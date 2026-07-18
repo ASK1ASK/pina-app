@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Home" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 18px 40px;color:#3a2a1c;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;display:flex;align-items:center;gap:6px;">🦩 Piña</div>
+        <a href="Pi%C3%B1a%20-%20Profilo.dc.html" style="text-decoration:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ffb627,#ff5f6d);display:flex;align-items:center;justify-content:center;font-size:15px;">🦩</a>
+      </div>
+
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:2px;">Ciao, {{ userName }}</div>
+      <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:22px;">Le tue avventure</div>
+
+      <sc-if value="{{ hasJourneys }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ journeys }}" as="j" hint-placeholder-count="4">
+            <div style="position:relative;border-radius:22px;overflow:hidden;height:112px;box-shadow:0 10px 22px -14px rgba(120,90,40,.3);">
+              <a href="{{ j.href }}" style="text-decoration:none;color:inherit;display:block;position:absolute;inset:0;">
+                <div style="position:absolute;inset:0;background:{{ j.gradient }};"></div>
+                <sc-if value="{{ j.hasPhoto }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;inset:0;background-image:url({{ j.photo }});background-size:cover;background-position:center;opacity:.55;"></div>
+                </sc-if>
+                <div style="position:relative;z-index:1;height:100%;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div style="font-family:'Fraunces',serif;font-weight:700;font-size:19px;line-height:1.15;">{{ j.name }}</div>
+                    <span style="{{ j.badgeStyle }}">{{ j.badgeLabel }}</span>
+                  </div>
+                  <div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.85);">{{ j.sub }}</div>
+                </div>
+              </a>
+              <sc-if value="{{ j.hasPhoto }}" hint-placeholder-val="{{ false }}">
+                <span></span>
+              </sc-if>
+              <sc-if value="{{ !j.hasPhoto }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;bottom:10px;right:10px;z-index:2;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ j.openPicker }}">🎨</div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- placeholder: banner "La tua guida a Piña" — da rifinire più avanti -->
+        <div style="margin-top:14px;border-radius:18px;background:#1e2a4a;box-shadow:0 10px 22px -14px rgba(30,42,74,.5);color:#fff;padding:15px 16px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:20px;flex-shrink:0;">🧭</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;line-height:1.15;margin-bottom:2px;">La tua guida a Piña</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.65);font-weight:600;">Scopri come viaggiare insieme con Piña</div>
+          </div>
+          <span style="font-size:15px;color:rgba(255,255,255,.5);flex-shrink:0;">›</span>
+        </div>
+
+        <a href="Pi%C3%B1a%20-%20Onboarding.dc.html?step=createTrip" style="text-decoration:none;display:block;text-align:center;margin-top:14px;border-radius:999px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:13px;font-weight:700;padding:14px 0;">+ Crea viaggio</a>
+      </sc-if>
+
+      <sc-if value="{{ !hasJourneys }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <a href="Pi%C3%B1a%20-%20Onboarding.dc.html?step=createTrip" style="text-decoration:none;color:#fff;border-radius:22px;padding:22px 20px;background:linear-gradient(135deg,#ffb627,#ff8a5b);box-shadow:0 14px 28px -16px rgba(255,150,60,.45);display:block;">
+            <div style="font-size:26px;margin-bottom:8px;">🦩</div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;margin-bottom:4px;">Un nuovo viaggio nel cassetto?</div>
+            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9);">Tira fuori Piña.</div>
+          </a>
+          <a href="Pi%C3%B1a%20-%20Onboarding.dc.html?step=createTrip" style="text-decoration:none;color:#fff;border-radius:22px;padding:22px 20px;background:linear-gradient(135deg,#2fbfae,#2a8fd8);box-shadow:0 14px 28px -16px rgba(50,140,170,.4);display:block;">
+            <div style="font-size:26px;margin-bottom:8px;">🗺</div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;margin-bottom:4px;">Disegna la mappa, invita chi vuoi.</div>
+            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9);">Parti con Piña.</div>
+          </a>
+          <a href="Pi%C3%B1a%20-%20Onboarding.dc.html?step=createTrip" style="text-decoration:none;color:#fff;border-radius:22px;padding:22px 20px;background:linear-gradient(135deg,#7a9d54,#4f8f4f);box-shadow:0 14px 28px -16px rgba(80,120,60,.4);display:block;">
+            <div style="font-size:26px;margin-bottom:8px;">🌅</div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;margin-bottom:4px;">Pronti a esplorare?</div>
+            <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9);">La tua nuova avventura inizia da qui.</div>
+          </a>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closePicker }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:#3a2a1c;margin-bottom:16px;">Scegli un colore</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+            <sc-for list="{{ paletteSwatches }}" as="sw" hint-placeholder-count="9">
+              <div style="{{ sw.style }}" onClick="{{ sw.select }}"></div>
+            </sc-for>
+            <div style="width:100%;aspect-ratio:1;border-radius:50%;background:#fff;border:1.5px dashed #d9b98a;color:#b8703a;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ openUploadMenu }}">+</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- UPLOAD MENU -->
+    <sc-if value="{{ uploadMenuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:41;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeUploadMenu }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:#3a2a1c;margin-bottom:14px;">Carica una copertina</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerCameraUpload }}"><span style="font-size:16px;">📷</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Scatta foto</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerLibraryUpload }}"><span style="font-size:16px;">🖼</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica dalla libreria</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerFileUpload }}"><span style="font-size:16px;">📁</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica da file</span></div>
+          </div>
+          <div style="text-align:center;margin-top:14px;font-size:12.5px;font-weight:700;color:#a9906f;cursor:pointer;" onClick="{{ closeUploadMenu }}">Annulla</div>
+        </div>
+      </div>
+    </sc-if>
+    <input type="file" accept="image/*" capture="environment" ref="{{ cameraFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" accept="image/*" ref="{{ libraryFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" ref="{{ fileFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  userName = 'Andrea';
+
+  slugify(name) {
+    return (name || 'trip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  loadStoredColors() {
+    try { return JSON.parse(localStorage.getItem('pina-journey-colors')) || {}; } catch (e) { return {}; }
+  }
+  saveStoredColors(map) {
+    try { localStorage.setItem('pina-journey-colors', JSON.stringify(map)); } catch (e) {}
+  }
+
+  state = {
+    pickerOpen: false,
+    pickerFor: null,
+    journeyColors: { spain: 'fiesta', iceland: 'beach', japan: 'culture' },
+    customPhotos: {},
+  };
+
+  componentDidMount() {
+    // sincronizza con eventuali colori scelti da "Modifica il viaggio"
+    const stored = this.loadStoredColors();
+    const merged = { ...this.state.journeyColors };
+    this.journeyDefs.forEach(j => {
+      const slug = this.slugify(j.name);
+      if (stored[slug]) merged[j.id] = stored[slug];
+    });
+    this.setState({ journeyColors: merged });
+  }
+
+  paletteDefs = [
+    { id: 'fiesta', gradient: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' },
+    { id: 'sunrise', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)' },
+    { id: 'romantic', gradient: 'linear-gradient(135deg,#ff5f96,#ff5f6d)' },
+    { id: 'terracotta', gradient: 'linear-gradient(135deg,#d9481f,#8a2f42)' },
+    { id: 'relax', gradient: 'linear-gradient(135deg,#ffb627,#ff8a5b)' },
+    { id: 'culture', gradient: 'linear-gradient(135deg,#e8b74e,#b8792e)' },
+    { id: 'camper', gradient: 'linear-gradient(135deg,#7a9d54,#4f8f4f)' },
+    { id: 'nature', gradient: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)' },
+    { id: 'beach', gradient: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' },
+  ];
+
+  openPicker = (id) => this.setState({ pickerOpen: true, pickerFor: id });
+  closePicker = () => this.setState({ pickerOpen: false, pickerFor: null });
+  stopPropagation = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+  openUploadMenu = () => this.setState({ uploadMenuOpen: true });
+  closeUploadMenu = () => this.setState({ uploadMenuOpen: false });
+  triggerCameraUpload = () => { if (this._cameraFileEl) this._cameraFileEl.click(); };
+  triggerLibraryUpload = () => { if (this._libraryFileEl) this._libraryFileEl.click(); };
+  triggerFileUpload = () => { if (this._fileFileEl) this._fileFileEl.click(); };
+  onCoverFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    const journeyId = this.state.pickerFor;
+    if (!file || !journeyId) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.setState(s => ({
+        customPhotos: { ...s.customPhotos, [journeyId]: reader.result },
+        uploadMenuOpen: false, pickerOpen: false, pickerFor: null,
+      }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  selectColor = (id) => {
+    const journeyId = this.state.pickerFor;
+    if (!journeyId) return;
+    const journeyDef = this.journeyDefs.find(j => j.id === journeyId);
+    this.setState(s => ({ journeyColors: { ...s.journeyColors, [journeyId]: id }, pickerOpen: false, pickerFor: null }));
+    if (journeyDef) {
+      const stored = this.loadStoredColors();
+      stored[this.slugify(journeyDef.name)] = id;
+      this.saveStoredColors(stored);
+    }
+  };
+  // TEMPO 0 — esempio: un utente nuovo ha in media 1 viaggio (al massimo 2) appena creato,
+  // non 4 di status diversi. Le altre demo (draft/planned/completed) restano qui sotto,
+  // pronte da riattivare quando servirà mostrare quegli stati.
+  journeyDefs = [
+    {
+      id: 'spain', name: 'Spain Roadtrip', sub: '14 → 26 agosto · 5 Crew', status: 'live',
+      hasPhoto: false,
+      href: 'Pi%C3%B1a%20-%20Onboarding.dc.html?step=recap',
+    },
+    // {
+    //   id: 'iceland', name: 'Iceland Expedition', sub: 'Date da definire · 3 Crew', status: 'draft',
+    //   hasPhoto: false,
+    //   href: 'Pi%C3%B1a%20-%20Onboarding.dc.html',
+    // },
+    // {
+    //   id: 'japan', name: 'Japan 2028', sub: 'Aprile 2028 · 2 Crew', status: 'planned',
+    //   hasPhoto: false,
+    //   href: 'Pi%C3%B1a%20-%20Onboarding.dc.html',
+    // },
+    // {
+    //   id: 'portugal', name: 'Portugal Coast', sub: 'Giugno 2025 · 4 Crew', status: 'completed',
+    //   photo: 'https://picsum.photos/seed/pina-home-portugal/500/300', hasPhoto: true,
+    //   href: 'Pi%C3%B1a%20-%20Memories.dc.html',
+    // },
+  ];
+
+  statusMeta = {
+    live: { label: '🟢 Live', bg: 'rgba(0,0,0,.28)' },
+    draft: { label: '🟡 Draft', bg: 'rgba(0,0,0,.28)' },
+    planned: { label: '📅 Planned', bg: 'rgba(0,0,0,.28)' },
+    completed: { label: '✅ Completed', bg: 'rgba(0,0,0,.28)' },
+  };
+
+  renderVals() {
+    const { pickerOpen, pickerFor, journeyColors, uploadMenuOpen, customPhotos } = this.state;
+    const gradientById = {};
+    this.paletteDefs.forEach(p => { gradientById[p.id] = p.gradient; });
+
+    const journeys = this.journeyDefs.map(j => {
+      const meta = this.statusMeta[j.status];
+      const colorId = journeyColors[j.id];
+      const customPhoto = customPhotos[j.id];
+      return {
+        id: j.id,
+        name: j.name,
+        sub: j.sub,
+        href: j.href,
+        gradient: j.hasPhoto ? 'linear-gradient(135deg,#7a9d54,#4f8f4f)' : (gradientById[colorId] || gradientById.fiesta),
+        hasPhoto: j.hasPhoto || !!customPhoto,
+        photo: customPhoto || j.photo || '',
+        badgeLabel: meta.label,
+        badgeStyle: `font-size:10.5px;font-weight:700;background:${meta.bg};padding:4px 9px;border-radius:999px;flex-shrink:0;`,
+        openPicker: () => this.openPicker(j.id),
+      };
+    });
+
+    const paletteSwatches = this.paletteDefs.map(p => ({
+      id: p.id,
+      style: `width:100%;aspect-ratio:1;border-radius:50%;background:${p.gradient};cursor:pointer;${pickerFor && journeyColors[pickerFor] === p.id ? 'box-shadow:0 0 0 3px #fbf6ec, 0 0 0 5px #3a2a1c;' : ''}`,
+      select: () => this.selectColor(p.id),
+    }));
+
+    return {
+      userName: this.userName,
+      journeys,
+      hasJourneys: journeys.length > 0,
+      pickerOpen,
+      closePicker: this.closePicker,
+      stopPropagation: this.stopPropagation,
+      paletteSwatches,
+      uploadMenuOpen,
+      openUploadMenu: this.openUploadMenu,
+      closeUploadMenu: this.closeUploadMenu,
+      triggerCameraUpload: this.triggerCameraUpload,
+      triggerLibraryUpload: this.triggerLibraryUpload,
+      triggerFileUpload: this.triggerFileUpload,
+      onCoverFileChosen: this.onCoverFileChosen,
+      cameraFileRef: (el) => { this._cameraFileEl = el; },
+      libraryFileRef: (el) => { this._libraryFileEl = el; },
+      fileFileRef: (el) => { this._fileFileEl = el; },
+    };
+  }
+}
+
+</script>
+</body>
+</html>

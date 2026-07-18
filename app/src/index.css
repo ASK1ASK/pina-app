@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Fraunces', serif;
+  --font-sans: 'Manrope', system-ui, sans-serif;
+
+  /* cream / sand backgrounds */
+  --color-cream: #f2ede3;
+  --color-cream-light: #faf3e2;
+  --color-cream-lighter: #fff1e0;
+  --color-sand: #e6d5b3;
+  --color-bg: #fbf6ec;
+
+  /* coral / mango / sunset — primary warm palette */
+  --color-coral: #d9481f;
+  --color-coral-light: #ff8a5b;
+  --color-sunset: #ff5f6d;
+  --color-mango: #ffb627;
+  --color-pink: #ff5f96;
+
+  /* cold accents — sparingly, never as hero gradient */
+  --color-ocean-1: #3ddbc5;
+  --color-ocean-2: #2fbfae;
+  --color-ocean-3: #2a8fd8;
+
+  /* text */
+  --color-text: #3a2a1c;
+  --color-text-strong: #2b2118;
+  --color-text-secondary: #a9906f;
+  --color-eyebrow: #b39a78;
+
+  /* borders / states */
+  --color-card-border: #f0e2c8;
+  --color-empty-border: #e6d5b3;
+  --color-add-border: #d9b98a;
+  --color-add-text: #b8703a;
+
+  /* fixed avatar palette, reused everywhere avatars appear */
+  --color-avatar-1: #ff8a5b;
+  --color-avatar-2: #3ddbc5;
+  --color-avatar-3: #7a9d54;
+  --color-avatar-4: #ff5f96;
+  --color-avatar-5: #ffb627;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+#root {
+  min-height: 100svh;
+}

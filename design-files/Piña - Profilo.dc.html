@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Profilo" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 18px 90px;color:#3a2a1c;">
+
+      <sc-if value="{{ hasLeft }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-top:120px;">
+          <div style="width:88px;height:88px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);display:flex;align-items:center;justify-content:center;font:600 8.5px ui-monospace, monospace;color:#b8703a;padding:6px;margin-bottom:16px;">fenicottero valigia</div>
+          <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin-bottom:6px;">Hai lasciato Spain Roadtrip</div>
+          <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:20px;line-height:1.4;">Il gruppo non ti vedrà più tra i<br/>partecipanti attivi al viaggio</div>
+          <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;font-size:13px;font-weight:700;padding:12px 22px;border-radius:999px;cursor:pointer;" onClick="{{ returnToTrip }}">Torna al viaggio</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ !hasLeft }}" hint-placeholder-val="{{ true }}">
+      <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;display:flex;align-items:center;gap:6px;">🦩 Piña</a>
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:7px 14px;font-size:12px;color:#3a2a1c;font-weight:700;white-space:nowrap;flex-shrink:0;">🏠 Home</a>
+      </div>
+
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:4px;">Profilo</div>
+      <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:18px;">Il tuo passaporto di viaggio</div>
+
+      <div style="position:relative;border-radius:24px;background:#fffaf0;border:2px dashed #e6b96f;padding:20px;box-shadow:0 14px 30px -18px rgba(120,90,40,.4);margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+          <div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#ffb627,#ff5f6d);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;box-shadow:0 6px 14px -6px rgba(217,72,31,.5);">🦩📸</div>
+          <div style="flex:1;min-width:0;">
+            <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;outline:none;cursor:text;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ saveName }}">{{ name }}</div>
+            <div style="font-size:11.5px;font-weight:700;color:#c2793a;">{{ roleTitle }} · Spain Roadtrip 2026</div>
+          </div>
+        </div>
+
+        <div style="border-top:1.5px dashed #e6b96f;margin-bottom:14px;"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px;">
+          <div><div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;">🌍 {{ tripDaysLabel }}</div></div>
+          <div><div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;">📸 {{ memoriesLabel }}</div></div>
+          <div><div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;">💰 {{ spentLabel }}</div></div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 10px;">Essentials personali</div>
+
+      <div style="border-radius:22px;overflow:hidden;margin-bottom:12px;box-shadow:0 10px 22px -16px rgba(120,90,40,.25);">
+        <div style="background:linear-gradient(135deg,#ff5f6d,#c2445a);color:#fff;padding:16px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ toggleEmergencyOpen }}">
+          <span style="font-size:22px;">📞</span>
+          <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;">Contatti di emergenza</div><div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);">{{ emergencyCountLabel }} · condivisi con la crew</div></div>
+          <span style="font-size:13px;">{{ emergencyChevron }}</span>
+        </div>
+        <sc-if value="{{ emergencyOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ emergencyEntries }}" as="en" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px dashed #f0e2c8;">
+                <div style="flex:1;min-width:0;">
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:12.5px;font-weight:700;outline:none;cursor:text;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ en.saveTitle }}" ref="{{ en.focusRef }}">{{ en.title }}</div>
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:11px;color:#a9906f;outline:none;cursor:text;margin-top:1px;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:1px -3px -1px;" onBlur="{{ en.saveSubtitle }}">{{ en.subtitle }}</div>
+                </div>
+                <sc-if value="{{ en.hasHref }}" hint-placeholder-val="{{ false }}">
+                  <button style="border:none;background:none;font-size:14px;cursor:pointer;flex-shrink:0;" onClick="{{ en.openLink }}">↗</button>
+                </sc-if>
+                <button style="width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ en.del }}">×</button>
+              </div>
+            </sc-for>
+            <div style="text-align:center;padding:9px;border-radius:12px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12px;font-weight:700;cursor:pointer;" onClick="{{ addEmergencyEntry }}">+ Aggiungi voce</div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="border-radius:22px;overflow:hidden;margin-bottom:18px;box-shadow:0 10px 22px -16px rgba(120,90,40,.25);">
+        <div style="background:linear-gradient(135deg,#e8b74e,#b8792e);color:#fff;padding:16px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ togglePaymentsOpen }}">
+          <span style="font-size:22px;">💳</span>
+          <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;">Pagamenti</div><div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85);">{{ paymentsCountLabel }} · solo tuoi</div></div>
+          <span style="font-size:13px;">{{ paymentsChevron }}</span>
+        </div>
+        <sc-if value="{{ paymentsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ paymentEntries }}" as="en" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px dashed #f0e2c8;">
+                <div style="flex:1;min-width:0;">
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:12.5px;font-weight:700;outline:none;cursor:text;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ en.saveTitle }}" ref="{{ en.focusRef }}">{{ en.title }}</div>
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:11px;color:#a9906f;outline:none;cursor:text;margin-top:1px;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:1px -3px -1px;" onBlur="{{ en.saveSubtitle }}">{{ en.subtitle }}</div>
+                </div>
+                <sc-if value="{{ en.isMasked }}" hint-placeholder-val="{{ false }}">
+                  <button style="border:none;background:none;font-size:13px;cursor:pointer;flex-shrink:0;" onClick="{{ en.toggleReveal }}">{{ en.revealIcon }}</button>
+                </sc-if>
+                <button style="width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ en.del }}">×</button>
+              </div>
+            </sc-for>
+            <div style="text-align:center;padding:9px;border-radius:12px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12px;font-weight:700;cursor:pointer;" onClick="{{ addPaymentEntry }}">+ Aggiungi voce</div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 10px;">Condividi il viaggio</div>
+      <div style="border-radius:20px;background:#fff;border:1px solid #f0e2c8;padding:16px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);margin-bottom:22px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:20px;">🔗</span>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13.5px;">Racconto del viaggio</div>
+            <div style="font-size:11.5px;color:#a9906f;font-weight:600;">Un link di sola lettura con Journey, Today e Checklist — perfetto da mandare a chi vuole rifare un viaggio così</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <a href="Pi%C3%B1a%20-%20Recap.dc.html" style="text-decoration:none;flex:1;text-align:center;background:#fbf6ec;color:#3a2a1c;font-size:12px;font-weight:700;padding:10px 0;border-radius:999px;">👀 Anteprima</a>
+          <div style="flex:1;text-align:center;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;font-size:12px;font-weight:700;padding:10px 0;border-radius:999px;cursor:pointer;" onClick="{{ copyShareLink }}">{{ shareCopyLabel }}</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:12px 2px 10px;">Impostazioni</div>
+      <div style="background:#fff;border:1px solid #f0e2c8;border-radius:18px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+        <div style="border-bottom:1px solid #faf3e2;">
+          <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;" onClick="{{ toggleNameSettings }}">
+            <span style="font-size:16px;">👤</span>
+            <span style="flex:1;font-size:13px;font-weight:600;">Nome e preferenze</span>
+            <span style="font-size:12px;color:#c2a97e;">{{ nameChevron }}</span>
+          </div>
+          <sc-if value="{{ nameSettingsOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:0 14px 14px 40px;">
+              <div style="font-size:10.5px;font-weight:700;color:#b39a78;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Il tuo nome nel viaggio</div>
+              <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;outline:none;cursor:text;background:#fbf6ec;border-radius:10px;padding:8px 10px;" style-focus="outline:2px solid #ffb627;" onBlur="{{ saveName }}">{{ name }}</div>
+              <div style="font-size:11px;color:#a9906f;font-weight:600;margin-top:6px;line-height:1.4;">Gli altri membri del gruppo vedranno questo nome nel viaggio.</div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #faf3e2;">
+          <span style="font-size:16px;">🔔</span>
+          <span style="flex:1;font-size:13px;font-weight:600;">Notifiche</span>
+          <div style="{{ notifToggleStyle }}" onClick="{{ toggleNotifications }}"><div style="{{ notifKnobStyle }}"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;" onClick="{{ toggleLeaveConfirm }}">
+            <span style="font-size:16px;">🚪</span>
+            <span style="flex:1;font-size:13px;font-weight:700;color:#d9481f;">Esci dal viaggio</span>
+            <span style="font-size:12px;color:#c2a97e;">{{ leaveChevron }}</span>
+          </div>
+          <sc-if value="{{ leaveConfirmOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:0 14px 16px 40px;">
+              <div style="font-size:12px;color:#a9906f;font-weight:600;margin-bottom:10px;line-height:1.4;">Sei sicuro? Non farai più parte dei partecipanti attivi a Spain Roadtrip.</div>
+              <div style="display:flex;gap:8px;">
+                <div style="flex:1;text-align:center;background:#f0e5d1;color:#3a2a1c;font-size:12px;font-weight:700;padding:9px 0;border-radius:999px;cursor:pointer;" onClick="{{ toggleLeaveConfirm }}">Annulla</div>
+                <div style="flex:1;text-align:center;background:#d9481f;color:#fff;font-size:12px;font-weight:700;padding:9px 0;border-radius:999px;cursor:pointer;" onClick="{{ confirmLeave }}">Sì, esci</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </div>
+      </sc-if>
+
+    </div>
+
+    <dc-import name="BottomNav" active="profile" hint-size="100%,74px" style="position:absolute;bottom:0;left:0;right:0;"></dc-import>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    name: 'Andrea',
+    roleTitle: 'Explorer',
+    notificationsOn: true,
+    nameSettingsOpen: false,
+    leaveConfirmOpen: false,
+    hasLeft: false,
+    stops: [],
+    memories: null,
+    expenses: [],
+    emergencyContacts: [],
+    emergencyOpen: false,
+    paymentsOpen: false,
+    payments: [
+      { id: 'pay1', title: 'Carte utilizzate', subtitle: 'Revolut', tag: '', href: '' },
+      { id: 'pay2', title: 'Contanti disponibili', subtitle: '68€ con te', tag: '', href: '' },
+      { id: 'pay3', title: 'Cambio valuta', subtitle: 'EUR · nessun cambio necessario', tag: '', href: '' },
+      { id: 'pay4', title: 'PIN carta personale', subtitle: '4471', tag: '', href: '', masked: true, revealed: false },
+    ],
+  };
+
+  _pendingFocusId = null;
+
+  componentDidMount() {
+    import('./trip-data.js').then(m => {
+      this._td = m;
+      this.setState({
+        stops: m.loadStops(),
+        memories: m.loadMemories(),
+        expenses: m.loadExpensesData().expenses,
+        emergencyContacts: m.loadEmergencyContacts(),
+      });
+    }).catch(() => {});
+  }
+
+  makeFocusRef(id) {
+    return (el) => {
+      if (el && this._pendingFocusId === id) {
+        el.focus();
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } catch (e) {}
+        this._pendingFocusId = null;
+      }
+    };
+  }
+
+  toggleEmergencyOpen = () => this.setState(s => ({ emergencyOpen: !s.emergencyOpen }));
+  togglePaymentsOpen = () => this.setState(s => ({ paymentsOpen: !s.paymentsOpen }));
+
+  updateEmergencyField = (entryId, field, value) => {
+    const next = this.state.emergencyContacts.map(en => en.id !== entryId ? en : { ...en, [field]: value || en[field] });
+    this.setState({ emergencyContacts: next });
+    if (this._td) this._td.saveEmergencyContacts(next);
+  };
+  deleteEmergencyEntry = (entryId) => {
+    const next = this.state.emergencyContacts.filter(en => en.id !== entryId);
+    this.setState({ emergencyContacts: next });
+    if (this._td) this._td.saveEmergencyContacts(next);
+  };
+  addEmergencyEntry = () => {
+    const id = 'em' + Date.now();
+    this._pendingFocusId = id;
+    const next = [...this.state.emergencyContacts, { id, title: 'Nuovo contatto', subtitle: 'Aggiungi numero', href: '' }];
+    this.setState({ emergencyContacts: next });
+    if (this._td) this._td.saveEmergencyContacts(next);
+  };
+
+  updatePaymentField = (entryId, field, value) => {
+    this.setState(s => ({ payments: s.payments.map(en => en.id !== entryId ? en : { ...en, [field]: value || en[field] }) }));
+  };
+  deletePaymentEntry = (entryId) => this.setState(s => ({ payments: s.payments.filter(en => en.id !== entryId) }));
+  addPaymentEntry = () => {
+    const id = 'pay' + Date.now();
+    this._pendingFocusId = id;
+    this.setState(s => ({ payments: [...s.payments, { id, title: 'Nuova voce', subtitle: 'Aggiungi dettagli', tag: '', href: '' }] }));
+  };
+  togglePaymentReveal = (entryId) => this.setState(s => ({ payments: s.payments.map(en => en.id !== entryId ? en : { ...en, revealed: !en.revealed }) }));
+
+  entryView(entry, opts) {
+    const isMasked = !!entry.masked;
+    const displaySubtitle = isMasked && !entry.revealed ? '••••••' : entry.subtitle;
+    return {
+      id: entry.id,
+      title: entry.title,
+      subtitle: displaySubtitle,
+      hasHref: !!entry.href,
+      isMasked,
+      revealIcon: entry.revealed ? '🙈' : '👁',
+      saveTitle: (e) => opts.saveField('title', e.target.textContent.trim()),
+      saveSubtitle: (e) => opts.saveField('subtitle', e.target.textContent.trim()),
+      toggleReveal: opts.toggleReveal || (() => {}),
+      openLink: () => { if (entry.href) window.open(entry.href, '_blank'); },
+      del: opts.del,
+      focusRef: this.makeFocusRef(entry.id),
+    };
+  }
+
+  saveName = (e) => {
+    const val = e.target.textContent.trim();
+    this.setState({ name: val || this.state.name });
+  };
+
+  shareUrl() {
+    return `${location.origin}${location.pathname.replace(/[^/]+$/, '')}Pi%C3%B1a%20-%20Recap.dc.html`;
+  }
+  copyShareLink = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(this.shareUrl()).catch(() => {});
+    this.setState({ shareCopied: true });
+    setTimeout(() => this.setState({ shareCopied: false }), 1600);
+  };
+
+  toggleNotifications = () => this.setState(s => ({ notificationsOn: !s.notificationsOn }));
+
+  toggleNameSettings = () => this.setState(s => ({ nameSettingsOpen: !s.nameSettingsOpen }));
+  toggleLeaveConfirm = () => this.setState(s => ({ leaveConfirmOpen: !s.leaveConfirmOpen }));
+  confirmLeave = () => this.setState({ hasLeft: true, leaveConfirmOpen: false });
+  returnToTrip = () => this.setState({ hasLeft: false });
+
+  renderVals() {
+    const { name, roleTitle, notificationsOn, nameSettingsOpen, leaveConfirmOpen, hasLeft,
+      stops, memories, expenses, emergencyContacts, emergencyOpen, paymentsOpen, payments } = this.state;
+
+    const tripDays = (stops && stops.length) ? Math.max(...stops.map(s => s.endDay || s.startDay || 1)) - Math.min(...stops.map(s => s.startDay || 1)) + 1 : 0;
+    const myMemoriesCount = memories ? memories.items.filter(it => it.author === name).length : 0;
+    const mySpend = expenses.filter(e => e.paidBy === 'A').reduce((a, e) => a + e.amount, 0);
+
+    const emergencyEntries = emergencyContacts.map(en => this.entryView(en, {
+      saveField: (field, val) => this.updateEmergencyField(en.id, field, val),
+      del: () => this.deleteEmergencyEntry(en.id),
+    }));
+    const paymentEntries = payments.map(en => this.entryView(en, {
+      saveField: (field, val) => this.updatePaymentField(en.id, field, val),
+      del: () => this.deletePaymentEntry(en.id),
+      toggleReveal: () => this.togglePaymentReveal(en.id),
+    }));
+
+    return {
+      tripDaysLabel: tripDays > 0 ? `${tripDays} giorni` : '—',
+      memoriesLabel: memories ? `${myMemoriesCount} ricordi` : '—',
+      spentLabel: `${mySpend}€`,
+
+      emergencyOpen,
+      emergencyChevron: emergencyOpen ? '⌃' : '⌄',
+      emergencyCountLabel: `${emergencyEntries.length} voci`,
+      emergencyEntries,
+      toggleEmergencyOpen: this.toggleEmergencyOpen,
+      addEmergencyEntry: this.addEmergencyEntry,
+
+      paymentsOpen,
+      paymentsChevron: paymentsOpen ? '⌃' : '⌄',
+      paymentsCountLabel: `${paymentEntries.length} voci`,
+      paymentEntries,
+      togglePaymentsOpen: this.togglePaymentsOpen,
+      addPaymentEntry: this.addPaymentEntry,
+
+      name,
+      roleTitle,
+      saveName: this.saveName,
+      hasLeft,
+      shareUrl: this.shareUrl(),
+      shareCopyLabel: this.state.shareCopied ? 'Copiato ✓' : 'Copia link',
+      copyShareLink: this.copyShareLink,
+      returnToTrip: this.returnToTrip,
+      toggleNameSettings: this.toggleNameSettings,
+      nameSettingsOpen,
+      nameChevron: nameSettingsOpen ? '⌃' : '›',
+      toggleLeaveConfirm: this.toggleLeaveConfirm,
+      leaveConfirmOpen,
+      leaveChevron: leaveConfirmOpen ? '⌃' : '›',
+      confirmLeave: this.confirmLeave,
+      toggleNotifications: this.toggleNotifications,
+      notifToggleStyle: `width:40px;height:24px;border-radius:999px;padding:2px;cursor:pointer;transition:background .15s;background:${notificationsOn ? '#d9481f' : '#e6d5b3'};display:flex;align-items:center;`,
+      notifKnobStyle: `width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:transform .15s;transform:translateX(${notificationsOn ? '16px' : '0px'});`,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

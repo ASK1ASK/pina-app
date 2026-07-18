@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Spese" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 18px 100px;color:#3a2a1c;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;">🦩 Piña</a>
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:7px 14px;font-size:12px;color:#3a2a1c;font-weight:700;">🏠 Home</a>
+      </div>
+
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:18px;">Spese</div>
+
+      <div style="border-radius:26px;padding:20px;background:linear-gradient(135deg,#ffb627 0%,#ff8a5b 100%);color:#fff;box-shadow:0 18px 36px -18px rgba(255,150,60,.5);margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:4px;">Totale speso finora</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:38px;line-height:1;">{{ totalLabel }}</div>
+        <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85);margin-top:6px;margin-bottom:16px;">{{ expenseCountLabel }}</div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <sc-for list="{{ visibleBalanceChips }}" as="b" hint-placeholder-count="5">
+            <div style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:16px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;">
+              <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ b.name }}</div>
+              <div style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:{{ b.amountColor }};">{{ b.amountLabel }}</div>
+              <div style="font-size:9.5px;font-weight:600;color:rgba(255,255,255,.75);">{{ b.statusLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hasMoreBalances }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;font-size:11.5px;font-weight:700;color:#fff;margin-top:10px;cursor:pointer;text-decoration:underline;" onClick="{{ toggleBalancesExpanded }}">{{ balancesToggleLabel }}</div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:22px;">
+        <div style="flex:1;text-align:center;padding:11px;border-radius:16px;background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;font-size:12.5px;font-weight:700;cursor:pointer;" onClick="{{ openAddExpense }}">＋ Aggiungi spesa</div>
+        <div style="flex:1;text-align:center;padding:11px;border-radius:16px;background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;font-size:12.5px;font-weight:700;cursor:pointer;" onClick="{{ openSettlement }}">💸 Registra rimborso</div>
+      </div>
+
+      <div style="border-radius:20px;padding:16px;background:#fff;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);margin-bottom:22px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;background:#e9f7f0;display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.04em;color:#b39a78;">Cassa comune</div>
+            <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;">{{ cassaLabel }}</div>
+          </div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#fdeee0;color:#d9481f;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ openCassa }}">＋</div>
+        </div>
+        <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-top:8px;">{{ cassaSubLabel }}</div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Spese recenti</span>
+        <span style="font-size:12px;font-weight:700;color:#d9481f;cursor:pointer;" onClick="{{ openLedger }}">Tutte →</span>
+      </div>
+
+      <sc-if value="{{ hasExpenses }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <sc-for list="{{ groupedRecentExpenses }}" as="grp" hint-placeholder-count="2">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#b39a78;margin:4px 2px 8px;">{{ grp.label }}</div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:2px;">
+                <sc-for list="{{ grp.items }}" as="exp" hint-placeholder-count="2">
+                  <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;padding:13px 14px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);cursor:pointer;" onClick="{{ exp.open }}">
+                    <div style="display:flex;align-items:center;gap:11px;">
+                      <div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;background:#fdeee0;display:flex;align-items:center;justify-content:center;font-size:18px;">{{ exp.icon }}</div>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:14px;font-weight:700;">{{ exp.title }}</div>
+                        <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-top:1px;">{{ exp.paidByLine }}</div>
+                      </div>
+                      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;flex-shrink:0;">{{ exp.amountLabel }}</div>
+                    </div>
+                    <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #f0e2c8;display:flex;align-items:center;justify-content:space-between;">
+                      <div style="display:flex;">
+                        <sc-for list="{{ exp.avatars }}" as="av" hint-placeholder-count="5">
+                          <span style="{{ av.style }}">{{ av.code }}</span>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:11.5px;color:#8a7256;font-weight:600;">{{ exp.perHeadLabel }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ !hasExpenses }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:32px 20px;border-radius:22px;border:1.5px dashed #e6d5b3;">
+          <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);"></div>
+          <div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin-bottom:4px;">Nessuna spesa ancora</div>
+          <div style="font-size:12px;color:#a9906f;font-weight:600;">Tocca ＋ per aggiungere la prima</div>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <div style="position:absolute;bottom:96px;right:20px;z-index:20;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);box-shadow:0 12px 24px -8px rgba(255,90,60,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;cursor:pointer;" onClick="{{ openAddExpense }}">＋</div>
+
+    <dc-import name="BottomNav" active="expenses" hint-size="100%,74px" style="position:absolute;bottom:0;left:0;right:0;"></dc-import>
+
+    <sc-if value="{{ isExpenseSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeSheet }}">
+        <div style="width:100%;max-height:88%;overflow-y:auto;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;">{{ sheetTitle }}</div>
+            <span style="color:#c2a97e;font-size:20px;cursor:pointer;" onClick="{{ closeSheet }}">×</span>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">La tua spesa</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ formTitleStyle }}" onBlur="{{ saveFormTitle }}" onFocus="{{ onFocusFormTitle }}">{{ formTitleDisplay }}</div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:14px 0 6px;">Importo (€)</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ formAmountStyle }}" onBlur="{{ saveFormAmount }}" onFocus="{{ onFocusFormAmount }}">{{ formAmountDisplay }}</div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:16px 0 8px;">Chi ha pagato</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <sc-for list="{{ paidByOptions }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.wrapStyle }}" onClick="{{ p.select }}">
+                <div style="{{ p.circleStyle }}">{{ p.code }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:#8a7256;margin-top:3px;">{{ p.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:16px 0 8px;">Diviso tra</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <sc-for list="{{ splitOptions }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.wrapStyle }}" onClick="{{ p.toggle }}">
+                <div style="{{ p.circleStyle }}">{{ p.code }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:#8a7256;margin-top:3px;">{{ p.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-top:8px;">{{ splitSummaryLabel }}</div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:16px 0 6px;">Note (opzionale)</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ formNoteStyle }}" onBlur="{{ saveFormNote }}" onFocus="{{ onFocusFormNote }}">{{ formNoteDisplay }}</div>
+
+          <div style="display:flex;gap:10px;margin-top:22px;">
+            <sc-if value="{{ isEditingExpense }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;background:#fdeceb;color:#c2445a;text-align:center;font-size:12.5px;font-weight:700;padding:13px 18px;border-radius:999px;cursor:pointer;" onClick="{{ deleteExpense }}">🗑 Elimina</div>
+            </sc-if>
+            <div style="flex:1;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:13px 0;border-radius:999px;cursor:pointer;" onClick="{{ saveExpenseForm }}">{{ sheetSaveLabel }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSettlementSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeSheet }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;">Registra un rimborso</div>
+            <span style="color:#c2a97e;font-size:20px;cursor:pointer;" onClick="{{ closeSheet }}">×</span>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Chi rimborsa</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <sc-for list="{{ settleFromOptions }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.wrapStyle }}" onClick="{{ p.select }}">
+                <div style="{{ p.circleStyle }}">{{ p.code }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:#8a7256;margin-top:3px;">{{ p.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">A chi</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <sc-for list="{{ settleToOptions }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.wrapStyle }}" onClick="{{ p.select }}">
+                <div style="{{ p.circleStyle }}">{{ p.code }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:#8a7256;margin-top:3px;">{{ p.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Importo (€)</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ settleAmountStyle }}" onBlur="{{ saveSettleAmount }}" onFocus="{{ onFocusSettleAmount }}">{{ settleAmountDisplay }}</div>
+
+          <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:13px 0;border-radius:999px;cursor:pointer;margin-top:22px;" onClick="{{ saveSettlement }}">Conferma rimborso</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLedgerSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeSheet }}">
+        <div style="width:100%;height:82%;display:flex;flex-direction:column;background:#fbf6ec;border-radius:24px 24px 0 0;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 22px 14px;">
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;">Tutte le spese</div>
+            <span style="color:#c2a97e;font-size:20px;cursor:pointer;" onClick="{{ closeSheet }}">×</span>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:0 22px;">
+            <sc-for list="{{ ledgerRows }}" as="row" hint-placeholder-count="6">
+              <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:12px 14px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                  <span style="{{ row.typeBadgeStyle }}">{{ row.typeLabel }}</span>
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:10.5px;font-weight:700;color:#a9906f;outline:none;cursor:text;" onBlur="{{ row.saveDate }}">{{ row.date }}</div>
+                </div>
+                <div style="font-size:13.5px;font-weight:700;color:#3a2a1c;margin-bottom:3px;">{{ row.desc }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:11.5px;color:#8a7256;font-weight:600;">{{ row.whoLine }}</span>
+                  <span style="font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;color:{{ row.amountColor }};">{{ row.amountLabel }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="padding:14px 22px;border-top:1px dashed #e6d5b3;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Totale per persona</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+              <sc-for list="{{ balanceChips }}" as="b" hint-placeholder-count="5">
+                <div style="background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:6px 10px;font-size:11.5px;font-weight:700;color:#3a2a1c;">{{ b.name }}: {{ b.amountLabel }}</div>
+              </sc-for>
+            </div>
+            <div style="text-align:center;padding:12px;border-radius:999px;background:#3a2a1c;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;" onClick="{{ exportCsv }}">⬇️ Esporta su Excel (CSV)</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCassaSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeSheet }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;">Aggiungi alla cassa comune</div>
+            <span style="color:#c2a97e;font-size:20px;cursor:pointer;" onClick="{{ closeSheet }}">×</span>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Chi contribuisce</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <sc-for list="{{ cassaPersonOptions }}" as="p" hint-placeholder-count="5">
+              <div style="{{ p.wrapStyle }}" onClick="{{ p.select }}">
+                <div style="{{ p.circleStyle }}">{{ p.code }}</div>
+                <div style="font-size:9.5px;font-weight:700;color:#8a7256;margin-top:3px;">{{ p.name }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Importo (€)</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ cassaAmountStyle }}" onBlur="{{ saveCassaAmount }}" onFocus="{{ onFocusCassaAmount }}">{{ cassaAmountDisplay }}</div>
+
+          <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:13px 0;border-radius:999px;cursor:pointer;margin-top:22px;" onClick="{{ saveCassaContribution }}">Aggiungi</div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    stops: null,
+    expenses: [],
+    settlements: [],
+    cassaContributions: [],
+    sheetMode: null, // null | 'expense' | 'settlement' | 'cassa' | 'ledger'
+    editingId: null,
+    form: { title: '', amount: '', icon: '💳', paidBy: 'A', splitAmong: [], note: '' },
+    settleForm: { from: '', to: '', amount: '' },
+    cassaForm: { person: 'A', amount: '' },
+    balancesExpanded: false,
+  };
+
+  iconSet = ['🍽️', '🍹', '🛒', '⛽', '🏕️', '🎟️', '🚗', '🏨', '📦', '💳'];
+
+  componentDidMount() {
+    import('./trip-data.js').then(m => {
+      this._td = m;
+      const data = m.loadExpensesData();
+      this.setState({
+        stops: m.loadStops(),
+        expenses: data.expenses,
+        settlements: data.settlements,
+        cassaContributions: data.cassaContributions,
+      });
+    }).catch(() => {});
+  }
+
+  persist(patch) {
+    this.setState(s => {
+      const next = { ...s, ...patch };
+      if (this._td) {
+        this._td.saveExpensesData({
+          expenses: next.expenses,
+          settlements: next.settlements,
+          cassaContributions: next.cassaContributions,
+        });
+      }
+      return patch;
+    });
+  }
+
+  stopPropagation = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+  closeSheet = () => this.setState({ sheetMode: null, editingId: null });
+
+  todayStopName() {
+    const stop = (this.state.stops || []).find(s => s.kind === 'today');
+    return stop ? stop.name : 'Oggi';
+  }
+
+  openAddExpense = () => {
+    this.setState({
+      sheetMode: 'expense',
+      editingId: null,
+      form: { title: '', amount: '', icon: '💳', paidBy: this._td ? this._td.currentUser : 'A', splitAmong: this._td ? [...this._td.personOrder] : [], note: '' },
+    });
+  };
+
+  openEditExpense = (exp) => {
+    this.setState({
+      sheetMode: 'expense',
+      editingId: exp.id,
+      form: { title: exp.title, amount: String(exp.amount), icon: exp.icon, paidBy: exp.paidBy, splitAmong: [...exp.splitAmong], note: exp.note || '' },
+    });
+  };
+
+  setFormField = (field, value) => this.setState(s => ({ form: { ...s.form, [field]: value } }));
+
+  saveFormTitle = (e) => this.setFormField('title', e.target.textContent.trim());
+  onFocusFormTitle = (e) => { if (!this.state.form.title) e.target.textContent = ''; };
+  saveFormAmount = (e) => this.setFormField('amount', e.target.textContent.trim());
+  onFocusFormAmount = (e) => { if (!this.state.form.amount) e.target.textContent = ''; };
+  saveFormNote = (e) => this.setFormField('note', e.target.textContent.trim());
+  onFocusFormNote = (e) => { if (!this.state.form.note) e.target.textContent = ''; };
+
+  selectIcon = (icon) => this.setFormField('icon', icon);
+  selectPaidBy = (code) => this.setFormField('paidBy', code);
+  toggleSplit = (code) => {
+    this.setState(s => {
+      const has = s.form.splitAmong.includes(code);
+      const next = has ? s.form.splitAmong.filter(c => c !== code) : [...s.form.splitAmong, code];
+      return { form: { ...s.form, splitAmong: next.length ? next : s.form.splitAmong } };
+    });
+  };
+
+  saveExpenseForm = () => {
+    const { form, editingId, expenses } = this.state;
+    const amount = parseFloat(String(form.amount).replace(',', '.')) || 0;
+    if (!form.title || amount <= 0) return;
+    const split = form.splitAmong.length ? form.splitAmong : (this._td ? this._td.personOrder : ['A']);
+    if (editingId) {
+      const next = expenses.map(e => e.id !== editingId ? e : { ...e, title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note });
+      this.persist({ expenses: next });
+    } else {
+      const newExp = {
+        id: 'e' + Date.now(), title: form.title, amount, icon: form.icon,
+        paidBy: form.paidBy, splitAmong: split, note: form.note,
+        dateLabel: `Oggi · ${this.todayStopName()}`,
+      };
+      this.persist({ expenses: [newExp, ...expenses] });
+    }
+    this.closeSheet();
+  };
+
+  deleteExpense = () => {
+    const { editingId, expenses } = this.state;
+    if (!editingId) return;
+    this.persist({ expenses: expenses.filter(e => e.id !== editingId) });
+    this.closeSheet();
+  };
+
+  toggleBalancesExpanded = () => this.setState(s => ({ balancesExpanded: !s.balancesExpanded }));
+  openLedger = () => this.setState({ sheetMode: 'ledger' });
+
+  updateExpenseDate = (id, label) => {
+    const next = this.state.expenses.map(e => e.id !== id ? e : { ...e, dateLabel: label || e.dateLabel });
+    this.persist({ expenses: next });
+  };
+  updateSettlementDate = (id, label) => {
+    const next = this.state.settlements.map(s => s.id !== id ? s : { ...s, dateLabel: label || s.dateLabel });
+    this.persist({ settlements: next });
+  };
+  updateCassaDate = (id, label) => {
+    const next = this.state.cassaContributions.map(c => c.id !== id ? c : { ...c, dateLabel: label || c.dateLabel });
+    this.persist({ cassaContributions: next });
+  };
+
+  exportCsv = () => {
+    const rows = [['Data', 'Descrizione', 'Tipo', 'Da', 'Verso', 'Importo (€)']];
+    this._lastLedgerRaw.forEach(r => rows.push([r.date, r.desc, r.typeLabel, r.who, r.toWhom, r.rawAmount]));
+    rows.push([]);
+    rows.push(['Totale per persona']);
+    this._lastBalanceChips.forEach(b => rows.push([b.name, b.amountLabel]));
+    const csv = rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pina-spese.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  openSettlement = () => {
+    const people = this._td ? this._td.personOrder : ['A', 'L'];
+    this.setState({ sheetMode: 'settlement', settleForm: { from: people[1] || people[0], to: people[0], amount: '' } });
+  };
+  selectSettleFrom = (code) => this.setState(s => ({ settleForm: { ...s.settleForm, from: code } }));
+  selectSettleTo = (code) => this.setState(s => ({ settleForm: { ...s.settleForm, to: code } }));
+  saveSettleAmount = (e) => this.setState(s => ({ settleForm: { ...s.settleForm, amount: e.target.textContent.trim() } }));
+  onFocusSettleAmount = (e) => { if (!this.state.settleForm.amount) e.target.textContent = ''; };
+
+  saveSettlement = () => {
+    const { settleForm, settlements } = this.state;
+    const amount = parseFloat(String(settleForm.amount).replace(',', '.')) || 0;
+    if (!settleForm.from || !settleForm.to || settleForm.from === settleForm.to || amount <= 0) return;
+    const rec = { id: 's' + Date.now(), from: settleForm.from, to: settleForm.to, amount, dateLabel: `Oggi · ${this.todayStopName()}` };
+    this.persist({ settlements: [rec, ...settlements] });
+    this.closeSheet();
+  };
+
+  openCassa = () => this.setState({ sheetMode: 'cassa', cassaForm: { person: this._td ? this._td.currentUser : 'A', amount: '' } });
+  selectCassaPerson = (code) => this.setState(s => ({ cassaForm: { ...s.cassaForm, person: code } }));
+  saveCassaAmount = (e) => this.setState(s => ({ cassaForm: { ...s.cassaForm, amount: e.target.textContent.trim() } }));
+  onFocusCassaAmount = (e) => { if (!this.state.cassaForm.amount) e.target.textContent = ''; };
+
+  saveCassaContribution = () => {
+    const { cassaForm, cassaContributions } = this.state;
+    const amount = parseFloat(String(cassaForm.amount).replace(',', '.')) || 0;
+    if (amount <= 0) return;
+    const rec = { id: 'c' + Date.now(), person: cassaForm.person, amount, dateLabel: `Oggi · ${this.todayStopName()}` };
+    this.persist({ cassaContributions: [rec, ...cassaContributions] });
+    this.closeSheet();
+  };
+
+  avatarWrapStyle(selected) {
+    return `display:flex;flex-direction:column;align-items:center;cursor:pointer;width:52px;${selected ? '' : 'opacity:.5;'}`;
+  }
+  avatarCircleStyle(color, selected) {
+    return `width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:${color};${selected ? 'box-shadow:0 0 0 3px #fbf6ec, 0 0 0 5px #3a2a1c;' : ''}`;
+  }
+
+  renderVals() {
+    const td = this._td;
+    const people = td ? td.people : {};
+    const personOrder = td ? td.personOrder : [];
+    const { expenses, settlements, cassaContributions, sheetMode, editingId, form, settleForm, cassaForm, balancesExpanded } = this.state;
+
+    const totalSpent = expenses.reduce((a, e) => a + e.amount, 0);
+    const balances = td ? td.computeBalances(expenses, settlements) : {};
+
+    const cassaTotal = cassaContributions.reduce((a, c) => a + c.amount, 0) - expenses.filter(e => e.paidBy === 'cassa').reduce((a, e) => a + e.amount, 0);
+
+    const balanceChips = personOrder.map(code => {
+      const p = people[code];
+      const bal = balances[code] || 0;
+      const rounded = Math.round(bal * 100) / 100;
+      let statusLabel = 'in pari', amountLabel = '0€', amountColor = '#fff1d6';
+      if (rounded > 0.01) { statusLabel = 'riceve'; amountLabel = `+${rounded.toFixed(rounded % 1 ? 2 : 0)}€`; amountColor = '#d7ffe0'; }
+      else if (rounded < -0.01) { statusLabel = 'deve'; amountLabel = `-${Math.abs(rounded).toFixed(rounded % 1 ? 2 : 0)}€`; amountColor = '#fff1d6'; }
+      return { code, name: `${(p && p.name) || code}`, amountLabel, amountColor, statusLabel };
+    });
+
+    const buildGroups = (list) => {
+      const groups = [];
+      list.forEach(exp => {
+        let g = groups[groups.length - 1];
+        if (!g || g.label !== exp.dateLabel) { g = { label: exp.dateLabel, items: [] }; groups.push(g); }
+        const among = exp.splitAmong && exp.splitAmong.length ? exp.splitAmong : personOrder;
+        const share = exp.amount / among.length;
+        const payer = people[exp.paidBy];
+        g.items.push({
+          id: exp.id,
+          icon: exp.icon,
+          title: exp.title,
+          amountLabel: `${exp.amount}€`,
+          paidByLine: payer ? `${payer.name} ha pagato` : 'Cassa comune',
+          perHeadLabel: among.length > 1 ? `diviso in ${among.length} → ${share.toFixed(share % 1 ? 2 : 0)}€ a testa` : 'nessuna divisione',
+          avatars: among.map((code, i) => ({ code, style: `width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:${(people[code] || {}).color || '#ccc'};margin-left:${i === 0 ? '0' : '-7px'};` })),
+          open: () => this.openEditExpense(exp),
+        });
+      });
+      return groups;
+    };
+    const groupedRecentExpenses = buildGroups(expenses.slice(0, 5));
+
+    // ---- full ledger sheet ----
+    const badgeStyle = (bg, color) => `font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:${bg};color:${color};`;
+    const expenseRows = expenses.map(e => {
+      const among = e.splitAmong && e.splitAmong.length ? e.splitAmong : personOrder;
+      const payer = people[e.paidBy];
+      return {
+        date: e.dateLabel, desc: e.title, typeLabel: 'Uscita',
+        typeBadgeStyle: badgeStyle('#fdeceb', '#c2445a'),
+        who: payer ? payer.name : 'Cassa comune',
+        toWhom: among.map(c => (people[c] || {}).name || c).join(', '),
+        whoLine: `${payer ? payer.name : 'Cassa'} → ${among.map(c => (people[c] || {}).name || c).join(', ')}`,
+        amountLabel: `-${e.amount}€`, amountColor: '#c2445a', rawAmount: -e.amount,
+        saveDate: (ev) => this.updateExpenseDate(e.id, ev.target.textContent.trim()),
+      };
+    });
+    const settlementRows = settlements.map(s => {
+      const fromP = people[s.from], toP = people[s.to];
+      return {
+        date: s.dateLabel || 'Oggi', desc: `Rimborso`, typeLabel: 'Rimborso',
+        typeBadgeStyle: badgeStyle('#e9f7f0', '#3f8f5f'),
+        who: fromP ? fromP.name : s.from, toWhom: toP ? toP.name : s.to,
+        whoLine: `${fromP ? fromP.name : s.from} → ${toP ? toP.name : s.to}`,
+        amountLabel: `${s.amount}€`, amountColor: '#3f8f5f', rawAmount: s.amount,
+        saveDate: (ev) => this.updateSettlementDate(s.id, ev.target.textContent.trim()),
+      };
+    });
+    const cassaRows = cassaContributions.map(c => {
+      const p = people[c.person];
+      return {
+        date: c.dateLabel || 'Oggi', desc: 'Contributo cassa comune', typeLabel: 'Cassa',
+        typeBadgeStyle: badgeStyle('#fdf3d9', '#b8792e'),
+        who: p ? p.name : c.person, toWhom: 'Cassa comune',
+        whoLine: `${p ? p.name : c.person} → Cassa comune`,
+        amountLabel: `${c.amount}€`, amountColor: '#b8792e', rawAmount: c.amount,
+        saveDate: (ev) => this.updateCassaDate(c.id, ev.target.textContent.trim()),
+      };
+    });
+    const ledgerRows = [...expenseRows, ...settlementRows, ...cassaRows];
+
+    const makeSingleOptions = (selectedCode, onSelect) => personOrder.map(code => {
+      const p = people[code] || {};
+      const selected = selectedCode === code;
+      return {
+        code, name: p.name || code,
+        wrapStyle: this.avatarWrapStyle(selected),
+        circleStyle: this.avatarCircleStyle(p.color || '#ccc', selected),
+        select: () => onSelect(code),
+      };
+    });
+
+    const paidByOptions = makeSingleOptions(form.paidBy, this.selectPaidBy);
+    const splitOptions = personOrder.map(code => {
+      const p = people[code] || {};
+      const selected = form.splitAmong.includes(code);
+      return {
+        code, name: p.name || code,
+        wrapStyle: this.avatarWrapStyle(selected),
+        circleStyle: this.avatarCircleStyle(p.color || '#ccc', selected),
+        toggle: () => this.toggleSplit(code),
+      };
+    });
+    const settleFromOptions = makeSingleOptions(settleForm.from, this.selectSettleFrom);
+    const settleToOptions = makeSingleOptions(settleForm.to, this.selectSettleTo);
+    const cassaPersonOptions = makeSingleOptions(cassaForm.person, this.selectCassaPerson);
+
+    const inputBaseStyle = "font-family:'Fraunces',serif;font-size:16px;background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:11px 14px;outline:none;cursor:text;";
+    const formTitleStyle = inputBaseStyle + (form.title ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;font-style:italic;');
+    const formAmountStyle = inputBaseStyle + (form.amount ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;font-style:italic;');
+    const formNoteStyle = "font-size:13px;font-weight:600;background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:11px 14px;outline:none;cursor:text;" + (form.note ? 'color:#3a2a1c;' : 'color:#b39a78;font-style:italic;');
+    const settleAmountStyle = inputBaseStyle + (settleForm.amount ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;font-style:italic;');
+    const cassaAmountStyle = inputBaseStyle + (cassaForm.amount ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;font-style:italic;');
+
+    return {
+      totalLabel: `${totalSpent.toFixed(totalSpent % 1 ? 2 : 0)}€`,
+      expenseCountLabel: `${expenses.length} spes${expenses.length === 1 ? 'a' : 'e'}`,
+      balanceChips,
+      visibleBalanceChips: (balancesExpanded ? balanceChips : balanceChips.slice(0, 6)),
+      hasMoreBalances: balanceChips.length > 6,
+      balancesToggleLabel: balancesExpanded ? 'Mostra meno' : `Mostra tutti (${balanceChips.length})`,
+      toggleBalancesExpanded: this.toggleBalancesExpanded,
+
+      cassaLabel: `${cassaTotal.toFixed(cassaTotal % 1 ? 2 : 0)}€`,
+      cassaSubLabel: `${cassaContributions.length} contribut${cassaContributions.length === 1 ? 'o' : 'i'} disponibili`,
+      openCassa: this.openCassa,
+      openSettlement: this.openSettlement,
+
+      hasExpenses: expenses.length > 0,
+      groupedRecentExpenses,
+      openAddExpense: this.openAddExpense,
+      openLedger: this.openLedger,
+      ledgerRows,
+      exportCsv: () => { this._lastLedgerRaw = ledgerRows; this._lastBalanceChips = balanceChips; this.exportCsv(); },
+
+      isExpenseSheet: sheetMode === 'expense',
+      isSettlementSheet: sheetMode === 'settlement',
+      isCassaSheet: sheetMode === 'cassa',
+      isLedgerSheet: sheetMode === 'ledger',
+      isEditingExpense: !!editingId,
+      sheetTitle: editingId ? 'Modifica spesa' : 'Nuova spesa',
+      sheetSaveLabel: editingId ? 'Salva modifiche' : 'Aggiungi spesa',
+      closeSheet: this.closeSheet,
+      stopPropagation: this.stopPropagation,
+
+      formTitleDisplay: form.title || 'Es. Cena in centro',
+      formTitleStyle,
+      saveFormTitle: this.saveFormTitle,
+      onFocusFormTitle: this.onFocusFormTitle,
+      formAmountDisplay: form.amount || '0',
+      formAmountStyle,
+      saveFormAmount: this.saveFormAmount,
+      onFocusFormAmount: this.onFocusFormAmount,
+      formNoteDisplay: form.note || 'Aggiungi una nota...',
+      formNoteStyle,
+      saveFormNote: this.saveFormNote,
+      onFocusFormNote: this.onFocusFormNote,
+      paidByOptions,
+      splitOptions,
+      splitSummaryLabel: `Diviso tra ${form.splitAmong.length} persone`,
+      saveExpenseForm: this.saveExpenseForm,
+      deleteExpense: this.deleteExpense,
+
+      settleFromOptions,
+      settleToOptions,
+      settleAmountDisplay: settleForm.amount || '0',
+      settleAmountStyle,
+      saveSettleAmount: this.saveSettleAmount,
+      onFocusSettleAmount: this.onFocusSettleAmount,
+      saveSettlement: this.saveSettlement,
+
+      cassaPersonOptions,
+      cassaAmountDisplay: cassaForm.amount || '0',
+      cassaAmountStyle,
+      saveCassaAmount: this.saveCassaAmount,
+      onFocusCassaAmount: this.onFocusCassaAmount,
+      saveCassaContribution: this.saveCassaContribution,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

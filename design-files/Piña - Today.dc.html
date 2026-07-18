@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+  a { color: #d9481f; }
+  a:hover { color: #b83a17; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Day" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 16px 90px;color:#3a2a1c;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;display:flex;align-items:center;gap:6px;">🦩 Piña</a>
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:7px 14px;font-size:12px;color:#3a2a1c;font-weight:700;white-space:nowrap;flex-shrink:0;">🏠 Home</a>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px;">
+        <div style="{{ navPrevBtnStyle }}" onClick="{{ goPrevDay }}">‹</div>
+        <div style="font-size:12px;font-weight:700;color:#a9906f;letter-spacing:.02em;">{{ dayNavLabel }}</div>
+        <div style="{{ navNextBtnStyle }}" onClick="{{ goNextDay }}">›</div>
+      </div>
+
+      <div style="border-radius:26px;padding:20px;background:{{ heroBackground }};color:#fff;box-shadow:0 18px 36px -18px rgba(80,50,20,.4);margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.85);">{{ moodLabel }}</div>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:26px;text-transform:uppercase;">{{ cityName }}</div>
+          <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;" onClick="{{ cycleStatus }}">{{ statusIcon }} {{ statusLabel }}</div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85);">{{ dateLabel }}</div>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;margin-bottom:12px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Programma di oggi</div>
+          <div style="font-size:10.5px;font-weight:700;color:#c2a97e;">ora {{ currentTimeLabel }}</div>
+        </div>
+        <sc-if value="{{ hasSchedule }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <sc-for list="{{ schedule }}" as="item" hint-placeholder-count="4">
+              <div style="{{ item.rowStyle }}">
+                <div style="display:flex;flex-direction:column;flex-shrink:0;width:15px;">
+                  <div style="{{ item.upStyle }}" onClick="{{ item.onMoveUp }}">▴</div>
+                  <div style="{{ item.downStyle }}" onClick="{{ item.onMoveDown }}">▾</div>
+                </div>
+                <div style="{{ item.timeStyle }}" onClick="{{ item.onOpen }}">{{ item.timeLabel }}</div>
+                <div style="width:20px;text-align:center;flex-shrink:0;font-size:15px;cursor:pointer;" onClick="{{ item.onOpen }}">{{ item.icon }}</div>
+                <div style="{{ item.labelStyle }}" onClick="{{ item.onOpen }}">{{ item.title }}</div>
+                <sc-if value="{{ item.showBadge }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:9.5px;font-weight:700;color:#d9481f;background:#fde3d0;padding:3px 7px;border-radius:999px;flex-shrink:0;" onClick="{{ item.onOpen }}">{{ item.badgeLabel }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ !hasSchedule }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:14px 6px;">
+            <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:8px;">Nessuna attività con la stellina per oggi.</div>
+            <a href="Pi%C3%B1a%20-%20Journey.dc.html" style="text-decoration:none;font-size:12px;font-weight:700;color:#d9481f;">⭐ Aggiungi stelline su Journey</a>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:10px;">Dove dormi stanotte</div>
+        <a href="Pi%C3%B1a%20-%20Checklist.dc.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:22px;flex-shrink:0;">🏨</span>
+          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;">{{ stayName }}</div><div style="font-size:11.5px;color:#a9906f;font-weight:600;">{{ stayLabel }}</div></div>
+        </a>
+        <div style="display:flex;gap:8px;">
+          <a href="{{ stayMapLink }}" target="_blank" style="text-decoration:none;color:inherit;flex:1;text-align:center;background:#fbf6ec;border-radius:10px;padding:8px 0;font-size:11px;font-weight:700;">📍 Mappa</a>
+          <a href="tel:+34600000000" style="text-decoration:none;color:inherit;flex:1;text-align:center;background:#fbf6ec;border-radius:10px;padding:8px 0;font-size:11px;font-weight:700;">📞 Chiama</a>
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Checklist di oggi</div>
+          <div style="width:22px;height:22px;border-radius:50%;background:#fbf6ec;color:#d9481f;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ addChecklistItem }}">+</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <sc-for list="{{ checklist }}" as="citem" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="{{ citem.boxStyle }}" onClick="{{ citem.onToggle }}">{{ citem.check }}</div>
+              <div ref="{{ citem.ref }}" contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ citem.labelStyle }}" onBlur="{{ citem.onEdit }}">{{ citem.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:10px;">Link e biglietti di oggi</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="background:#fbf6ec;border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;" onClick="{{ openTicketsSheet }}">
+            <div style="font-size:20px;margin-bottom:4px;">🎫</div>
+            <div style="font-size:11px;font-weight:700;">Biglietti e Ticket</div>
+          </div>
+          <div style="background:#fbf6ec;border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;" onClick="{{ openLinksSheet }}">
+            <div style="font-size:20px;margin-bottom:4px;">🔗</div>
+            <div style="font-size:11px;font-weight:700;">Link utili</div>
+          </div>
+          <a href="Pi%C3%B1a%20-%20Checklist.dc.html" style="text-decoration:none;color:#3a2a1c;background:#fbf6ec;border-radius:14px;padding:12px 8px;text-align:center;display:block;">
+            <div style="font-size:20px;margin-bottom:4px;">🎒</div>
+            <div style="font-size:11px;font-weight:700;">Checklist</div>
+          </a>
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:16px 8px;margin-bottom:12px;display:flex;align-items:center;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:9px;">Spese di oggi</div>
+          <div style="display:flex;justify-content:center;gap:5px;">
+            <sc-for list="{{ expenses }}" as="exp" hint-placeholder-count="3">
+              <div style="width:22px;height:22px;border-radius:50%;background:{{ exp.color }};color:#fff;font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ exp.initial }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="width:1.5px;align-self:stretch;background:#e6d5b3;margin:0 8px;"></div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Totale</div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;">{{ expenseTotal }}€</div>
+        </div>
+        <div style="width:1.5px;align-self:stretch;background:#e6d5b3;margin:0 8px;"></div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:9px;">Aggiungi</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#fdece0;color:#d9481f;font-size:19px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ openAddExpenseSheet }}">+</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:20px;border:1px solid #f0e2c8;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:10px;">Ricordi di oggi</div>
+        <sc-if value="{{ isEndOfDay }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;background:#fff4e6;border-radius:14px;padding:12px;margin-bottom:10px;">
+            <div style="font-size:22px;">🌙</div>
+            <div style="font-size:13px;font-weight:700;flex:1;">Com'è andata oggi?</div>
+          </div>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:10px;">
+          <sc-for list="{{ memoryPhotos }}" as="ph" hint-placeholder-count="4">
+            <div style="aspect-ratio:1;border-radius:8px;background:#e8dcc3;background-image:url({{ ph.url }});background-size:cover;"></div>
+          </sc-for>
+        </div>
+        <a href="Pi%C3%B1a%20-%20Memories.dc.html" style="text-decoration:none;display:flex;align-items:center;gap:6px;color:#d9481f;font-size:12px;font-weight:700;">+ Aggiungi ricordi</a>
+      </div>
+
+    </div>
+
+    <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(30,20,10,.45);z-index:40;" onClick="{{ closeSheet }}"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;max-height:85%;overflow-y:auto;background:#fbf6ec;border-radius:26px 26px 0 0;padding:18px 18px 28px;z-index:41;box-shadow:0 -20px 40px -10px rgba(80,50,20,.35);">
+        <div style="width:36px;height:4px;background:#e6d5b3;border-radius:99px;margin:0 auto 16px;"></div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:19px;margin-bottom:4px;">{{ sheetTitle }}</div>
+        <sc-if value="{{ sheetNote }}" hint-placeholder-val="{{ null }}">
+          <div style="font-size:12.5px;color:#8a6a3e;font-style:italic;margin-bottom:12px;">{{ sheetNote }}</div>
+        </sc-if>
+        <sc-if value="{{ sheetIsSchedule }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:6px;">
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+              <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="width:44px;height:44px;flex-shrink:0;background:#fff;border:1px solid #f0e2c8;border-radius:12px;font-size:20px;display:flex;align-items:center;justify-content:center;outline:none;" onBlur="{{ sheetSaveIcon }}">{{ sheetIconValue }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Nome dell'evento</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:10px 12px;font-size:14px;font-weight:700;outline:none;color:#3a2a1c;" onBlur="{{ sheetSaveName }}">{{ sheetNameValue }}</div>
+              </div>
+            </div>
+
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Orario</div>
+            <input type="time" value="{{ sheetTimeValue }}" onChange="{{ sheetSetCustomTime }}" style="background:#fff;border:1px solid #f0e2c8;border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:700;color:#3a2a1c;margin-bottom:10px;width:100%;box-sizing:border-box;" />
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;">
+              <sc-for list="{{ sheetTimePresets }}" as="tp" hint-placeholder-count="7">
+                <div style="{{ tp.style }}" onClick="{{ tp.select }}">{{ tp.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+              <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:10px 12px;">
+                <div style="font-size:10.5px;font-weight:700;color:#b39a78;margin-bottom:4px;">📍 Maps</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ sheetMapsStyle }}" onFocus="{{ sheetFocusMaps }}" onBlur="{{ sheetSaveMaps }}">{{ sheetMapsValue }}</div>
+              </div>
+              <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:10px 12px;">
+                <div style="font-size:10.5px;font-weight:700;color:#b39a78;margin-bottom:4px;">🔗 Link</div>
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ sheetLinkStyle }}" onFocus="{{ sheetFocusLink }}" onBlur="{{ sheetSaveLink }}">{{ sheetLinkValue }}</div>
+              </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:10px 12px;margin-bottom:14px;">
+              <div style="font-size:10.5px;font-weight:700;color:#b39a78;margin-bottom:4px;">🎫 Prenotazione</div>
+              <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ sheetBookingStyle }}" onFocus="{{ sheetFocusBooking }}" onBlur="{{ sheetSaveBooking }}">{{ sheetBookingValue }}</div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Checklist attività</div>
+              <div style="width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;color:#d9481f;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ addActivityChecklistItem }}">+</div>
+            </div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:10px 12px;margin-bottom:14px;">
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <sc-for list="{{ sheetActivityChecklist }}" as="ac" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:9px;">
+                    <div style="{{ ac.boxStyle }}" onClick="{{ ac.onToggle }}">{{ ac.check }}</div>
+                    <div ref="{{ ac.ref }}" contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ ac.labelStyle }}" onBlur="{{ ac.onEdit }}">{{ ac.label }}</div>
+                    <div style="font-size:15px;color:#c2a97e;cursor:pointer;flex-shrink:0;" onClick="{{ ac.onDelete }}">×</div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ sheetActivityChecklistEmpty }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:11.5px;color:#b39a78;font-style:italic;">Nessuna voce. Aggiungine una con +.</div>
+              </sc-if>
+            </div>
+
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Note</div>
+            <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ sheetNotesStyle }}" onFocus="{{ sheetFocusNotes }}" onBlur="{{ sheetSaveNotes }}">{{ sheetNotesValue }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sheetIsList }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <sc-for list="{{ sheetListItems }}" as="li" hint-placeholder-count="2">
+              <a href="{{ li.url }}" target="_blank" style="text-decoration:none;color:#3a2a1c;background:#fff;border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px;">
+                <div style="font-size:18px;">{{ li.emoji }}</div>
+                <div style="font-size:13px;font-weight:700;">{{ li.label }}</div>
+              </a>
+            </sc-for>
+            <sc-if value="{{ sheetListEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:12.5px;color:#a9906f;text-align:center;padding:10px;">Nessun elemento per oggi.</div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sheetIsAddExpense }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border-radius:14px;padding:16px;text-align:center;margin-top:4px;">
+            <div style="font-size:28px;margin-bottom:8px;">🚧</div>
+            <div style="font-size:12.5px;color:#8a6a3e;">Presto potrai registrare una spesa direttamente da qui.</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <dc-import name="BottomNav" active="today" hint-size="100%,74px" style="position:absolute;bottom:0;left:0;right:0;"></dc-import>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // Mirrora l'elenco tappe di Journey: la timeline dei giorni parte dalla prima tappa
+  // e avanza giorno per giorno seguendo le tappe del viaggio.
+  stopsMeta = [
+    { id: 'girona', name: 'Girona', moodId: 'culture', moodLine: '🏛 Culture', startDay: 14, endDay: 15, stayName: '', stayLabel: '', stayLink: '' },
+    { id: 'barcelona', name: 'Barcellona', moodId: 'fiesta', moodLine: '🎉 Fiesta', startDay: 16, endDay: 17, stayName: 'Hotel Casa Fuster', stayLabel: 'Alloggio prenotato', stayLink: 'https://maps.google.com/?q=Hotel+Casa+Fuster+Barcelona' },
+    { id: 'valencia', name: 'Valencia', moodId: 'beach', moodLine: '🌊 Beach vibes', startDay: 18, endDay: 19, stayName: '', stayLabel: '', stayLink: '' },
+    { id: 'rototom', name: 'Rototom Sunsplash', moodId: 'fiesta', moodLine: '🎶 Festival', startDay: 21, endDay: 22, stayName: '', stayLabel: '', stayLink: '' },
+    { id: 'malaga', name: 'Malaga', moodId: 'relax', moodLine: '🌅 Sunset', startDay: 24, endDay: 25, stayName: '', stayLabel: '', stayLink: '' },
+  ];
+
+  tripStartDay = 14;
+  tripEndDay = 26;
+
+  // Contenuto specifico già programmato per alcuni giorni (Programma, Checklist, ecc).
+  // I giorni non ancora programmati usano contenuti vuoti generati dalla tappa.
+  customDayOverrides = {
+    15: {
+      city: 'Girona', mood: '🥾 Esplorazione', moodId: 'culture',
+      stayName: 'Camper – sosta libera', stayLabel: 'Prima notte', stayLink: 'https://maps.google.com/?q=Girona+Camper',
+      schedule: [
+        { time: '09:00', emoji: '🥐', title: 'Colazione', note: null },
+        { time: '11:00', emoji: '🏛', title: 'Centro storico', note: 'Portare la macchina fotografica' },
+        { time: '15:00', emoji: '🍽️', title: 'Pranzo tipico', note: null },
+        { time: '20:00', emoji: '🍷', title: 'Cena', note: null },
+      ],
+      checklist: [
+        { label: 'Fare benzina', done: true },
+        { label: 'Ritirare camper', done: true },
+      ],
+      tickets: [],
+      usefulLinks: [{ emoji: '🚐', label: 'Camper', url: 'Pi%C3%B1a%20-%20Checklist.dc.html' }],
+      expenses: [
+        { name: 'Marco', amount: 22, initial: 'M', color: '#ff8a5b' },
+        { name: 'Sara', amount: 14, initial: 'S', color: '#7a9d54' },
+      ],
+      memoryPhotos: ['today-gir-1', 'today-gir-2', 'today-gir-3'],
+    },
+    16: {
+      city: 'Barcellona', mood: '🎉 Fiesta', moodId: 'fiesta', subtitle: 'Il giorno che aspettavamo da mesi.',
+      stayName: 'Airbnb Barcellona', stayLabel: 'Check-in fatto · Host Marta', stayLink: 'https://maps.google.com/?q=Hotel+Casa+Fuster+Barcelona',
+      schedule: [
+        { time: '09:00', emoji: '🥐', title: 'Colazione', note: null },
+        { time: '11:00', emoji: '🏖', title: 'Spiaggia', note: 'Barceloneta, ombrellone prenotato' },
+        { time: '15:00', emoji: '🏛', title: 'Museo', note: 'Biglietto già acquistato' },
+        { time: '20:30', emoji: '🍻', title: 'Bar', note: null },
+        { time: '23:00', emoji: '🎶', title: 'Club', note: 'Lista Andrea +4' },
+      ],
+      checklist: [
+        { label: 'Portare costume', done: false },
+        { label: 'Comprare ghiaccio', done: false },
+        { label: 'Passare in farmacia', done: true },
+      ],
+      tickets: [
+        { emoji: '🎫', label: 'Biglietto Museo', url: 'Pi%C3%B1a%20-%20Checklist.dc.html' },
+        { emoji: '🎟', label: 'Biglietto Festival', url: 'Pi%C3%B1a%20-%20Checklist.dc.html' },
+      ],
+      usefulLinks: [{ emoji: '💬', label: 'Gruppo WhatsApp', url: 'https://wa.me/' }],
+      expenses: [
+        { name: 'Marco', amount: 35, initial: 'M', color: '#ff8a5b' },
+        { name: 'Andrea', amount: 18, initial: 'A', color: '#5b8fff' },
+        { name: 'Sara', amount: 9, initial: 'S', color: '#7a9d54' },
+      ],
+      memoryPhotos: ['today-bcn-1', 'today-bcn-2', 'today-bcn-3', 'today-bcn-4'],
+    },
+    17: {
+      city: 'Barcellona', mood: '🎨 Cultura', moodId: 'fiesta',
+      stayName: 'Airbnb Barcellona', stayLabel: 'Seconda notte · Host Marta', stayLink: 'https://maps.google.com/?q=Hotel+Casa+Fuster+Barcelona',
+      schedule: [
+        { time: '10:00', emoji: '🥐', title: 'Colazione', note: null },
+        { time: '12:00', emoji: '🏛', title: 'Sagrada Familia', note: 'Ingresso prenotato online' },
+        { time: '17:00', emoji: '🍽️', title: 'La Boqueria', note: null },
+        { time: '22:00', emoji: '🍻', title: 'Razzmatazz', note: null },
+      ],
+      checklist: [{ label: 'Stampare biglietti Sagrada', done: false }],
+      tickets: [{ emoji: '🎫', label: 'Sagrada Familia', url: 'Pi%C3%B1a%20-%20Checklist.dc.html' }],
+      usefulLinks: [],
+      expenses: [],
+      memoryPhotos: [],
+    },
+  };
+
+  buildDays() {
+    const days = [];
+    for (let d = this.tripStartDay; d <= this.tripEndDay; d++) {
+      const stop = this.stopsMeta.find(s => d >= s.startDay && d <= s.endDay);
+      const base = stop ? {
+        city: stop.name, moodId: stop.moodId, mood: stop.moodLine,
+        stayName: stop.stayName || 'Da definire', stayLabel: stop.stayLabel || 'Alloggio da confermare', stayLink: stop.stayLink || 'https://maps.google.com',
+      } : {
+        city: 'In viaggio', moodId: 'camper', mood: '🚐 Trasferimento',
+        stayName: '—', stayLabel: 'Nessun pernottamento fisso', stayLink: 'https://maps.google.com',
+      };
+      const override = this.customDayOverrides[d] || {};
+      const dateLabel = this.formatDateLabel(new Date(2026, 7, d));
+      days.push({
+        dayOfMonth: d,
+        city: override.city || base.city,
+        moodId: override.moodId || base.moodId,
+        mood: override.mood || base.mood,
+        dateLabel,
+        subtitle: override.subtitle || null,
+        stayName: override.stayName || base.stayName,
+        stayLabel: override.stayLabel || base.stayLabel,
+        stayLink: override.stayLink || base.stayLink,
+        schedule: override.schedule || [],
+        checklist: override.checklist || [],
+        tickets: override.tickets || [],
+        usefulLinks: override.usefulLinks || [],
+        expenses: override.expenses || [],
+        memoryPhotos: override.memoryPhotos || [],
+      });
+    }
+    return days;
+  }
+
+  formatDateLabel(dateObj) {
+    const str = dateObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  moodGradients = {
+    fiesta: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)',
+    culture: 'linear-gradient(135deg,#e8b74e,#b8792e)',
+    beach: 'linear-gradient(135deg,#2fbfae,#2a8fd8)',
+    camper: 'linear-gradient(135deg,#7a9d54,#4f8f4f)',
+    relax: 'linear-gradient(135deg,#ffb627,#ff8a5b)',
+    nature: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)',
+    romantic: 'linear-gradient(135deg,#ff5f96,#ff5f6d)',
+    food: 'linear-gradient(135deg,#c2445a,#8a2f42)',
+  };
+
+  tripStartDay = 14; // Journey: il viaggio inizia il 14 agosto (Giorno 1)
+
+  statusOrder = ['planned', 'ready', 'inprogress', 'done'];
+  statusMeta = {
+    planned: { icon: '○', label: 'Da pianificare' },
+    ready: { icon: '◐', label: 'Pronto' },
+    inprogress: { icon: '●', label: 'In corso' },
+    done: { icon: '✓', label: 'Completato' },
+  };
+
+  state = {
+    now: new Date(),
+    dayIndex: 2, // 16 agosto = Barcellona, oggi
+    sheetOpen: false,
+    sheetMode: 'list',
+    sheetTarget: null,
+    listType: null,
+    dayStatus: { 0: 'done', 1: 'done', 2: 'inprogress', 3: 'ready' },
+    checklistDone: {},
+    extraChecklist: {},
+    checklistLabels: {},
+    focusChecklistKey: null,
+    stops: [],
+    scheduleOrder: {},
+    focusActivityChecklistId: null,
+    tripLinks: [],
+  };
+
+  _checklistRefs = {};
+
+  iconPalette = ['🍽️', '🍻', '📍', '🎫', '🏖️', '🎶', '☕', '🚐', '🎉', '🛍️'];
+  mealPresets = [
+    { label: 'Colaz', time: '08:00' },
+    { label: 'Brunch', time: '10:30' },
+    { label: 'Pranzo', time: '13:00' },
+    { label: 'Merenda', time: '17:00' },
+    { label: 'Ape', time: '19:00' },
+    { label: 'Cena', time: '20:30' },
+    { label: 'Serata', time: '22:30' },
+  ];
+
+  _activityChecklistRefs = {};
+
+  loadScheduleOrder() {
+    try { return JSON.parse(localStorage.getItem('pina-schedule-order') || '{}'); } catch (e) { return {}; }
+  }
+  saveScheduleOrder(order) {
+    try { localStorage.setItem('pina-schedule-order', JSON.stringify(order)); } catch (e) {}
+  }
+
+  componentDidMount() {
+    this._tick = setInterval(() => this.setState({ now: new Date() }), 30000);
+    this.setState({ scheduleOrder: this.loadScheduleOrder() });
+    import('./trip-data.js').then(m => {
+      this._tripData = m;
+      this.setState({ stops: m.loadStops(), tripLinks: m.loadLinks() });
+    }).catch(() => {});
+  }
+
+  componentDidUpdate() {
+    if (this.state.focusChecklistKey) {
+      const el = this._checklistRefs[this.state.focusChecklistKey];
+      if (el) {
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      this.setState({ focusChecklistKey: null });
+    }
+    if (this.state.focusActivityChecklistId) {
+      const el = this._activityChecklistRefs[this.state.focusActivityChecklistId];
+      if (el) {
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      this.setState({ focusActivityChecklistId: null });
+    }
+  }
+
+  componentWillUnmount() {
+    clearInterval(this._tick);
+  }
+
+  goPrevDay = () => this.setState(s => ({ dayIndex: Math.max(0, s.dayIndex - 1) }));
+  goNextDay = () => this.setState(s => ({ dayIndex: Math.min(this.buildDays().length - 1, s.dayIndex + 1) }));
+
+  cycleStatus = () => {
+    this.setState(s => {
+      const current = s.dayStatus[s.dayIndex] || 'planned';
+      const idx = this.statusOrder.indexOf(current);
+      const next = this.statusOrder[(idx + 1) % this.statusOrder.length];
+      return { dayStatus: { ...s.dayStatus, [s.dayIndex]: next } };
+    });
+  };
+
+  openScheduleSheet = (it) => this.setState({ sheetOpen: true, sheetMode: 'schedule', sheetTarget: { stopId: it.stopId, catId: it.catId, itemId: it.id } });
+  openTicketsSheet = () => this.setState({ sheetOpen: true, sheetMode: 'list', listType: 'tickets' });
+  openLinksSheet = () => this.setState({ sheetOpen: true, sheetMode: 'list', listType: 'links' });
+  openAddExpenseSheet = () => this.setState({ sheetOpen: true, sheetMode: 'addExpense' });
+  closeSheet = () => this.setState({ sheetOpen: false, sheetTarget: null });
+
+  findScheduleItem() {
+    const t = this.state.sheetTarget;
+    if (!t) return null;
+    const stop = this.state.stops.find(s => s.id === t.stopId);
+    if (!stop) return null;
+    const cat = (stop.categories || []).find(c => c.id === t.catId);
+    if (!cat) return null;
+    const item = (cat.items || []).find(i => i.id === t.itemId);
+    if (!item) return null;
+    return { ...item, catIcon: cat.icon };
+  }
+
+  updateSheetItem = (patch) => {
+    const t = this.state.sheetTarget;
+    if (!t || !this._tripData) return;
+    const stops = this._tripData.updateItem(this.state.stops, t.stopId, t.catId, t.itemId, patch);
+    this.setState({ stops });
+    this._tripData.saveStops(stops);
+  };
+
+  sheetSaveName = (e) => { const v = e.target.textContent.trim(); if (v) this.updateSheetItem({ label: v }); };
+  sheetSaveIcon = (e) => { const v = e.target.textContent.trim(); this.updateSheetItem({ icon: v }); };
+
+  sheetSetTime = (newTime) => {
+    const t = this.state.sheetTarget;
+    if (!t || !this._tripData) return;
+    const stops = this._tripData.updateItem(this.state.stops, t.stopId, t.catId, t.itemId, { time: newTime });
+    this._tripData.saveStops(stops);
+    const dayOfMonth = this.buildDays()[this.state.dayIndex].dayOfMonth;
+    const scheduleOrder = this.repositionOrder(stops, dayOfMonth, t.itemId, newTime);
+    this.setState({ stops, scheduleOrder });
+  };
+
+  repositionOrder(stops, dayOfMonth, itemId, newTime) {
+    const dayKey = String(dayOfMonth);
+    const starred = this._tripData.starredItemsForDay(stops, dayOfMonth);
+    const toMinutes = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    let order = (this.state.scheduleOrder[dayKey] || []).filter(id => id !== itemId && starred.some(s => s.id === id));
+    const known = new Set(order);
+    const missing = starred.filter(s => s.id !== itemId && !known.has(s.id))
+      .sort((a, b) => (toMinutes(a.time) ?? 9999) - (toMinutes(b.time) ?? 9999))
+      .map(s => s.id);
+    order = [...order, ...missing];
+    const newMinutes = toMinutes(newTime);
+    let insertAt = order.length;
+    if (newMinutes !== null) {
+      for (let i = 0; i < order.length; i++) {
+        const other = starred.find(s => s.id === order[i]);
+        const otherMinutes = other ? toMinutes(other.time) : null;
+        if (otherMinutes === null || newMinutes < otherMinutes) { insertAt = i; break; }
+      }
+    }
+    order.splice(insertAt, 0, itemId);
+    const scheduleOrder = { ...this.state.scheduleOrder, [dayKey]: order };
+    this.saveScheduleOrder(scheduleOrder);
+    return scheduleOrder;
+  }
+
+  sheetSetCustomTime = (e) => this.sheetSetTime(e.target.value);
+  sheetSaveMaps = (e) => this.updateSheetItem({ link: e.target.textContent.trim() });
+  sheetSaveLink = (e) => this.updateSheetItem({ usefulLink: e.target.textContent.trim() });
+  sheetSaveBooking = (e) => this.updateSheetItem({ booking: e.target.textContent.trim() });
+  sheetSaveNotes = (e) => this.updateSheetItem({ notes: e.target.textContent.trim() });
+  sheetFocusMaps = (e) => { const it = this.findScheduleItem(); if (it && !it.link) e.target.textContent = ''; };
+  sheetFocusLink = (e) => { const it = this.findScheduleItem(); if (it && !it.usefulLink) e.target.textContent = ''; };
+  sheetFocusBooking = (e) => { const it = this.findScheduleItem(); if (it && !it.booking) e.target.textContent = ''; };
+  sheetFocusNotes = (e) => { const it = this.findScheduleItem(); if (it && !it.notes) e.target.textContent = ''; };
+
+  addActivityChecklistItem = () => {
+    const it = this.findScheduleItem();
+    if (!it) return;
+    const id = 'ac' + Date.now();
+    const list = [...(it.checklist || []), { id, label: 'Nuova voce', done: false }];
+    this.updateSheetItem({ checklist: list });
+    this.setState({ focusActivityChecklistId: id });
+  };
+  toggleActivityChecklistItem = (id) => {
+    const it = this.findScheduleItem();
+    if (!it) return;
+    const list = (it.checklist || []).map(c => c.id !== id ? c : { ...c, done: !c.done });
+    this.updateSheetItem({ checklist: list });
+  };
+  updateActivityChecklistLabel = (id, label) => {
+    const it = this.findScheduleItem();
+    if (!it) return;
+    const list = (it.checklist || []).map(c => c.id !== id ? c : { ...c, label: label || c.label });
+    this.updateSheetItem({ checklist: list });
+  };
+  removeActivityChecklistItem = (id) => {
+    const it = this.findScheduleItem();
+    if (!it) return;
+    const list = (it.checklist || []).filter(c => c.id !== id);
+    this.updateSheetItem({ checklist: list });
+  };
+
+  toggleChecklist = (dayIdx, itemIdx) => {
+    this.setState(s => {
+      const dayMap = { ...(s.checklistDone[dayIdx] || {}) };
+      dayMap[itemIdx] = !dayMap[itemIdx];
+      return { checklistDone: { ...s.checklistDone, [dayIdx]: dayMap } };
+    });
+  };
+
+  addChecklistItem = (dayIdx) => {
+    const day = this.buildDays()[dayIdx];
+    this.setState(s => {
+      const list = [...(s.extraChecklist[dayIdx] || [])];
+      list.push('Nuovo elemento');
+      const newIndex = day.checklist.length + list.length - 1;
+      return {
+        extraChecklist: { ...s.extraChecklist, [dayIdx]: list },
+        focusChecklistKey: `${dayIdx}:${newIndex}`,
+      };
+    });
+  };
+
+  updateChecklistLabel = (dayIdx, itemIdx, text) => {
+    this.setState(s => {
+      const dayMap = { ...(s.checklistLabels[dayIdx] || {}) };
+      dayMap[itemIdx] = text;
+      return { checklistLabels: { ...s.checklistLabels, [dayIdx]: dayMap } };
+    });
+  };
+
+  renderVals() {
+    const { dayIndex, now } = this.state;
+    const days = this.buildDays();
+    const day = days[dayIndex];
+
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const toMinutes = (t) => {
+      if (!t) return null;
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const stops = this.state.stops || [];
+    const starred = (this._tripData && stops.length) ? this._tripData.starredItemsForDay(stops, day.dayOfMonth) : [];
+    const dayKey = String(day.dayOfMonth);
+    const savedOrder = this.state.scheduleOrder[dayKey] || [];
+
+    let ordered = [...starred].sort((a, b) => {
+      const ta = toMinutes(a.time), tb = toMinutes(b.time);
+      if (ta === null && tb === null) return 0;
+      if (ta === null) return 1;
+      if (tb === null) return -1;
+      return ta - tb;
+    });
+    if (savedOrder.length) {
+      ordered.sort((a, b) => {
+        const ia = savedOrder.indexOf(a.id), ib = savedOrder.indexOf(b.id);
+        const ra = ia === -1 ? 9999 : ia, rb = ib === -1 ? 9999 : ib;
+        return ra - rb;
+      });
+    }
+
+    let currentIndex = -1;
+    for (let i = 0; i < ordered.length; i++) {
+      const t = toMinutes(ordered[i].time);
+      if (t !== null && t <= nowMinutes) currentIndex = i;
+    }
+    const nextIndex = currentIndex + 1 < ordered.length ? currentIndex + 1 : -1;
+
+    const orderedIds = ordered.map(o => o.id);
+    const moveItem = (idx, dir) => {
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= orderedIds.length) return;
+      const next = [...orderedIds];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      const order = { ...this.state.scheduleOrder, [dayKey]: next };
+      this.saveScheduleOrder(order);
+      this.setState({ scheduleOrder: order });
+    };
+
+    const schedule = ordered.map((it, i) => {
+      const hasTime = !!it.time;
+      const isPast = hasTime && i < currentIndex;
+      const isCurrent = hasTime && i === currentIndex;
+      const isNext = hasTime && i === nextIndex;
+      let rowStyle = 'display:flex;align-items:center;gap:8px;';
+      let timeStyle = hasTime
+        ? 'font-size:11px;font-weight:700;color:#a9906f;width:36px;flex-shrink:0;cursor:pointer;'
+        : 'font-size:10px;font-weight:700;font-style:italic;color:#c2a97e;width:60px;flex-shrink:0;cursor:pointer;';
+      let labelStyle = 'font-size:13px;font-weight:600;flex:1;min-width:0;cursor:pointer;';
+      let badgeLabel = '';
+      let showBadge = false;
+
+      if (isPast) {
+        rowStyle += 'opacity:.5;';
+      } else if (isCurrent) {
+        rowStyle += 'background:#fff4e6;border-radius:12px;padding:6px 8px;margin:0 -8px;';
+        timeStyle = timeStyle.replace('color:#a9906f', 'color:#d9481f');
+        labelStyle = labelStyle.replace('font-weight:600', 'font-weight:700');
+        badgeLabel = 'ORA';
+        showBadge = true;
+      } else if (isNext) {
+        labelStyle = labelStyle.replace('font-weight:600', 'font-weight:700');
+        badgeLabel = 'PROSSIMO';
+        showBadge = true;
+      }
+
+      const canUp = i > 0;
+      const canDown = i < ordered.length - 1;
+
+      return {
+        id: it.id, icon: it.icon || it.catIcon || '📌', title: it.label,
+        timeLabel: hasTime ? it.time : 'Orario',
+        rowStyle, timeStyle, labelStyle, showBadge, badgeLabel,
+        onOpen: () => this.openScheduleSheet(it),
+        upStyle: `font-size:9px;line-height:9px;height:11px;text-align:center;${canUp ? 'color:#a9906f;cursor:pointer;' : 'color:#e6d5b3;'}`,
+        downStyle: `font-size:9px;line-height:9px;height:11px;text-align:center;${canDown ? 'color:#a9906f;cursor:pointer;' : 'color:#e6d5b3;'}`,
+        onMoveUp: canUp ? () => moveItem(i, -1) : () => {},
+        onMoveDown: canDown ? () => moveItem(i, 1) : () => {},
+      };
+    });
+    const hasSchedule = schedule.length > 0;
+
+    const dayStatusKey = this.state.dayStatus[dayIndex] || 'planned';
+    const meta = this.statusMeta[dayStatusKey];
+
+    const checklistDoneMap = this.state.checklistDone[dayIndex] || {};
+    const checklistLabelMap = this.state.checklistLabels[dayIndex] || {};
+    const fullChecklist = [
+      ...day.checklist,
+      ...(this.state.extraChecklist[dayIndex] || []).map(label => ({ label, done: false })),
+    ];
+    const checklist = fullChecklist.map((c, i) => {
+      const done = checklistDoneMap[i] !== undefined ? checklistDoneMap[i] : c.done;
+      const label = checklistLabelMap[i] !== undefined ? checklistLabelMap[i] : c.label;
+      return {
+        label,
+        check: done ? '✓' : '',
+        boxStyle: `width:19px;height:19px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;${done ? 'background:#7a9d54;' : 'background:#fff;border:1.5px solid #e6d5b3;'}`,
+        labelStyle: `font-size:13px;font-weight:600;outline:none;${done ? 'color:#a9906f;text-decoration:line-through;' : ''}`,
+        onToggle: () => this.toggleChecklist(dayIndex, i),
+        onEdit: (e) => this.updateChecklistLabel(dayIndex, i, e.target.textContent),
+        ref: (el) => { this._checklistRefs[`${dayIndex}:${i}`] = el; },
+      };
+    });
+
+    const expenseTotal = day.expenses.reduce((sum, e) => sum + e.amount, 0);
+    const memoryPhotos = day.memoryPhotos.map(seed => ({ url: `https://picsum.photos/seed/${seed}/160/160` }));
+
+    const currentTimeLabel = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const isEndOfDay = hasSchedule && currentIndex >= schedule.length - 1;
+
+    const sheetMode = this.state.sheetMode;
+    const sheetIsSchedule = sheetMode === 'schedule';
+    const sheetIsList = sheetMode === 'list';
+    const sheetIsAddExpense = sheetMode === 'addExpense';
+    const sheetItem = sheetIsSchedule ? this.findScheduleItem() : null;
+    const currentIcon = sheetItem ? (sheetItem.icon || sheetItem.catIcon) : null;
+    const sheetIconValue = sheetItem ? (sheetItem.icon || sheetItem.catIcon || '📌') : '';
+    const sheetTimePresets = this.mealPresets.map(p => ({
+      label: p.label,
+      style: `font-size:11.5px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer;white-space:nowrap;${sheetItem && sheetItem.time === p.time ? 'background:#3a2a1c;color:#fff;' : 'background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;'}`,
+      select: () => this.sheetSetTime(p.time),
+    }));
+    const emptyFieldStyle = 'font-size:11.5px;font-weight:600;outline:none;color:#b39a78;font-style:italic;';
+    const filledFieldStyle = 'font-size:11.5px;font-weight:600;outline:none;color:#3a2a1c;';
+
+    const sheetListItems = sheetIsList ? (this.state.listType === 'tickets' ? day.tickets : [...day.usefulLinks, ...this.state.tripLinks.map(l => ({ emoji: l.emoji, label: l.label, url: l.url }))]) : [];
+    const sheetListEmpty = sheetIsList && sheetListItems.length === 0;
+    const listTitle = this.state.listType === 'tickets' ? 'Biglietti e Ticket' : 'Link utili';
+
+    const activityChecklistRaw = sheetItem ? (sheetItem.checklist || []) : [];
+    const sheetActivityChecklist = activityChecklistRaw.map(c => ({
+      id: c.id,
+      label: c.label,
+      check: c.done ? '✓' : '',
+      boxStyle: `width:19px;height:19px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;${c.done ? 'background:#7a9d54;' : 'background:#fbf6ec;border:1.5px solid #e6d5b3;'}`,
+      labelStyle: `font-size:13px;font-weight:600;flex:1;min-width:0;outline:none;${c.done ? 'color:#a9906f;text-decoration:line-through;' : 'color:#3a2a1c;'}`,
+      onToggle: () => this.toggleActivityChecklistItem(c.id),
+      onEdit: (e) => this.updateActivityChecklistLabel(c.id, e.target.textContent.trim()),
+      onDelete: () => this.removeActivityChecklistItem(c.id),
+      ref: (el) => { this._activityChecklistRefs[c.id] = el; },
+    }));
+    const sheetActivityChecklistEmpty = sheetActivityChecklist.length === 0;
+
+    return {
+      dayNavLabel: `Giorno ${day.dayOfMonth - this.tripStartDay + 1}`,
+      cityName: day.city,
+      dateLabel: day.dateLabel,
+      moodLabel: day.mood,
+      heroBackground: this.moodGradients[day.moodId] || this.moodGradients.fiesta,
+      subtitle: day.subtitle,
+      statusIcon: meta.icon,
+      statusLabel: meta.label,
+      cycleStatus: this.cycleStatus,
+      schedule,
+      hasSchedule,
+      currentTimeLabel,
+      checklist,
+      addChecklistItem: () => this.addChecklistItem(dayIndex),
+      openTicketsSheet: this.openTicketsSheet,
+      openLinksSheet: this.openLinksSheet,
+      openAddExpenseSheet: this.openAddExpenseSheet,
+      expenses: day.expenses,
+      expenseTotal,
+      stayName: day.stayName,
+      stayLabel: day.stayLabel,
+      stayMapLink: day.stayLink,
+      memoryPhotos,
+      isEndOfDay,
+      goPrevDay: this.goPrevDay,
+      goNextDay: this.goNextDay,
+      navPrevBtnStyle: `width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #e6d5b3;color:#8a6a3e;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${dayIndex === 0 ? 'opacity:.35;cursor:default;' : 'cursor:pointer;'}`,
+      navNextBtnStyle: `width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #e6d5b3;color:#8a6a3e;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${dayIndex === days.length - 1 ? 'opacity:.35;cursor:default;' : 'cursor:pointer;'}`,
+      sheetOpen: this.state.sheetOpen,
+      sheetIsSchedule,
+      sheetIsList,
+      sheetIsAddExpense,
+      sheetTitle: sheetIsSchedule ? (sheetItem ? `${sheetItem.icon || sheetItem.catIcon || '📌'} ${sheetItem.label}` : '') : (sheetIsAddExpense ? '💶 Aggiungi spesa' : listTitle),
+      sheetNote: sheetIsAddExpense ? 'Il form per aggiungere una spesa arriverà qui a breve.' : null,
+      sheetIconValue,
+      sheetSaveIcon: this.sheetSaveIcon,
+      sheetNameValue: sheetItem ? sheetItem.label : '',
+      sheetSaveName: this.sheetSaveName,
+      sheetTimePresets,
+      sheetTimeValue: sheetItem ? (sheetItem.time || '') : '',
+      sheetSetCustomTime: this.sheetSetCustomTime,
+      sheetMapsValue: sheetItem ? (sheetItem.link || 'Aggiungi link Maps') : '',
+      sheetMapsStyle: sheetItem && sheetItem.link ? filledFieldStyle : emptyFieldStyle,
+      sheetFocusMaps: this.sheetFocusMaps,
+      sheetSaveMaps: this.sheetSaveMaps,
+      sheetLinkValue: sheetItem ? (sheetItem.usefulLink || 'Aggiungi link') : '',
+      sheetLinkStyle: sheetItem && sheetItem.usefulLink ? filledFieldStyle : emptyFieldStyle,
+      sheetFocusLink: this.sheetFocusLink,
+      sheetSaveLink: this.sheetSaveLink,
+      sheetBookingValue: sheetItem ? (sheetItem.booking || 'Aggiungi riferimento prenotazione') : '',
+      sheetBookingStyle: sheetItem && sheetItem.booking ? filledFieldStyle : emptyFieldStyle,
+      sheetFocusBooking: this.sheetFocusBooking,
+      sheetSaveBooking: this.sheetSaveBooking,
+      sheetNotesValue: sheetItem ? (sheetItem.notes || 'Aggiungi una nota') : '',
+      sheetNotesStyle: (sheetItem && sheetItem.notes ? filledFieldStyle : emptyFieldStyle) + 'background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:12px;min-height:56px;display:block;',
+      sheetFocusNotes: this.sheetFocusNotes,
+      sheetSaveNotes: this.sheetSaveNotes,
+      sheetListItems,
+      sheetListEmpty,
+      sheetActivityChecklist,
+      sheetActivityChecklistEmpty,
+      addActivityChecklistItem: this.addActivityChecklistItem,
+      closeSheet: this.closeSheet,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

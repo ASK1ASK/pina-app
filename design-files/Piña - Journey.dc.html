@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Journey" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 18px 90px;color:#3a2a1c;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;display:flex;align-items:center;gap:6px;">🦩 Piña</a><a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:7px 14px;font-size:12px;color:#3a2a1c;font-weight:700;white-space:nowrap;flex-shrink:0;">🏠 Home</a>
+      </div>
+
+      <sc-if value="{{ hasStops }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-bottom:16px;">
+          <div style="display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #f0dfc0;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:#8a6a3e;white-space:nowrap;">{{ statusPillLabel }}</div>
+        </div>
+
+        <div style="position:relative;border-radius:28px;overflow:hidden;height:312px;box-shadow:0 18px 36px -16px rgba(255,110,70,.45);color:#fff;margin-bottom:28px;">
+          <div style="position:absolute;inset:0;"><div style="width:100%;height:100%;background:{{ heroBackground }};"></div></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;top:38%;background:linear-gradient(180deg,transparent,rgba(20,12,8,.82) 55%);"></div>
+          <div style="position:absolute;top:14px;right:14px;z-index:3;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.28);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ openCoverPicker }}">🎨</div>
+          <div style="position:relative;z-index:2;height:100%;padding:18px 20px 22px;display:flex;flex-direction:column;justify-content:flex-end;">
+            <div style="height: 200px">
+              <div style="font-family:'Fraunces',serif;font-weight:700;font-size:26px;line-height:1.05;margin-bottom:4px;">{{ tripName }}</div>
+              <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.88);margin-bottom:16px;">{{ tripDatesLabel }}</div>
+              <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.28);overflow:hidden;margin-bottom:8px;"><div style="height:100%;border-radius:999px;background:#fff;width:{{ progressPct }}%;"></div></div>
+              <div style="font-size:12px;font-weight:700;margin-bottom:16px;">{{ progressLabel }}</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                <div style="text-align:center;"><div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;line-height:1;">{{ dayBoxValue }}</div><div style="font-size:11px;font-weight:700;color:#fff;margin-top:4px;">{{ dayBoxLabel }}</div></div>
+                <div style="text-align:center;"><div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;line-height:1;">{{ stopsCount }}</div><div style="font-size:11px;font-weight:700;color:#fff;margin-top:4px;">tappe</div></div>
+                <div style="text-align:center;"><div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;line-height:1;">{{ friendsCount }}</div><div style="font-size:11px;font-weight:700;color:#fff;margin-top:4px;">amici</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Le tappe</div>
+          <div style="font-size:11.5px;font-weight:700;color:#d9481f;cursor:pointer;white-space:nowrap;" onClick="{{ toggleEdit }}">{{ editLabel }}</div>
+        </div>
+
+        <div style="position:relative;display:flex;flex-direction:column;gap:16px;">
+          <div style="position:absolute;left:21px;top:8px;bottom:8px;width:2px;background:#ecdfc4;z-index:0;"></div>
+
+          <sc-for list="{{ stops }}" as="stop" hint-placeholder-count="5">
+            <div style="position:relative;z-index:1;display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:2px;">
+                <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+                  <span style="{{ stop.moveUpStyle }}" onClick="{{ stop.moveUp }}">▲</span>
+                </sc-if>
+                <div style="{{ stop.dotStyle }}"></div>
+                <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+                  <span style="{{ stop.moveDownStyle }}" onClick="{{ stop.moveDown }}">▼</span>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ stop.isDone }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;border-radius:22px;background:#fff;border:1px solid #f0e2c8;box-shadow:0 10px 22px -14px rgba(120,90,40,.3);display:flex;align-items:center;gap:10px;padding:8px 10px;opacity:.55;cursor:pointer;" onClick="{{ stop.openDetail }}">
+                  <div style="width:40px;height:40px;border-radius:10px;overflow:hidden;flex-shrink:0;"><div ref="{{ stop.photoRef }}" style="width:100%;height:100%;background-size:cover;background-position:center;filter:grayscale(.3);"></div></div>
+                  <div style="flex:1;"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;">{{ stop.name }}</div><div style="font-size:10.5px;color:#a9906f;font-weight:600;">{{ stop.moodLine }} · {{ stop.dates }}</div></div>
+                  <span style="font-size:12px;">✓</span>
+                  <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+                    <span style="color:#c2a97e;font-size:15px;cursor:pointer;" onClick="{{ stop.remove }}">×</span>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ stop.isToday }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;border-radius:22px;overflow:hidden;background:#fff;border:1px solid #f0e2c8;box-shadow:0 10px 22px -14px rgba(120,90,40,.3);cursor:pointer;" onClick="{{ stop.openDetail }}">
+                  <div style="position:relative;height:168px;">
+                    <div ref="{{ stop.photoRef }}" style="position:absolute;inset:0;background-size:cover;background-position:center;"></div>
+                    <div style="position:absolute;bottom:0;left:0;right:0;height:55%;background:linear-gradient(180deg,transparent,rgba(40,20,10,.75));"></div>
+                    <span style="position:absolute;top:12px;left:12px;font-size:11.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.3);padding:5px 10px;border-radius:999px;">{{ stop.moodLine }}</span>
+                    <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;top:10px;right:12px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ stop.remove }}">×</span>
+                    </sc-if>
+                    <div style="position:absolute;bottom:12px;left:14px;right:14px;">
+                      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:#fff;">{{ stop.name }}</div>
+                      <div style="font-size:11.5px;color:rgba(255,255,255,.85);font-weight:600;">{{ stop.dates }}</div>
+                    </div>
+                  </div>
+                  <div style="padding:12px 16px 14px;">
+                    <span style="font-size:11.5px;font-weight:700;color:#8a7256;">{{ stop.thingsSummary }}</span>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ stop.isFuture }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ stop.futureCardStyle }}cursor:pointer;" onClick="{{ stop.openDetail }}">
+                  <div style="display:flex;gap:12px;padding:10px;">
+                    <div style="width:64px;height:64px;border-radius:14px;overflow:hidden;flex-shrink:0;"><div ref="{{ stop.photoRef }}" style="width:100%;height:100%;background-size:cover;background-position:center;"></div></div>
+                    <div style="flex:1;min-width:0;padding:2px 0;">
+                      <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div style="font-size:11px;font-weight:700;color:#c2793a;margin-bottom:2px;">{{ stop.moodLine }}</div>
+                        <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+                          <span style="color:#c2a97e;font-size:15px;cursor:pointer;" onClick="{{ stop.remove }}">×</span>
+                        </sc-if>
+                      </div>
+                      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;">{{ stop.name }}</div>
+                      <div style="font-size:11.5px;color:#a9906f;font-weight:600;">{{ stop.dates }}</div>
+                    </div>
+                  </div>
+                  <div style="padding:0 10px 10px 86px;">
+                    <span style="font-size:10.5px;font-weight:700;color:#8a7256;">{{ stop.thingsSummary }}</span>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;z-index:1;display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:44px;flex-shrink:0;"></div>
+              <div style="flex:1;text-align:center;padding:12px;border-radius:16px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12.5px;font-weight:700;cursor:pointer;" onClick="{{ openAddStopSheet }}">+ Aggiungi tappa</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="margin-top:22px;background:#fff;border:1px solid #f0e2c8;border-radius:20px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onClick="{{ toggleActivity }}">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Attività recenti · {{ activityCount }}</div>
+            <span style="font-size:11px;font-weight:700;color:#d9481f;">{{ activityExpandLabel }}</span>
+          </div>
+          <sc-if value="{{ activityExpanded }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:9px;margin-top:12px;">
+              <sc-for list="{{ activity }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex;align-items:baseline;gap:6px;font-size:12.5px;">
+                  <span style="font-weight:700;flex-shrink:0;">{{ a.person }}</span>
+                  <span style="color:#8a7256;flex:1;">{{ a.action }}</span>
+                  <span style="color:#c2a97e;font-size:11px;flex-shrink:0;">{{ a.time }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ !hasStops }}" hint-placeholder-val="{{ false }}">
+        <div style="border-radius:28px;overflow:hidden;padding:36px 26px;background:linear-gradient(135deg,#ffb627,#ff8a5b);color:#fff;text-align:center;box-shadow:0 18px 36px -16px rgba(255,150,60,.45);">
+          <div style="font-size:44px;margin-bottom:14px;">🦩</div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin-bottom:8px;">Il viaggio non è ancora iniziato</div>
+          <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:24px;line-height:1.5;">Costruite insieme le tappe, giorno per giorno</div>
+          <div style="display:inline-block;background:#fff;color:#3a2a1c;font-size:13px;font-weight:700;padding:13px 24px;border-radius:999px;cursor:pointer;" onClick="{{ openAddStopSheet }}">+ Aggiungi la prima tappa</div>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <dc-import name="BottomNav" active="journey" hint-size="100%,74px" style="position:absolute;bottom:0;left:0;right:0;"></dc-import>
+
+    <sc-if value="{{ coverPickerOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeCoverPicker }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:#3a2a1c;margin-bottom:16px;">Scegli un colore</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+            <sc-for list="{{ coverSwatches }}" as="cs" hint-placeholder-count="9">
+              <div style="{{ cs.style }}" onClick="{{ cs.select }}"></div>
+            </sc-for>
+            <div style="width:100%;aspect-ratio:1;border-radius:50%;background:#fff;border:1.5px dashed #d9b98a;color:#b8703a;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ openUploadMenu }}">+</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ uploadMenuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:41;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeUploadMenu }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:#3a2a1c;margin-bottom:14px;">Carica una copertina</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerCameraUpload }}"><span style="font-size:16px;">📷</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Scatta foto</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerLibraryUpload }}"><span style="font-size:16px;">🖼</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica dalla libreria</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerFileUpload }}"><span style="font-size:16px;">📁</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica da file</span></div>
+          </div>
+          <div style="text-align:center;margin-top:14px;font-size:12.5px;font-weight:700;color:#a9906f;cursor:pointer;" onClick="{{ closeUploadMenu }}">Annulla</div>
+        </div>
+      </div>
+    </sc-if>
+    <input type="file" accept="image/*" capture="environment" ref="{{ cameraFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" accept="image/*" ref="{{ libraryFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" ref="{{ fileFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+
+    <!-- STOP DETAIL SHEET -->
+    <sc-if value="{{ stopDetailOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeStopDetail }}">
+        <div style="width:100%;max-height:85%;overflow-y:auto;background:#fbf6ec;border-radius:24px 24px 0 0;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="position:relative;height:140px;border-radius:24px 24px 0 0;overflow:hidden;background:{{ detailStopBg }};">
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(20,12,8,.75));"></div>
+            <span style="position:absolute;top:12px;right:14px;color:#fff;font-size:18px;cursor:pointer;" onClick="{{ closeStopDetail }}">×</span>
+            <div style="position:absolute;top:12px;right:44px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ detailStop.openSettings }}">⚙️</div>
+            <div style="position:absolute;bottom:12px;left:18px;right:18px;color:#fff;">
+              <div style="font-family:'Fraunces',serif;font-weight:700;font-size:21px;">{{ detailStop.name }}</div>
+              <div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.85);">{{ detailStop.moodLine }} · {{ detailStop.dates }}</div>
+            </div>
+          </div>
+          <div style="padding:16px 18px 24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">🏨 Dove soggiornerete</div>
+              <sc-if value="{{ detailStop.multiDay }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:5px;flex-shrink:0;">
+                  <sc-for list="{{ detailStop.staySquares }}" as="ds" hint-placeholder-count="3">
+                    <div style="{{ ds.style }}" onClick="{{ ds.select }}">{{ ds.day }}</div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <sc-for list="{{ detailStop.stays }}" as="stay" hint-placeholder-count="1">
+              <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+                <div style="flex:1;background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:12px 14px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ stay.nameStyle }}flex:1;" onFocus="{{ stay.onFocusName }}" onBlur="{{ stay.saveName }}">{{ stay.nameDisplay }}</div>
+                    <sc-if value="{{ stay.canRemove }}" hint-placeholder-val="{{ false }}">
+                      <span style="color:#c2a97e;font-size:14px;cursor:pointer;flex-shrink:0;" onClick="{{ stay.remove }}">×</span>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ !stay.editing }}" hint-placeholder-val="{{ true }}">
+                    <sc-if value="{{ stay.hasLink }}" hint-placeholder-val="{{ false }}">
+                      <a href="{{ stay.linkHref }}" target="_blank" style="display:block;font-size:11.5px;font-weight:600;color:#8a6a3e;text-decoration:underline;margin-top:2px;">🔗 Apri link</a>
+                    </sc-if>
+                  </sc-if>
+                  <sc-if value="{{ stay.editing }}" hint-placeholder-val="{{ false }}">
+                    <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:11.5px;font-weight:600;outline:none;cursor:text;color:#3a2a1c;border-bottom:1.5px solid #ffb627;margin-top:6px;padding-bottom:2px;" onBlur="{{ stay.saveLink }}">{{ stay.linkFieldValue }}</div>
+                  </sc-if>
+                </div>
+                <div style="width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ stay.toggleLinkEdit }}">📎</div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ detailStop.multiDay }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:8px;margin-bottom:22px;border-radius:12px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:11.5px;font-weight:700;cursor:pointer;" onClick="{{ detailStop.addStay }}">+ Aggiungi un altro alloggio</div>
+            </sc-if>
+            <sc-if value="{{ !detailStop.multiDay }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-bottom:22px;"></div>
+            </sc-if>
+
+            <sc-for list="{{ detailStop.categories }}" as="cat" hint-placeholder-count="4">
+              <div style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+                  <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">{{ cat.icon }} {{ cat.label }}</div>
+                  <sc-if value="{{ detailStop.multiDay }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:5px;flex-shrink:0;">
+                      <sc-for list="{{ cat.catSquares }}" as="ds" hint-placeholder-count="3">
+                        <div style="{{ ds.style }}" onClick="{{ ds.select }}">{{ ds.day }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ cat.items }}" as="it" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                      <div style="flex:1;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:9px 11px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                          <span style="cursor:pointer;font-size:14px;flex-shrink:0;" onClick="{{ it.toggleStar }}">{{ it.starIcon }}</span>
+                          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="flex:1;font-size:12.5px;font-weight:600;outline:none;cursor:text;color:#3a2a1c;" style-focus="outline:1.5px solid #ffb627;border-radius:4px;" onBlur="{{ it.saveLabel }}">{{ it.label }}</div>
+                          <span style="color:#c2a97e;font-size:13px;cursor:pointer;flex-shrink:0;" onClick="{{ it.remove }}">×</span>
+                        </div>
+                        <sc-if value="{{ !it.editing }}" hint-placeholder-val="{{ true }}">
+                          <sc-if value="{{ it.hasLink }}" hint-placeholder-val="{{ false }}">
+                            <a href="{{ it.linkHref }}" target="_blank" style="display:block;font-size:11px;font-weight:600;color:#8a6a3e;text-decoration:underline;margin-top:4px;padding-left:23px;">🔗 Apri link</a>
+                          </sc-if>
+                        </sc-if>
+                        <sc-if value="{{ it.editing }}" hint-placeholder-val="{{ false }}">
+                          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:11px;font-weight:600;outline:none;cursor:text;color:#3a2a1c;border-bottom:1.5px solid #ffb627;margin-top:4px;padding-left:23px;padding-bottom:2px;" onBlur="{{ it.saveLink }}">{{ it.linkFieldValue }}</div>
+                        </sc-if>
+                      </div>
+                      <div style="width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ it.toggleLinkEdit }}">📎</div>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ cat.newItemRef }}" style="flex:1;font-size:12px;font-weight:600;background:#fff;border:1.5px dashed #d9b98a;border-radius:999px;padding:8px 12px;outline:none;cursor:text;color:#3a2a1c;" onKeyDown="{{ cat.onNewItemKeyDown }}"></div>
+                    <div style="background:#3a2a1c;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;" onClick="{{ cat.addItem }}">+</div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ !detailStop.addingCategory }}" hint-placeholder-val="{{ true }}">
+              <div style="text-align:center;padding:10px;border-radius:14px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12px;font-weight:700;cursor:pointer;" onClick="{{ detailStop.startAddCategory }}">+ Nuova sezione</div>
+            </sc-if>
+            <sc-if value="{{ detailStop.addingCategory }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ detailStop.newCategoryRef }}" style="flex:1;font-size:12px;font-weight:600;background:#fff;border:1.5px dashed #d9b98a;border-radius:999px;padding:9px 14px;outline:none;cursor:text;color:#a9906f;font-style:italic;" onFocus="{{ detailStop.onFocusNewCategory }}" onKeyDown="{{ detailStop.onNewCategoryKeyDown }}">🎁 emoji + nome sezione</div>
+                <div style="background:#3a2a1c;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;" onClick="{{ detailStop.addCategory }}">+</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ADD STOP SHEET -->
+    <sc-if value="{{ addStopOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeAddStopSheet }}">
+        <div style="width:100%;max-height:88%;overflow-y:auto;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:#3a2a1c;">{{ addStopTitle }}</div>
+            <span style="color:#c2a97e;font-size:16px;cursor:pointer;" onClick="{{ closeAddStopSheet }}">×</span>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Nome del luogo</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ newStopNameRef }}" style="{{ newStopNameStyle }}" onFocus="{{ onFocusNewStopName }}">{{ newStopNameDisplay }}</div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:18px 0 8px;">Quando</div>
+          <div style="font-size:11.5px;font-weight:600;color:#8a7256;margin-bottom:10px;">{{ newStopDatesLabel }}</div>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:4px;">
+            <sc-for list="{{ newStopDayChips }}" as="d" hint-placeholder-count="13">
+              <div style="{{ d.style }}" onClick="{{ d.select }}">{{ d.num }}</div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:18px 0 8px;">Mood</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <sc-for list="{{ newStopMoods }}" as="m" hint-placeholder-count="9">
+              <div style="{{ m.style }}" onClick="{{ m.select }}">{{ m.label }}</div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:18px 0 8px;">Copertina</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:{{ newStopCoverPreview }};"></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;font-size:12px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;" onClick="{{ openStopUploadMenu }}">📷 Carica foto</div>
+            <div style="flex:1;font-size:10.5px;color:#a9906f;font-weight:600;line-height:1.4;">Senza foto usiamo il colore del mood</div>
+          </div>
+
+          <sc-if value="{{ newStopError }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11.5px;font-weight:700;color:#a3392a;margin:10px 0 4px;">⚠️ {{ newStopError }}</div>
+          </sc-if>
+
+          <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;margin-top:16px;" onClick="{{ saveNewStop }}">{{ addStopCta }}</div>
+          <div style="text-align:center;margin-top:10px;font-size:12px;font-weight:700;color:#a9906f;cursor:pointer;" onClick="{{ closeAddStopSheet }}">Fatto, chiudi</div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    editMode: false,
+    coverPickerOpen: false,
+    uploadMenuOpen: false,
+    coverColorId: 'fiesta',
+    coverPhoto: null,
+    stops: [
+      { id: 'girona', name: 'Girona', kind: 'done', startDay: 14, endDay: 15, moodId: 'culture', moodLine: '🏛 Culture', dates: '14-15 ago', photo: 'https://picsum.photos/seed/pina-girona/120/120',
+        stays: [{ id: 'st-girona', name: '', link: '', days: [14] }],
+        categories: [
+          { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [] },
+          { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [] },
+          { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [] },
+          { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [] },
+        ] },
+      { id: 'barcelona', name: 'Barcellona', kind: 'today', startDay: 16, endDay: 17, moodId: 'fiesta', moodLine: '🎉 Fiesta', dates: '16 → 17 agosto', photo: 'https://picsum.photos/seed/pina-barcelona2/700/500',
+        stays: [{ id: 'st-bcn', name: 'Hotel Casa Fuster', link: 'https://maps.google.com/?q=Hotel+Casa+Fuster+Barcelona', days: [16] }],
+        categories: [
+          { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [{ id: 'i1', label: 'La Boqueria', link: 'https://maps.google.com/?q=La+Boqueria', starred: true, days: [] }] },
+          { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [{ id: 'i2', label: 'Razzmatazz', link: '', starred: false, days: [] }] },
+          { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [{ id: 'i3', label: 'Sagrada Familia', link: 'https://maps.google.com/?q=Sagrada+Familia', starred: true, days: [] }] },
+          { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [] },
+        ] },
+      { id: 'valencia', name: 'Valencia', kind: 'future', startDay: 18, endDay: 19, moodId: 'beach', moodLine: '🌊 Beach vibes', dates: '18-19 agosto', photo: 'https://picsum.photos/seed/pina-valencia2/140/140', highlight: false,
+        stays: [{ id: 'st-val', name: '', link: '', days: [18] }],
+        categories: [
+          { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [{ id: 'i4', label: 'Mercado Central', link: '', starred: false }] },
+          { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [] },
+          { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [{ id: 'i5', label: 'Malvarrosa', link: '', starred: false }] },
+          { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [] },
+        ] },
+      { id: 'rototom', name: 'Rototom Sunsplash', kind: 'future', startDay: 21, endDay: 22, moodId: 'fiesta', moodLine: '🎶 Festival', dates: '21-22 agosto', photo: 'https://picsum.photos/seed/pina-rototom2/140/140', highlight: true,
+        stays: [{ id: 'st-roto', name: '', link: '', days: [21] }],
+        categories: [
+          { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [{ id: 'i6', label: 'Food Trucks', link: '', starred: false }] },
+          { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [] },
+          { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [] },
+          { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [{ id: 'i7', label: 'Main Stage', link: '', starred: true }] },
+        ] },
+      { id: 'malaga', name: 'Malaga', kind: 'future', startDay: 24, endDay: 25, moodId: 'relax', moodLine: '🌅 Sunset', dates: '24-25 agosto', photo: 'https://picsum.photos/seed/pina-malaga2/140/140', highlight: false,
+        stays: [{ id: 'st-mlg', name: '', link: '', days: [24] }],
+        categories: [
+          { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [{ id: 'i8', label: 'El Pimpi', link: '', starred: false }] },
+          { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [] },
+          { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [{ id: 'i9', label: 'Balcón de Europa', link: '', starred: false }] },
+          { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [] },
+        ] },
+    ],
+    addStopOpen: false,
+    editingStopId: null,
+    newStopName: '',
+    newStopStartDay: null,
+    newStopEndDay: null,
+    newStopMoodId: null,
+    newStopPhoto: null,
+    newStopError: null,
+    uploadTarget: 'tripCover',
+    activityExpanded: false,
+    stopDetailId: null,
+    addingCategoryFor: null,
+    linkEditKey: null,
+    activeDayByCategory: {},
+    activeDayForStay: {},
+    activityLog: [
+      { person: 'Giulia', action: 'ha aggiunto Rototom Sunsplash', time: '2 min fa' },
+      { person: 'Marco', action: 'ha cambiato le date di Valencia', time: '1 h fa' },
+      { person: 'Andrea', action: 'ha spostato Malaga dopo Rototom', time: 'ieri' },
+    ],
+  };
+
+  currentUser = 'Tu';
+  logActivity(action) {
+    this.setState(s => ({
+      activityLog: [{ person: this.currentUser, action, time: 'adesso' }, ...s.activityLog].slice(0, 5),
+    }));
+  }
+
+  componentDidMount() {
+    const colors = this.loadStoredColors();
+    const photos = this.loadStoredPhotos();
+    const slug = this.slugify(this.tripName);
+    this.setState({
+      coverColorId: colors[slug] || 'fiesta',
+      coverPhoto: photos[slug] || null,
+    });
+    import('./trip-data.js').then(m => {
+      this._tripData = m;
+      const stored = m.loadStops();
+      if (stored && stored.length) this.setState({ stops: stored });
+    }).catch(() => {});
+  }
+
+  persistStops = (stops) => {
+    if (this._tripData) this._tripData.saveStops(stops);
+    else { try { localStorage.setItem('pina-trip-stops', JSON.stringify(stops)); } catch (e) {} }
+  };
+
+  newItemRefs = {};
+
+  tripName = 'Spain Roadtrip';
+  tripStartDate = new Date(2026, 7, 14); // 14 agosto 2026
+  tripEndDate = new Date(2026, 7, 26); // 26 agosto 2026
+  friendsCount = 5;
+
+  coverPaletteDefs = [
+    { id: 'fiesta', gradient: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' },
+    { id: 'sunrise', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)' },
+    { id: 'romantic', gradient: 'linear-gradient(135deg,#ff5f96,#ff5f6d)' },
+    { id: 'terracotta', gradient: 'linear-gradient(135deg,#d9481f,#8a2f42)' },
+    { id: 'relax', gradient: 'linear-gradient(135deg,#ffb627,#ff8a5b)' },
+    { id: 'culture', gradient: 'linear-gradient(135deg,#e8b74e,#b8792e)' },
+    { id: 'camper', gradient: 'linear-gradient(135deg,#7a9d54,#4f8f4f)' },
+    { id: 'nature', gradient: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)' },
+    { id: 'beach', gradient: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' },
+  ];
+
+  slugify(name) {
+    return (name || 'trip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  loadStoredColors() {
+    try { return JSON.parse(localStorage.getItem('pina-journey-colors')) || {}; } catch (e) { return {}; }
+  }
+  saveStoredColor(id) {
+    const stored = this.loadStoredColors();
+    stored[this.slugify(this.tripName)] = id;
+    try { localStorage.setItem('pina-journey-colors', JSON.stringify(stored)); } catch (e) {}
+  }
+  loadStoredPhotos() {
+    try { return JSON.parse(localStorage.getItem('pina-journey-photos')) || {}; } catch (e) { return {}; }
+  }
+  saveStoredPhoto(dataUrl) {
+    const stored = this.loadStoredPhotos();
+    stored[this.slugify(this.tripName)] = dataUrl;
+    try { localStorage.setItem('pina-journey-photos', JSON.stringify(stored)); } catch (e) {}
+  }
+
+  openCoverPicker = () => this.setState({ coverPickerOpen: true });
+  closeCoverPicker = () => this.setState({ coverPickerOpen: false });
+  stopPropagation = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+  selectCoverColor = (id) => {
+    this.setState({ coverColorId: id, coverPickerOpen: false, coverPhoto: null });
+    this.saveStoredColor(id);
+    this.saveStoredPhoto(null);
+  };
+  openUploadMenu = () => this.setState({ uploadMenuOpen: true, uploadTarget: 'tripCover' });
+  closeUploadMenu = () => this.setState({ uploadMenuOpen: false });
+  triggerCameraUpload = () => { if (this._cameraFileEl) this._cameraFileEl.click(); };
+  triggerLibraryUpload = () => { if (this._libraryFileEl) this._libraryFileEl.click(); };
+  triggerFileUpload = () => { if (this._fileFileEl) this._fileFileEl.click(); };
+  onCoverFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (this.state.uploadTarget === 'newStop') {
+        this.setState({ newStopPhoto: reader.result, uploadMenuOpen: false });
+      } else {
+        this.setState({ coverPhoto: reader.result, uploadMenuOpen: false, coverPickerOpen: false });
+        this.saveStoredPhoto(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  makeDefaultCategories() {
+    return [
+      { id: 'food', icon: '🍽', label: 'Dove mangiare', items: [] },
+      { id: 'nightlife', icon: '🍻', label: 'Bar & Nightlife', items: [] },
+      { id: 'places', icon: '📍', label: 'Luoghi da visitare', items: [] },
+      { id: 'activities', icon: '🎫', label: 'Attività & Esperienze', items: [] },
+    ];
+  }
+
+  computeTripPhase() {
+    const msDay = 86400000;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(this.tripStartDate); start.setHours(0, 0, 0, 0);
+    const end = new Date(this.tripEndDate); end.setHours(0, 0, 0, 0);
+    const totalDays = Math.round((end - start) / msDay) + 1;
+    if (today < start) {
+      return { phase: 'pre', daysUntil: Math.round((start - today) / msDay), totalDays };
+    }
+    if (today > end) {
+      return { phase: 'done', totalDays, currentDay: totalDays };
+    }
+    return { phase: 'active', currentDay: Math.round((today - start) / msDay) + 1, totalDays };
+  }
+
+  toggleEdit = () => this.setState(s => ({ editMode: !s.editMode }));
+  toggleActivity = () => this.setState(s => ({ activityExpanded: !s.activityExpanded }));
+
+  removeStop = (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const stop = this.state.stops.find(s => s.id === id);
+    this.setState(s => {
+      const stops = s.stops.filter(st => st.id !== id);
+      this.persistStops(stops);
+      return { stops };
+    });
+    if (stop) this.logActivity(`ha rimosso ${stop.name}`);
+  };
+
+  moveStop = (id, dir, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this.setState(s => {
+      const idx = s.stops.findIndex(st => st.id === id);
+      const swapIdx = idx + dir;
+      if (idx < 0 || swapIdx < 0 || swapIdx >= s.stops.length) return null;
+      const next = [...s.stops];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      this.persistStops(next);
+      return { stops: next };
+    });
+  };
+
+  openStopDetail = (id) => this.setState({ stopDetailId: id });
+  closeStopDetail = () => this.setState({ stopDetailId: null });
+
+  stopMoodDefs = [
+    { id: 'fiesta', label: '🎉 Festival', gradient: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' },
+    { id: 'beach', label: '🌊 Mare', gradient: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' },
+    { id: 'camper', label: '🏕 Camper', gradient: 'linear-gradient(135deg,#7a9d54,#4f8f4f)' },
+    { id: 'food', label: '🍷 Food', gradient: 'linear-gradient(135deg,#c2445a,#8a2f42)' },
+    { id: 'nature', label: '🌄 Natura', gradient: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)' },
+    { id: 'romantic', label: '😍 Romantico', gradient: 'linear-gradient(135deg,#ff5f96,#ff5f6d)' },
+    { id: 'study', label: '📚 Studio', gradient: 'linear-gradient(135deg,#8a6a3e,#5a4326)' },
+    { id: 'culture', label: '🏛 Cultura', gradient: 'linear-gradient(135deg,#e8b74e,#b8792e)' },
+    { id: 'relax', label: '🎡 Relax', gradient: 'linear-gradient(135deg,#ffb627,#ff8a5b)' },
+  ];
+
+  openAddStopSheet = () => this.setState({ addStopOpen: true, editingStopId: null });
+  openStopSettings = (stopId) => {
+    const stop = this.state.stops.find(st => st.id === stopId);
+    if (!stop) return;
+    const mood = this.stopMoodDefs.find(m => m.label === stop.moodLine);
+    this.setState({
+      addStopOpen: true,
+      editingStopId: stopId,
+      stopDetailId: null,
+      newStopName: stop.name,
+      newStopStartDay: stop.startDay,
+      newStopEndDay: stop.endDay,
+      newStopMoodId: mood ? mood.id : null,
+      newStopPhoto: stop.photo || null,
+      newStopError: null,
+    });
+  };
+  closeAddStopSheet = () => this.setState({
+    addStopOpen: false, editingStopId: null, newStopName: '', newStopStartDay: null, newStopEndDay: null,
+    newStopMoodId: null, newStopPhoto: null, newStopError: null,
+  });
+  onFocusNewStopName = (e) => { if (!this.state.newStopName) e.target.textContent = ''; };
+  saveNewStopNameFromEl = () => { if (this._newStopNameEl) this.setState({ newStopName: this._newStopNameEl.textContent.trim() }); };
+  selectNewStopDay = (day) => {
+    this.setState(s => {
+      if (s.newStopStartDay && s.newStopEndDay) return { newStopStartDay: day, newStopEndDay: null };
+      if (s.newStopStartDay && !s.newStopEndDay) {
+        return day >= s.newStopStartDay ? { newStopEndDay: day } : { newStopStartDay: day, newStopEndDay: null };
+      }
+      return { newStopStartDay: day, newStopEndDay: null };
+    });
+  };
+  selectNewStopMood = (id) => this.setState({ newStopMoodId: id });
+  openStopUploadMenu = () => this.setState({ uploadTarget: 'newStop', uploadMenuOpen: true });
+
+  saveNewStop = () => {
+    this.saveNewStopNameFromEl();
+    const { newStopName, newStopStartDay, newStopEndDay, newStopMoodId, newStopPhoto, editingStopId } = this.state;
+    if (!newStopName || !newStopStartDay) {
+      this.setState({ newStopError: 'Inserisci almeno il nome e la data della tappa.' });
+      return;
+    }
+    const mood = this.stopMoodDefs.find(m => m.id === newStopMoodId) || this.stopMoodDefs[0];
+    const startDay = newStopStartDay;
+    const endDay = newStopEndDay || newStopStartDay;
+    const dates = endDay !== startDay ? `${startDay} → ${endDay} agosto` : `${startDay} agosto`;
+
+    if (editingStopId) {
+      this.setState(s => {
+        const stops = s.stops.map(st => st.id !== editingStopId ? st : {
+          ...st, name: newStopName, startDay, endDay, moodLine: mood.label, dates,
+          photo: newStopPhoto, gradient: mood.gradient,
+        }).sort((a, b) => (a.startDay || 0) - (b.startDay || 0));
+        this.persistStops(stops);
+        return {
+          stops,
+          addStopOpen: false, editingStopId: null,
+          newStopName: '', newStopStartDay: null, newStopEndDay: null,
+          newStopMoodId: null, newStopPhoto: null, newStopError: null,
+        };
+      });
+      this.logActivity(`ha modificato ${newStopName}`);
+      return;
+    }
+
+    const id = 'stop' + Date.now();
+    const newStop = {
+      id, name: newStopName, startDay, endDay, moodLine: mood.label, dates,
+      photo: newStopPhoto, gradient: mood.gradient,
+      stays: [{ id: 'stay' + Date.now(), name: '', link: '', days: this.stopNights({ startDay, endDay }) }],
+      categories: this.makeDefaultCategories(),
+    };
+    this.setState(s => {
+      const stops = [...s.stops, newStop].sort((a, b) => (a.startDay || 0) - (b.startDay || 0));
+      this.persistStops(stops);
+      return {
+        stops,
+        newStopName: '', newStopStartDay: null, newStopEndDay: null,
+        newStopMoodId: null, newStopPhoto: null, newStopError: null,
+        editMode: true,
+      };
+    });
+    this.logActivity(`ha aggiunto ${newStopName}`);
+    if (this._newStopNameEl) this._newStopNameEl.textContent = '';
+  };
+
+  updateStop = (stopId, fn) => {
+    this.setState(s => {
+      const stops = s.stops.map(st => st.id !== stopId ? st : fn(st));
+      this.persistStops(stops);
+      return { stops };
+    });
+  };
+
+  onFocusStayField = (e, placeholder) => { if (e.target.textContent.trim() === placeholder) e.target.textContent = ''; };
+
+  toggleLinkEdit = (key) => this.setState(s => ({ linkEditKey: s.linkEditKey === key ? null : key }));
+
+  setActiveDayForStay = (stopId, day) => this.setState(s => ({ activeDayForStay: { ...s.activeDayForStay, [stopId]: day } }));
+  setActiveDayForCategory = (stopId, catId, day) => this.setState(s => ({ activeDayByCategory: { ...s.activeDayByCategory, [stopId + ':' + catId]: day } }));
+
+  addStay = (stopId) => {
+    const stop = this.state.stops.find(st => st.id === stopId);
+    const nights = stop ? this.stopNights(stop) : [];
+    const activeDay = this.state.activeDayForStay[stopId] || nights[nights.length - 1];
+    const id = 'stay' + Date.now();
+    this.updateStop(stopId, st => ({ ...st, stays: [...(st.stays || []), { id, name: '', link: '', day: activeDay }] }));
+  };
+  removeStay = (stopId, stayId) => {
+    this.updateStop(stopId, st => ({ ...st, stays: (st.stays || []).filter(s => s.id !== stayId) }));
+  };
+  saveStayName = (stopId, stayId, e) => {
+    const text = e.target.textContent.trim();
+    this.updateStop(stopId, st => ({ ...st, stays: st.stays.map(s => s.id !== stayId ? s : { ...s, name: text }) }));
+  };
+  saveStayLinkInline = (stopId, stayId, e) => {
+    const text = e.target.textContent.trim();
+    this.updateStop(stopId, st => ({ ...st, stays: st.stays.map(s => s.id !== stayId ? s : { ...s, link: text }) }));
+    this.setState({ linkEditKey: null });
+  };
+
+
+  saveItemLinkInline = (stopId, catId, itemId, e) => {
+    const text = e.target.textContent.trim();
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, link: text }) }),
+    }));
+    this.setState({ linkEditKey: null });
+  };
+
+
+  stopDayRange(stop) {
+    const start = stop.startDay || 1;
+    const end = stop.endDay || start;
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }
+
+  // le "notti" sono i giorni di check-in: dal 14 al 15 = 1 sola notte (il 14)
+  stopNights(stop) {
+    const range = this.stopDayRange(stop);
+    return range.length > 1 ? range.slice(0, -1) : range;
+  }
+
+  addItem = (stopId, catId) => {
+    const key = stopId + ':' + catId;
+    const el = this.newItemRefs[key];
+    const text = el ? el.textContent.trim() : '';
+    if (!text) return;
+    const id = 'it' + Date.now();
+    const stop = this.state.stops.find(st => st.id === stopId);
+    const nights = stop ? this.stopNights(stop) : [];
+    const activeDay = this.state.activeDayByCategory[stopId + ':' + catId] || nights[nights.length - 1];
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: [...c.items, { id, label: text, link: '', starred: false, day: activeDay }] }),
+    }));
+    if (el) el.textContent = '';
+    if (stop) this.logActivity(`ha aggiunto "${text}" a ${stop.name}`);
+  };
+  onNewItemKeyDown = (stopId, catId, e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.addItem(stopId, catId); }
+  };
+  removeItem = (stopId, catId, itemId) => {
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: c.items.filter(it => it.id !== itemId) }),
+    }));
+  };
+  toggleStar = (stopId, catId, itemId) => {
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, starred: !it.starred }) }),
+    }));
+  };
+  saveItemLabel = (stopId, catId, itemId, e) => {
+    const text = e.target.textContent.trim();
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, label: text || it.label }) }),
+    }));
+  };
+  saveItemLink = (stopId, catId, itemId, e) => {
+    const text = e.target.textContent.trim();
+    this.updateStop(stopId, st => ({
+      ...st,
+      categories: st.categories.map(c => c.id !== catId ? c : { ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, link: text }) }),
+    }));
+  };
+
+  startAddCategory = (stopId) => this.setState({ addingCategoryFor: stopId });
+  onFocusNewCategory = (e) => { if (e.target.textContent.trim() === '🎁 emoji + nome sezione') e.target.textContent = ''; };
+  onNewCategoryKeyDown = (stopId, e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.addCategory(stopId); }
+  };
+  addCategory = (stopId) => {
+    const el = this._newCategoryEl;
+    let text = el ? el.textContent.trim() : '';
+    if (text === '🎁 emoji + nome sezione') text = '';
+    if (!text) { this.setState({ addingCategoryFor: null }); return; }
+    const parts = text.split(' ');
+    const icon = parts.length > 1 ? parts[0] : '📌';
+    const label = parts.length > 1 ? parts.slice(1).join(' ') : text;
+    const id = 'cat' + Date.now();
+    this.updateStop(stopId, st => ({ ...st, categories: [...(st.categories || []), { id, icon, label, items: [] }] }));
+    this.setState({ addingCategoryFor: null });
+  };
+
+
+
+  computeStopKind(stop, isPre) {
+    if (isPre) return 'future';
+    if (stop.kind) return stop.kind;
+    const msDay = 86400000;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(2026, 7, stop.startDay || 1); start.setHours(0, 0, 0, 0);
+    const end = new Date(2026, 7, stop.endDay || stop.startDay || 1); end.setHours(0, 0, 0, 0);
+    if (today > end) return 'done';
+    if (today >= start && today <= end) return 'today';
+    return 'future';
+  }
+
+  renderVals() {
+    const {
+      editMode, stops, coverPickerOpen, uploadMenuOpen, coverColorId, coverPhoto,
+      addStopOpen, editingStopId, newStopName, newStopStartDay, newStopEndDay, newStopMoodId, newStopPhoto, newStopError,
+      activityExpanded, activityLog,
+    } = this.state;
+    const coverPaletteById = {};
+    this.coverPaletteDefs.forEach(p => { coverPaletteById[p.id] = p.gradient; });
+    const heroBackground = coverPhoto
+      ? `url(${coverPhoto}) center/cover no-repeat`
+      : (coverPaletteById[coverColorId] || coverPaletteById.fiesta);
+    const coverSwatches = this.coverPaletteDefs.map(p => ({
+      id: p.id,
+      style: `width:100%;aspect-ratio:1;border-radius:50%;background:${p.gradient};cursor:pointer;${coverColorId === p.id && !coverPhoto ? 'box-shadow:0 0 0 3px #fbf6ec, 0 0 0 5px #3a2a1c;' : ''}`,
+      select: () => this.selectCoverColor(p.id),
+    }));
+
+    const trip = this.computeTripPhase();
+    const isPre = trip.phase === 'pre';
+    const isTripDone = trip.phase === 'done';
+
+    const todayStop = stops.find(s => s.kind === 'today');
+    const statusPillLabel = isPre
+      ? `🗓 Si parte tra ${trip.daysUntil} giorn${trip.daysUntil === 1 ? 'o' : 'i'}`
+      : isTripDone
+        ? '🎉 Viaggio concluso'
+        : `☀️ Oggi siete a ${todayStop ? todayStop.name : '...'}`;
+
+    const progressPct = isPre ? 0 : isTripDone ? 100 : Math.round((trip.currentDay / trip.totalDays) * 100);
+    const progressLabel = isPre
+      ? `0% · Manca${trip.daysUntil === 1 ? '' : 'no'} ${trip.daysUntil} giorni alla partenza`
+      : isTripDone
+        ? '100% completato'
+        : `${progressPct}% completato`;
+
+    const dayBoxValue = isPre ? `-${trip.daysUntil}` : `${trip.currentDay}/${trip.totalDays}`;
+    const dayBoxLabel = isPre ? 'al via' : 'giorno';
+
+    const startMonth = this.tripStartDate.toLocaleDateString('it-IT', { day: 'numeric' });
+    const endMonth = this.tripEndDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+    const tripDatesLabel = `${startMonth} → ${endMonth}`;
+
+    const stopsView = stops.map((stop, idx) => {
+      const kind = this.computeStopKind(stop, isPre);
+      const isDone = kind === 'done';
+      const isToday = kind === 'today';
+      const isFuture = kind === 'future';
+      let dotStyle = 'width:14px;height:14px;border-radius:50%;border:3px solid #fbf6ec;';
+      dotStyle += isToday ? 'background:#ff6b5b;box-shadow:0 0 0 1.5px #ff6b5b;' : 'background:#ecdfc4;box-shadow:0 0 0 1.5px #ecdfc4;';
+
+      const futureCardStyle = `flex:1;border-radius:22px;background:#fff;box-shadow:0 10px 22px -14px rgba(120,90,40,.3);border:${stop.highlight ? '1.5px solid #ffb627' : '1px solid #f0e2c8'};`;
+
+      const isFirst = idx === 0;
+      const isLast = idx === stops.length - 1;
+      const arrowBase = 'font-size:10px;line-height:1;';
+
+      return {
+        id: stop.id,
+        name: stop.name,
+        moodLine: stop.moodLine,
+        dates: stop.dates,
+        photo: stop.photo,
+        isDone,
+        isToday,
+        isFuture,
+        dotStyle,
+        futureCardStyle,
+        photoRef: (el) => {
+          if (!el) return;
+          if (stop.photo) { el.style.backgroundImage = `url(${stop.photo})`; el.style.background = ''; }
+          else { el.style.backgroundImage = ''; el.style.background = stop.gradient || 'linear-gradient(135deg,#ffb627,#ff8a5b)'; }
+        },
+        remove: (e) => this.removeStop(stop.id, e),
+        moveUp: (e) => this.moveStop(stop.id, -1, e),
+        moveDown: (e) => this.moveStop(stop.id, 1, e),
+        moveUpStyle: arrowBase + (isFirst ? 'color:#e0d3b8;cursor:default;' : 'color:#b8703a;cursor:pointer;'),
+        moveDownStyle: arrowBase + (isLast ? 'color:#e0d3b8;cursor:default;' : 'color:#b8703a;cursor:pointer;'),
+        openDetail: () => this.openStopDetail(stop.id),
+        thingsSummary: (() => {
+          const cats = stop.categories || [];
+          const total = cats.reduce((n, c) => n + c.items.length, 0);
+          const starred = cats.reduce((n, c) => n + c.items.filter(it => it.starred).length, 0);
+          return total === 0 ? '+ Aggiungi info sulla tappa' : `${starred}/${total} preferiti`;
+        })(),
+      };
+    });
+
+    const { linkEditKey } = this.state;
+    const detailSrc = this.state.stopDetailId ? stops.find(s => s.id === this.state.stopDetailId) : null;
+    const detailStop = detailSrc ? (() => {
+      const stop = detailSrc;
+      const stays = stop.stays || [];
+      const addingCategory = this.state.addingCategoryFor === stop.id;
+      const nights = this.stopNights(stop);
+      const multiDay = nights.length > 1;
+      const descNights = [...nights].reverse();
+
+      const buildHeaderSquares = (activeDay, onSelect) => descNights.map(day => ({
+        day,
+        style: `width:26px;height:26px;flex-shrink:0;border-radius:7px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;${day === activeDay ? 'background:#3a2a1c;color:#fff;' : 'background:#fbf6ec;border:1px solid #f0e2c8;color:#a9906f;'}`,
+        select: () => onSelect(day),
+      }));
+
+      const stayActiveDay = this.state.activeDayForStay[stop.id] || nights[nights.length - 1];
+      const staySquares = multiDay ? buildHeaderSquares(stayActiveDay, (day) => this.setActiveDayForStay(stop.id, day)) : [];
+
+      return {
+        id: stop.id,
+        name: stop.name,
+        moodLine: stop.moodLine,
+        dates: stop.dates,
+        photo: stop.photo,
+        gradient: stop.gradient || (this.stopMoodDefs.find(m => m.id === stop.moodId) || {}).gradient || 'linear-gradient(135deg,#ffb627,#ff8a5b)',
+        multiDay,
+        staySquares,
+        openSettings: () => this.openStopSettings(stop.id),
+        addStay: () => this.addStay(stop.id),
+        stays: stays.filter(stay => !multiDay || !stay.day || stay.day === stayActiveDay).map(stay => {
+          const key = 'stay:' + stay.id;
+          const editing = linkEditKey === key;
+          return {
+            id: stay.id,
+            nameDisplay: stay.name || 'Nome del B&B/hotel/appartamento',
+            nameStyle: `font-size:13.5px;font-weight:700;outline:none;cursor:text;margin-bottom:4px;${stay.name ? 'color:#3a2a1c;' : 'color:#b39a78;'}`,
+            onFocusName: (e) => this.onFocusStayField(e, 'Nome del B&B/hotel/appartamento'),
+            saveName: (e) => this.saveStayName(stop.id, stay.id, e),
+            hasLink: !!stay.link,
+            linkHref: stay.link || '#',
+            editing,
+            linkFieldValue: stay.link || '',
+            toggleLinkEdit: () => this.toggleLinkEdit(key),
+            saveLink: (e) => this.saveStayLinkInline(stop.id, stay.id, e),
+            canRemove: stays.length > 1,
+            remove: () => this.removeStay(stop.id, stay.id),
+          };
+        }),
+        addingCategory,
+        startAddCategory: () => this.startAddCategory(stop.id),
+        onFocusNewCategory: this.onFocusNewCategory,
+        onNewCategoryKeyDown: (e) => this.onNewCategoryKeyDown(stop.id, e),
+        newCategoryRef: (el) => { this._newCategoryEl = el; },
+        addCategory: () => this.addCategory(stop.id),
+        categories: (stop.categories || []).map(cat => {
+          const catKey = stop.id + ':' + cat.id;
+          const catActiveDay = this.state.activeDayByCategory[catKey] || nights[nights.length - 1];
+          const catSquares = multiDay ? buildHeaderSquares(catActiveDay, (day) => this.setActiveDayForCategory(stop.id, cat.id, day)) : [];
+          return {
+            id: cat.id,
+            icon: cat.icon,
+            label: cat.label,
+            catSquares,
+            addItem: () => this.addItem(stop.id, cat.id),
+            onNewItemKeyDown: (e) => this.onNewItemKeyDown(stop.id, cat.id, e),
+            newItemRef: (el) => { this.newItemRefs[stop.id + ':' + cat.id] = el; },
+            items: cat.items.filter(it => !multiDay || !it.day || it.day === catActiveDay).map(it => {
+              const key = 'item:' + cat.id + ':' + it.id;
+              const editing = linkEditKey === key;
+              return {
+                id: it.id,
+                label: it.label,
+                starIcon: it.starred ? '⭐' : '☆',
+                hasLink: !!it.link,
+                linkHref: it.link || '#',
+                editing,
+                linkFieldValue: it.link || '',
+                toggleLinkEdit: () => this.toggleLinkEdit(key),
+                saveLink: (e) => this.saveItemLinkInline(stop.id, cat.id, it.id, e),
+                toggleStar: () => this.toggleStar(stop.id, cat.id, it.id),
+                saveLabel: (e) => this.saveItemLabel(stop.id, cat.id, it.id, e),
+                remove: () => this.removeItem(stop.id, cat.id, it.id),
+              };
+            }),
+          };
+        }),
+      };
+    })() : null;
+
+    return {
+      editMode,
+      editLabel: editMode ? 'Fatto' : 'Modifica',
+      toggleEdit: this.toggleEdit,
+      hasStops: stops.length > 0,
+      stopsCount: stops.length,
+      stops: stopsView,
+      activity: activityLog,
+      activityCount: activityLog.length,
+      activityExpanded,
+      activityExpandLabel: activityExpanded ? 'Chiudi ⌃' : 'Apri ⌄',
+      toggleActivity: this.toggleActivity,
+      tripName: this.tripName,
+      tripDatesLabel,
+      friendsCount: this.friendsCount,
+      statusPillLabel,
+      progressPct,
+      progressLabel,
+      dayBoxValue,
+      dayBoxLabel,
+      heroBackground,
+      coverPickerOpen,
+      openCoverPicker: this.openCoverPicker,
+      closeCoverPicker: this.closeCoverPicker,
+      stopPropagation: this.stopPropagation,
+      coverSwatches,
+      uploadMenuOpen,
+      openUploadMenu: this.openUploadMenu,
+      closeUploadMenu: this.closeUploadMenu,
+      triggerCameraUpload: this.triggerCameraUpload,
+      triggerLibraryUpload: this.triggerLibraryUpload,
+      triggerFileUpload: this.triggerFileUpload,
+      onCoverFileChosen: this.onCoverFileChosen,
+      cameraFileRef: (el) => { this._cameraFileEl = el; },
+      libraryFileRef: (el) => { this._libraryFileEl = el; },
+      fileFileRef: (el) => { this._fileFileEl = el; },
+
+      addStopOpen,
+      addStopTitle: editingStopId ? 'Modifica tappa' : 'Nuova tappa',
+      addStopCta: editingStopId ? 'Salva modifiche' : '+ Aggiungi tappa e continua',
+      openAddStopSheet: this.openAddStopSheet,
+      closeAddStopSheet: this.closeAddStopSheet,
+      newStopNameDisplay: newStopName || 'Nome del luogo',
+      newStopNameStyle: `font-family:'Fraunces',serif;font-size:17px;background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:12px 14px;outline:none;cursor:text;${newStopName ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;'}`,
+      newStopNameRef: (el) => { this._newStopNameEl = el; },
+      onFocusNewStopName: this.onFocusNewStopName,
+      newStopDatesLabel: newStopStartDay
+        ? (newStopEndDay && newStopEndDay !== newStopStartDay ? `${newStopStartDay} → ${newStopEndDay} agosto` : `${newStopStartDay} agosto`)
+        : 'Scegli le date (dentro il viaggio)',
+      newStopDayChips: Array.from({ length: this.tripEndDate.getDate() - this.tripStartDate.getDate() + 1 }, (_, i) => {
+        const day = this.tripStartDate.getDate() + i;
+        const inRange = newStopStartDay && newStopEndDay && day >= newStopStartDay && day <= newStopEndDay;
+        const isEdge = day === newStopStartDay || day === newStopEndDay;
+        let style = 'flex-shrink:0;width:32px;text-align:center;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer;color:#3a2a1c;background:#fff;border:1px solid #f0e2c8;';
+        if (isEdge) style = 'flex-shrink:0;width:32px;text-align:center;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer;background:#d9481f;color:#fff;';
+        else if (inRange) style = 'flex-shrink:0;width:32px;text-align:center;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer;background:#fde3d0;color:#b8703a;';
+        return { num: day, style, select: () => this.selectNewStopDay(day) };
+      }),
+      newStopMoods: this.stopMoodDefs.map(m => ({
+        id: m.id,
+        label: m.label,
+        select: () => this.selectNewStopMood(m.id),
+        style: `font-size:12px;font-weight:700;padding:8px 13px;border-radius:999px;cursor:pointer;white-space:nowrap;flex-shrink:0;${newStopMoodId === m.id ? 'background:#3a2a1c;color:#fff;' : 'background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;'}`,
+      })),
+      newStopCoverPreview: newStopPhoto
+        ? `url(${newStopPhoto}) center/cover no-repeat`
+        : ((this.stopMoodDefs.find(m => m.id === newStopMoodId) || this.stopMoodDefs[0]).gradient),
+      openStopUploadMenu: this.openStopUploadMenu,
+      newStopError,
+      saveNewStop: this.saveNewStop,
+
+      stopDetailOpen: !!detailStop,
+      detailStop,
+      detailStopBg: detailStop ? detailStop.gradient : '',
+      closeStopDetail: this.closeStopDetail,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

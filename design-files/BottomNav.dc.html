@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:absolute;bottom:0;left:0;right:0;background:#fffaf0;border-top:1px solid #f0e2c8;padding:8px 4px 14px;display:flex;justify-content:space-around;z-index:25;">
+  <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="7">
+    <a href="{{ tab.href }}" style="{{ tab.style }}">
+      <div style="font-size:18px;">{{ tab.emoji }}</div>
+      <div style="font-size:9px;font-weight:700;margin-top:2px;">{{ tab.label }}</div>
+    </a>
+  </sc-for>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 390, &quot;height&quot;: 74}, &quot;active&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;journey&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;journey&quot;, &quot;today&quot;, &quot;expenses&quot;, &quot;checklist&quot;, &quot;memories&quot;, &quot;profile&quot;]}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active || 'journey';
+    const defs = [
+      { id: 'journey', emoji: '🗺', label: 'Journey', href: 'Pi%C3%B1a%20-%20Journey.dc.html' },
+      { id: 'today', emoji: '☀️', label: 'Today', href: 'Pi%C3%B1a%20-%20Today.dc.html' },
+      { id: 'expenses', emoji: '💰', label: 'Spese', href: 'Pi%C3%B1a%20-%20Spese.dc.html' },
+      { id: 'checklist', emoji: '🎒', label: 'Checklist', href: 'Pi%C3%B1a%20-%20Checklist.dc.html' },
+      { id: 'memories', emoji: '📸', label: 'Memories', href: 'Pi%C3%B1a%20-%20Memories.dc.html' },
+      { id: 'profile', emoji: '👤', label: 'Profilo', href: 'Pi%C3%B1a%20-%20Profilo.dc.html' },
+    ];
+    const tabs = defs.map(d => ({
+      id: d.id,
+      emoji: d.emoji,
+      label: d.label,
+      href: d.href,
+      style: `display:flex;flex-direction:column;align-items:center;text-decoration:none;color:${d.id === active ? '#d9481f' : '#c2a97e'};`,
+    }));
+    return { tabs };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Checklist" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 18px 90px;color:#3a2a1c;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:19px;color:#d9481f;display:flex;align-items:center;gap:6px;">🦩 Piña</a>
+        <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;background:#fff;border:1px solid #f0e2c8;border-radius:12px;padding:7px 14px;font-size:12px;color:#3a2a1c;font-weight:700;">🏠 Home</a>
+      </div>
+
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:16px;">Checklist</div>
+
+      <div style="display:flex;background:#f0e5d1;border-radius:13px;padding:4px;margin-bottom:18px;">
+        <div style="{{ tabCondivisaStyle }}" onClick="{{ setTabCondivisa }}">Condivisa</div>
+        <div style="{{ tabValigiaStyle }}" onClick="{{ setTabValigia }}">La mia valigia</div>
+      </div>
+
+      <sc-if value="{{ isCondivisa }}" hint-placeholder-val="{{ true }}">
+        <div>
+
+          <div style="border-radius:26px;padding:20px;background:linear-gradient(135deg, #ff8a5b 0%, #d9481f 100%);color:#fff;box-shadow:0 18px 36px -18px rgba(217,72,31,.45);margin-bottom:14px;">
+            <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:4px;">🧳 Si parte tra 12 giorni</div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;line-height:1.15;margin-bottom:10px;">Essentials del viaggio</div>
+            <div style="font-size:12px;font-weight:700;">{{ percentLabel }} · {{ assignedToYou }} assegnate a te</div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 10px;">📎 Riferimenti</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <sc-for list="{{ essentialsCats }}" as="cat" hint-placeholder-count="4">
+              <div style="{{ cat.tileStyle }}" onClick="{{ cat.setActive }}">
+                <div style="font-size:24px;margin-bottom:6px;">{{ cat.emoji }}</div>
+                <div style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;margin-bottom:2px;">{{ cat.name }}</div>
+                <div style="font-size:11px;color:#a9906f;font-weight:600;">{{ cat.countLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ hasActiveEssential }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:22px;overflow:hidden;margin-bottom:18px;box-shadow:0 12px 26px -16px rgba(120,90,40,.35);">
+              <div style="background:{{ activeEssential.gradient }};color:#fff;padding:16px;display:flex;align-items:center;gap:10px;">
+                <span style="font-size:22px;">{{ activeEssential.emoji }}</span>
+                <span style="flex:1;font-family:'Fraunces',serif;font-weight:600;font-size:16px;">{{ activeEssential.name }}</span>
+                <button style="width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,.25);color:#fff;font-size:14px;cursor:pointer;" onClick="{{ activeEssential.close }}">✕</button>
+              </div>
+              <div style="background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ activeEssential.entries }}" as="en" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px dashed #f0e2c8;">
+                    <div style="flex:1;min-width:0;">
+                      <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:12.5px;font-weight:700;outline:none;cursor:text;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ en.saveTitle }}" ref="{{ en.focusRef }}">{{ en.title }}</div>
+                      <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:11px;color:#a9906f;outline:none;cursor:text;margin-top:1px;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:1px -3px -1px;" onBlur="{{ en.saveSubtitle }}">{{ en.subtitle }}</div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-top:5px;">
+                        <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="flex:1;font-size:10.5px;color:#2a8fd8;outline:none;cursor:text;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ en.saveHref }}">🔗 {{ en.hrefDisplay }}</div>
+                        <div ref="{{ en.thumbRef }}" style="{{ en.thumbStyle }}" onClick="{{ en.openAttachment }}"></div>
+                        <button style="{{ en.removeBtnStyle }}" onClick="{{ en.removeAttachment }}">×</button>
+                        <button style="{{ en.attachBtnStyle }}" onClick="{{ en.attachTrigger }}">📎 QR/PDF</button>
+                        <input type="file" accept="image/*,application/pdf" style="display:none;" ref="{{ en.fileInputRef }}" onChange="{{ en.onFileChange }}" />
+                      </div>
+                    </div>
+                    <sc-if value="{{ en.hasTag }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:10.5px;font-weight:700;color:#d9481f;flex-shrink:0;">{{ en.tag }}</span>
+                    </sc-if>
+                    <sc-if value="{{ en.hasHref }}" hint-placeholder-val="{{ false }}">
+                      <button style="border:none;background:none;font-size:14px;cursor:pointer;flex-shrink:0;" onClick="{{ en.openLink }}">↗</button>
+                    </sc-if>
+                    <button style="width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ en.del }}">×</button>
+                  </div>
+                </sc-for>
+                <div style="text-align:center;padding:9px;border-radius:12px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12px;font-weight:700;cursor:pointer;" onClick="{{ activeEssential.addEntry }}">+ Aggiungi voce</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ hasActivityGroups }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-bottom:16px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 10px;">Attività</div>
+              <sc-for list="{{ activityGroups }}" as="ag" hint-placeholder-count="2">
+                <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;margin-bottom:12px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+                  <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;">
+                    <span style="font-size:18px;">{{ ag.icon }}</span>
+                    <span style="flex:1;font-weight:700;font-size:14.5px;">{{ ag.title }}</span>
+                    <span style="font-size:11.5px;font-weight:700;color:#b39a78;">{{ ag.countLabel }}</span>
+                  </div>
+                  <div style="border-top:1px dashed #f0e2c8;">
+                    <sc-for list="{{ ag.items }}" as="item" hint-placeholder-count="2">
+                      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;">
+                        <div style="{{ item.chkStyle }}" onClick="{{ item.toggle }}">{{ item.chkMark }}</div>
+                        <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ item.labelStyle }}" onBlur="{{ item.saveLabel }}">{{ item.label }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;background:#f0e5d1;border-radius:13px;padding:4px;margin-bottom:16px;">
+            <div style="{{ viewCatStyle }}" onClick="{{ setViewCategoria }}">Per categoria</div>
+            <div style="{{ viewPersonStyle }}" onClick="{{ setViewPersona }}">Per persona</div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:18px 2px 10px;">✅ Da fare</div>
+
+          <sc-if value="{{ isCategoria }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <sc-for list="{{ categoriesView }}" as="cat" hint-placeholder-count="4">
+                <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;margin-bottom:12px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+                  <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;">
+                    <span contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:18px;cursor:text;outline:none;" style-focus="outline:2px solid #ffb627;border-radius:6px;" onBlur="{{ cat.saveEmoji }}">{{ cat.emoji }}</span>
+                    <span contentEditable="true" suppressContentEditableWarning="{{ true }}" style="flex:1;font-weight:700;font-size:14.5px;cursor:text;outline:none;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ cat.saveName }}" ref="{{ cat.focusRef }}">{{ cat.name }}</span>
+                    <span style="font-size:11.5px;font-weight:700;color:#b39a78;">{{ cat.countLabel }}</span>
+                    <button style="width:24px;height:24px;border-radius:50%;border:none;background:#fdeee0;color:#d9481f;font-size:15px;font-weight:700;cursor:pointer;line-height:1;" onClick="{{ cat.addItem }}">+</button>
+                  </div>
+                  <div style="border-top:1px dashed #f0e2c8;">
+                    <sc-for list="{{ cat.items }}" as="item" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;">
+                        <div style="{{ item.chkStyle }}" onClick="{{ item.toggle }}">{{ item.chkMark }}</div>
+                        <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ item.labelStyle }}" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ item.saveLabel }}" ref="{{ item.focusRef }}">{{ item.label }}</div>
+                        <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:{{ item.avatarColor }};flex-shrink:0;cursor:pointer;" onClick="{{ item.cycleAssignee }}">{{ item.assignee }}</div>
+                        <button style="width:20px;height:20px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ item.delete }}">×</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+
+              <div style="text-align:center;padding:12px;border-radius:16px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:12px;" onClick="{{ addCategory }}">+ Aggiungi sezione</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ !isCategoria }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <sc-for list="{{ personGroups }}" as="grp" hint-placeholder-count="4">
+                <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;margin-bottom:12px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+                  <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;background:#fbf6ec;">
+                    <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:{{ grp.color }};">{{ grp.code }}</div>
+                    <span style="flex:1;font-weight:700;font-size:14.5px;">{{ grp.name }}</span>
+                    <span style="font-size:11.5px;font-weight:700;color:#b39a78;">{{ grp.countLabel }}</span>
+                  </div>
+                  <div>
+                    <sc-for list="{{ grp.items }}" as="item" hint-placeholder-count="2">
+                      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;">
+                        <div style="{{ item.chkStyle }}" onClick="{{ item.toggle }}">{{ item.chkMark }}</div>
+                        <span style="font-size:10.5px;font-weight:700;color:#c2793a;background:#fdeee0;padding:3px 7px;border-radius:999px;flex-shrink:0;white-space:nowrap;">{{ item.catTag }}</span>
+                        <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ item.labelStyle }}" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ item.saveLabel }}" ref="{{ item.focusRef }}">{{ item.label }}</div>
+                        <button style="width:20px;height:20px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ item.delete }}">×</button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showCelebrateCondivisa }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:20px;border:1.5px solid #d9b98a;background:#fffaf0;padding:20px;text-align:center;margin-top:6px;">
+              <div style="width:84px;height:84px;margin:0 auto 10px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);display:flex;align-items:center;justify-content:center;font:600 8.5px ui-monospace, monospace;color:#b8703a;text-align:center;padding:6px;">fenicottero con zaino</div>
+              <div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin-bottom:3px;">Tutto pronto!</div>
+              <div style="font-size:12px;color:#a9906f;font-weight:600;">Si parte 🎉</div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ !isCondivisa }}" hint-placeholder-val="{{ false }}">
+        <div>
+
+          <div style="border-radius:26px;padding:20px;background:linear-gradient(135deg, #2fbfae 0%, #2a8fd8 100%);color:#fff;box-shadow:0 18px 36px -18px rgba(40,150,180,.45);margin-bottom:18px;">
+            <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:4px;">🎒 La tua valigia</div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;line-height:1.1;margin-bottom:14px;">{{ personalHeroTitle }}</div>
+            <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.28);overflow:hidden;margin-bottom:7px;"><div style="height:100%;border-radius:999px;background:#fff;width:{{ personalProgressWidth }};"></div></div>
+            <div style="font-size:12px;font-weight:700;">{{ personalPercentLabel }}</div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 12px;">Il tuo condiviso</div>
+
+          <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;margin-bottom:18px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+            <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;">
+              <span style="font-size:18px;">🔗</span>
+              <span style="flex:1;font-weight:700;font-size:14.5px;">Dalla checklist condivisa</span>
+              <span style="font-size:11.5px;font-weight:700;color:#b39a78;">{{ mySharedCountLabel }}</span>
+            </div>
+            <div style="border-top:1px dashed #f0e2c8;">
+              <sc-for list="{{ mySharedItems }}" as="item" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;">
+                  <div style="{{ item.chkStyle }}" onClick="{{ item.toggle }}">{{ item.chkMark }}</div>
+                  <span style="font-size:10.5px;font-weight:700;color:#c2793a;background:#fdeee0;padding:3px 7px;border-radius:999px;flex-shrink:0;white-space:nowrap;">{{ item.catTag }}</span>
+                  <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ item.labelStyle }}" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ item.saveLabel }}" ref="{{ item.focusRef }}">{{ item.label }}</div>
+                  <button style="width:20px;height:20px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ item.delete }}">×</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin:2px 2px 12px;">La tua valigia</div>
+
+          <sc-for list="{{ personalSectionsView }}" as="sec" hint-placeholder-count="3">
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:20px;margin-bottom:12px;overflow:hidden;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+              <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;">
+                <span contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-size:18px;cursor:text;outline:none;" style-focus="outline:2px solid #ffb627;border-radius:6px;" onBlur="{{ sec.saveEmoji }}">{{ sec.emoji }}</span>
+                <span contentEditable="true" suppressContentEditableWarning="{{ true }}" style="flex:1;font-weight:700;font-size:14.5px;cursor:text;outline:none;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ sec.saveName }}" ref="{{ sec.focusRef }}">{{ sec.name }}</span>
+                <span style="font-size:11.5px;font-weight:700;color:#b39a78;">{{ sec.countLabel }}</span>
+                <button style="width:24px;height:24px;border-radius:50%;border:none;background:#fdeee0;color:#d9481f;font-size:15px;font-weight:700;cursor:pointer;line-height:1;" onClick="{{ sec.addItem }}">+</button>
+              </div>
+              <div style="border-top:1px dashed #f0e2c8;">
+                <sc-for list="{{ sec.items }}" as="item" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;">
+                    <div style="{{ item.chkStyle }}" onClick="{{ item.toggle }}">{{ item.chkMark }}</div>
+                    <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ item.labelStyle }}" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 3px;margin:-1px -3px;" onBlur="{{ item.saveLabel }}" ref="{{ item.focusRef }}">{{ item.label }}</div>
+                    <button style="width:20px;height:20px;border-radius:50%;border:none;background:transparent;color:#c2a97e;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;" onClick="{{ item.delete }}">×</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+
+          <div style="text-align:center;padding:12px;border-radius:16px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:12px;" onClick="{{ addPersonalSection }}">+ Aggiungi sezione</div>
+
+          <sc-if value="{{ showCelebrateValigia }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:20px;border:1.5px solid #d9b98a;background:#fffaf0;padding:20px;text-align:center;margin-top:6px;">
+              <div style="width:84px;height:84px;margin:0 auto 10px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);display:flex;align-items:center;justify-content:center;font:600 8.5px ui-monospace, monospace;color:#b8703a;text-align:center;padding:6px;">fenicottero con valigia</div>
+              <div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin-bottom:3px;">Valigia pronta!</div>
+              <div style="font-size:12px;color:#a9906f;font-weight:600;">Non manca niente 🎒</div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
+    </div>
+
+    <dc-import name="BottomNav" active="checklist" hint-size="100%,74px" style="position:absolute;bottom:0;left:0;right:0;"></dc-import>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    tab: 'condivisa',
+    viewMode: 'categoria',
+    categories: [
+      { id: 'doc', emoji: '📄', name: 'Documenti', items: [
+        { id: 'd1', label: "Passaporti e carte d'identità", done: true, assignee: 'A' },
+        { id: 'd2', label: 'Assicurazione di viaggio', done: true, assignee: 'A' },
+        { id: 'd3', label: 'Documenti noleggio auto', done: false, assignee: 'A' },
+      ]},
+      { id: 'stay', emoji: '🏕', name: 'Alloggi', items: [
+        { id: 's1', label: 'Camping Girona', done: true, assignee: 'L' },
+        { id: 's2', label: 'Airbnb Barcellona', done: true, assignee: 'L' },
+        { id: 's3', label: 'Hotel Valencia', done: false, assignee: 'L' },
+        { id: 's4', label: 'Alloggio Rototom', done: false, assignee: 'M' },
+      ]},
+      { id: 'transport', emoji: '🚐', name: 'Trasporti', items: [
+        { id: 't1', label: 'Voli andata/ritorno', done: true, assignee: 'M' },
+        { id: 't2', label: 'Ritiro noleggio auto', done: false, assignee: 'M' },
+        { id: 't3', label: 'Biglietti Rototom', done: true, assignee: 'M' },
+      ]},
+      { id: 'pack', emoji: '🎒', name: 'Packing condiviso', items: [
+        { id: 'p1', label: 'Power bank e adattatori', done: false, assignee: 'S' },
+        { id: 'p2', label: 'Kit primo soccorso', done: false, assignee: 'G' },
+        { id: 'p3', label: 'Altoparlante bluetooth', done: true, assignee: 'S' },
+      ]},
+    ],
+    personalSections: [
+      { id: 'abb', emoji: '👕', name: 'Abbigliamento', items: [
+        { id: 'pa1', label: 'Costumi da bagno', done: false },
+        { id: 'pa2', label: 'Vestiti per il festival', done: false },
+        { id: 'pa3', label: 'Scarpe comode', done: true },
+      ]},
+      { id: 'elet', emoji: '🔌', name: 'Elettronica', items: [
+        { id: 'pe1', label: 'Caricabatterie', done: true },
+        { id: 'pe2', label: 'Cuffie', done: false },
+      ]},
+      { id: 'igiene', emoji: '🧴', name: 'Igiene personale', items: [
+        { id: 'pi1', label: 'Spazzolino e dentifricio', done: false },
+        { id: 'pi2', label: 'Crema solare', done: false },
+      ]},
+    ],
+  };
+
+  essentialsState = {
+    activeId: null,
+    categories: [],
+  };
+  _essentialsFileInputs = {};
+
+  persistEssentials() {
+    if (this._td) this._td.saveEssentialsData({ categories: this.essentialsState.categories });
+  }
+
+  setActiveEssential = (catId) => {
+    this.essentialsState.activeId = this.essentialsState.activeId === catId ? null : catId;
+    this.forceUpdate();
+  };
+  updateEssentialEntryField = (catId, entryId, field, value) => {
+    const cat = this.essentialsState.categories.find(c => c.id === catId);
+    const entry = cat && cat.entries.find(e => e.id === entryId);
+    if (entry) entry[field] = value || entry[field];
+    this.persistEssentials();
+    this.forceUpdate();
+  };
+  updateEssentialAttachment = (catId, entryId, dataUrl) => {
+    const cat = this.essentialsState.categories.find(c => c.id === catId);
+    const entry = cat && cat.entries.find(e => e.id === entryId);
+    if (entry) entry.attachment = dataUrl;
+    this.persistEssentials();
+    this.forceUpdate();
+  };
+  deleteEssentialEntry = (catId, entryId) => {
+    const cat = this.essentialsState.categories.find(c => c.id === catId);
+    if (cat) cat.entries = cat.entries.filter(e => e.id !== entryId);
+    this.persistEssentials();
+    this.forceUpdate();
+  };
+  addEssentialEntry = (catId) => {
+    const cat = this.essentialsState.categories.find(c => c.id === catId);
+    if (cat) cat.entries.push({ id: 'ee' + Date.now(), title: 'Nuova voce', subtitle: 'Aggiungi dettagli', tag: '', href: '' });
+    this.persistEssentials();
+    this.forceUpdate();
+  };
+
+  essentialEntryView(cat, entry) {
+    const key = 'checklist:' + cat.id + ':' + entry.id;
+    return {
+      id: entry.id,
+      title: entry.title,
+      subtitle: entry.subtitle,
+      tag: entry.tag,
+      hasTag: !!entry.tag,
+      hasHref: !!entry.href,
+      hrefDisplay: entry.href || 'Aggiungi link (tocca)',
+      hasAttachment: !!entry.attachment,
+      thumbStyle: entry.attachment ? 'width:24px;height:24px;border-radius:6px;background-size:cover;background-position:center;cursor:pointer;flex-shrink:0;display:inline-block;' : 'display:none;width:0;height:0;',
+      thumbRef: (el) => { if (el) el.style.backgroundImage = entry.attachment ? `url(${entry.attachment})` : 'none'; },
+      removeBtnStyle: entry.attachment ? 'border:none;background:none;color:#c2a97e;font-size:12px;cursor:pointer;flex-shrink:0;display:inline-block;' : 'display:none;',
+      attachBtnStyle: !entry.attachment ? 'border:1px dashed #e6d5b3;background:none;color:#b8703a;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;border-radius:8px;padding:3px 6px;display:inline-block;' : 'display:none;',
+      saveTitle: (e) => this.updateEssentialEntryField(cat.id, entry.id, 'title', e.target.textContent.trim()),
+      saveSubtitle: (e) => this.updateEssentialEntryField(cat.id, entry.id, 'subtitle', e.target.textContent.trim()),
+      saveHref: (e) => {
+        const val = e.target.textContent.trim();
+        this.updateEssentialEntryField(cat.id, entry.id, 'href', val === 'Aggiungi link (tocca)' ? '' : val);
+      },
+      openLink: () => { if (entry.href) window.open(entry.href, '_blank'); },
+      openAttachment: () => { if (entry.attachment) window.open(entry.attachment, '_blank'); },
+      removeAttachment: () => this.updateEssentialAttachment(cat.id, entry.id, null),
+      attachTrigger: () => { const el = this._essentialsFileInputs[key]; if (el) el.click(); },
+      fileInputRef: (el) => { this._essentialsFileInputs[key] = el; },
+      onFileChange: (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => this.updateEssentialAttachment(cat.id, entry.id, reader.result);
+        reader.readAsDataURL(file);
+      },
+      del: () => this.deleteEssentialEntry(cat.id, entry.id),
+      focusRef: this.makeFocusRef(entry.id),
+    };
+  }
+
+  currentUser = 'A';
+  people = {
+    A: { name: 'Andrea', color: '#ff8a5b' },
+    L: { name: 'Luca', color: '#3ddbc5' },
+    M: { name: 'Marco', color: '#7a9d54' },
+    S: { name: 'Sara', color: '#ff5f96' },
+    G: { name: 'Giulia', color: '#ffb627' },
+  };
+  personOrder = ['A', 'L', 'M', 'S', 'G'];
+  _pendingFocusId = null;
+
+  componentDidMount() {
+    import('./trip-data.js').then(m => {
+      this._tripData = m;
+      const saved = m.loadChecklistData();
+      this.setState({
+        stops: m.loadStops(),
+        ...(saved ? { categories: saved.categories, personalSections: saved.personalSections } : {}),
+      });
+      this._td = m;
+      this.essentialsState.categories = m.loadEssentialsData().categories;
+      this.forceUpdate();
+    }).catch(() => {});
+  }
+
+  componentDidUpdate() {
+    if (this._tripData) {
+      this._tripData.saveChecklistData({ categories: this.state.categories, personalSections: this.state.personalSections });
+    }
+  }
+
+  toggleActivityChecklistItem = (stopId, catId, itemId, checklistId) => {
+    if (!this._tripData) return;
+    const stop = this.state.stops.find(s => s.id === stopId);
+    const cat = stop && (stop.categories || []).find(c => c.id === catId);
+    const item = cat && (cat.items || []).find(i => i.id === itemId);
+    if (!item) return;
+    const list = (item.checklist || []).map(c => c.id !== checklistId ? c : { ...c, done: !c.done });
+    const stops = this._tripData.updateItem(this.state.stops, stopId, catId, itemId, { checklist: list });
+    this.setState({ stops });
+    this._tripData.saveStops(stops);
+  };
+
+  updateActivityChecklistLabel = (stopId, catId, itemId, checklistId, label) => {
+    if (!this._tripData) return;
+    const stop = this.state.stops.find(s => s.id === stopId);
+    const cat = stop && (stop.categories || []).find(c => c.id === catId);
+    const item = cat && (cat.items || []).find(i => i.id === itemId);
+    if (!item) return;
+    const list = (item.checklist || []).map(c => c.id !== checklistId ? c : { ...c, label: label || c.label });
+    const stops = this._tripData.updateItem(this.state.stops, stopId, catId, itemId, { checklist: list });
+    this.setState({ stops });
+    this._tripData.saveStops(stops);
+  };
+
+  makeFocusRef(id) {
+    return (el) => {
+      if (el && this._pendingFocusId === id) {
+        el.focus();
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } catch (e) {}
+        this._pendingFocusId = null;
+      }
+    };
+  }
+
+  toggleItem = (catId, itemId) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : {
+        ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, done: !it.done })
+      })
+    }));
+  };
+
+  deleteItem = (catId, itemId) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : {
+        ...c, items: c.items.filter(it => it.id !== itemId)
+      })
+    }));
+  };
+
+  deletePersonalItem = (sectionId, itemId) => {
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : {
+        ...sec, items: sec.items.filter(it => it.id !== itemId)
+      })
+    }));
+  };
+
+  togglePersonalItem = (sectionId, itemId) => {
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : {
+        ...sec, items: sec.items.map(it => it.id !== itemId ? it : { ...it, done: !it.done })
+      })
+    }));
+  };
+
+  updateItemLabel = (catId, itemId, label) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : {
+        ...c, items: c.items.map(it => it.id !== itemId ? it : { ...it, label: label || it.label })
+      })
+    }));
+  };
+
+  updatePersonalItemLabel = (sectionId, itemId, label) => {
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : {
+        ...sec, items: sec.items.map(it => it.id !== itemId ? it : { ...it, label: label || it.label })
+      })
+    }));
+  };
+
+  updateCategoryName = (catId, name) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : { ...c, name: name || c.name })
+    }));
+  };
+
+  updateCategoryEmoji = (catId, emoji) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : { ...c, emoji: emoji || c.emoji })
+    }));
+  };
+
+  updatePersonalSectionName = (sectionId, name) => {
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : { ...sec, name: name || sec.name })
+    }));
+  };
+
+  updatePersonalSectionEmoji = (sectionId, emoji) => {
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : { ...sec, emoji: emoji || sec.emoji })
+    }));
+  };
+
+  cycleAssignee = (catId, itemId) => {
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : {
+        ...c, items: c.items.map(it => {
+          if (it.id !== itemId) return it;
+          const idx = this.personOrder.indexOf(it.assignee);
+          const next = this.personOrder[(idx + 1) % this.personOrder.length];
+          return { ...it, assignee: next };
+        })
+      })
+    }));
+  };
+
+  addItemToCategory = (catId) => {
+    const id = 'i' + Date.now();
+    this._pendingFocusId = id;
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id !== catId ? c : {
+        ...c, items: [...c.items, { id, label: 'Nuova voce', done: false, assignee: this.currentUser }]
+      })
+    }));
+  };
+
+  addCategory = () => {
+    const id = 'c' + Date.now();
+    this._pendingFocusId = id;
+    this.setState(s => ({
+      categories: [...s.categories, { id, emoji: '📌', name: 'Nuova sezione', items: [] }]
+    }));
+  };
+
+  addPersonalItem = (sectionId) => {
+    const id = 'pi' + Date.now();
+    this._pendingFocusId = id;
+    this.setState(s => ({
+      personalSections: s.personalSections.map(sec => sec.id !== sectionId ? sec : {
+        ...sec, items: [...sec.items, { id, label: 'Nuova voce', done: false }]
+      })
+    }));
+  };
+
+  addPersonalSection = () => {
+    const id = 'ps' + Date.now();
+    this._pendingFocusId = id;
+    this.setState(s => ({
+      personalSections: [...s.personalSections, { id, emoji: '📦', name: 'Nuova sezione', items: [] }]
+    }));
+  };
+
+  setTab = (tab) => this.setState({ tab });
+  setViewMode = (viewMode) => this.setState({ viewMode });
+
+  itemView(item, opts) {
+    const person = this.people[item.assignee] || { color: '#ccc' };
+    return {
+      id: item.id,
+      label: item.label,
+      assignee: item.assignee || '',
+      avatarColor: person.color,
+      chkMark: item.done ? '✓' : '',
+      chkStyle: item.done
+        ? 'width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;background:#d9481f;color:#fff;font-weight:700;cursor:pointer;'
+        : 'width:22px;height:22px;border-radius:50%;flex-shrink:0;border:2px solid #e6d5b3;cursor:pointer;',
+      labelStyle: item.done
+        ? 'flex:1;font-size:13px;font-weight:600;color:#b7a586;text-decoration:line-through;cursor:text;outline:none;'
+        : 'flex:1;font-size:13px;font-weight:600;color:#3a2a1c;cursor:text;outline:none;',
+      toggle: opts.toggle,
+      cycleAssignee: opts.cycle,
+      saveLabel: (e) => opts.save(e.target.textContent.trim()),
+      focusRef: this.makeFocusRef(item.id),
+      delete: opts.del,
+    };
+  }
+
+  renderVals() {
+    const { tab, viewMode, categories, personalSections, stops } = this.state;
+
+    const activityGroups = [];
+    (stops || []).forEach(stop => {
+      (stop.categories || []).forEach(cat => {
+        (cat.items || []).forEach(item => {
+          if (!item.checklist || !item.checklist.length) return;
+          const done = item.checklist.filter(c => c.done).length;
+          activityGroups.push({
+            icon: cat.icon,
+            title: `${item.label} · ${stop.name}`,
+            countLabel: `${done}/${item.checklist.length}`,
+            items: item.checklist.map(c => ({
+              id: c.id,
+              label: c.label,
+              chkMark: c.done ? '✓' : '',
+              chkStyle: c.done
+                ? 'width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;background:#2a8fd8;color:#fff;font-weight:700;cursor:pointer;'
+                : 'width:22px;height:22px;border-radius:50%;flex-shrink:0;border:2px solid #e6d5b3;cursor:pointer;',
+              labelStyle: c.done
+                ? 'flex:1;font-size:13px;font-weight:600;color:#b7a586;text-decoration:line-through;cursor:text;outline:none;'
+                : 'flex:1;font-size:13px;font-weight:600;color:#3a2a1c;cursor:text;outline:none;',
+              toggle: () => this.toggleActivityChecklistItem(stop.id, cat.id, item.id, c.id),
+              saveLabel: (e) => this.updateActivityChecklistLabel(stop.id, cat.id, item.id, c.id, e.target.textContent.trim()),
+            })),
+          });
+        });
+      });
+    });
+    const hasActivityGroups = activityGroups.length > 0;
+
+    const flat = [];
+    categories.forEach(c => c.items.forEach(it => flat.push({ ...it, catEmoji: c.emoji, catName: c.name, catId: c.id })));
+    const totalItems = flat.length;
+    const doneItems = flat.filter(i => i.done).length;
+    const percent = totalItems ? Math.round(doneItems / totalItems * 100) : 0;
+    const assignedToYou = flat.filter(i => i.assignee === this.currentUser).length;
+
+    const categoriesView = categories.map(c => {
+      const done = c.items.filter(i => i.done).length;
+      return {
+        id: c.id,
+        emoji: c.emoji,
+        name: c.name,
+        countLabel: `${done}/${c.items.length}`,
+        addItem: () => this.addItemToCategory(c.id),
+        saveName: (e) => this.updateCategoryName(c.id, e.target.textContent.trim()),
+        saveEmoji: (e) => this.updateCategoryEmoji(c.id, e.target.textContent.trim()),
+        focusRef: this.makeFocusRef(c.id),
+        items: c.items.map(it => this.itemView(it, {
+          toggle: () => this.toggleItem(c.id, it.id),
+          cycle: () => this.cycleAssignee(c.id, it.id),
+          save: (label) => this.updateItemLabel(c.id, it.id, label),
+          del: () => this.deleteItem(c.id, it.id),
+        })),
+      };
+    });
+
+    const personGroups = this.personOrder.map(code => {
+      const person = this.people[code];
+      const items = flat.filter(i => i.assignee === code).map(it => ({
+        ...this.itemView(it, {
+          toggle: () => this.toggleItem(it.catId, it.id),
+          save: (label) => this.updateItemLabel(it.catId, it.id, label),
+          del: () => this.deleteItem(it.catId, it.id),
+        }),
+        catTag: `${it.catEmoji} ${it.catName}`,
+      }));
+      const done = items.filter(i => i.chkMark === '✓').length;
+      return { code, name: person.name, color: person.color, countLabel: `${done}/${items.length}`, items };
+    }).filter(g => g.items.length > 0);
+
+    const mySharedItems = flat.filter(i => i.assignee === this.currentUser).map(it => ({
+      ...this.itemView(it, {
+        toggle: () => this.toggleItem(it.catId, it.id),
+        save: (label) => this.updateItemLabel(it.catId, it.id, label),
+        del: () => this.deleteItem(it.catId, it.id),
+      }),
+      catTag: `${it.catEmoji} ${it.catName}`,
+    }));
+    const mySharedDone = mySharedItems.filter(i => i.chkMark === '✓').length;
+
+    const personalSectionsView = personalSections.map(sec => {
+      const done = sec.items.filter(i => i.done).length;
+      return {
+        id: sec.id,
+        emoji: sec.emoji,
+        name: sec.name,
+        countLabel: `${done}/${sec.items.length}`,
+        addItem: () => this.addPersonalItem(sec.id),
+        saveName: (e) => this.updatePersonalSectionName(sec.id, e.target.textContent.trim()),
+        saveEmoji: (e) => this.updatePersonalSectionEmoji(sec.id, e.target.textContent.trim()),
+        focusRef: this.makeFocusRef(sec.id),
+        items: sec.items.map(it => this.itemView(it, {
+          toggle: () => this.togglePersonalItem(sec.id, it.id),
+          save: (label) => this.updatePersonalItemLabel(sec.id, it.id, label),
+          del: () => this.deletePersonalItem(sec.id, it.id),
+        })),
+      };
+    });
+
+    const personalTotal = mySharedItems.length + personalSections.reduce((a, s) => a + s.items.length, 0);
+    const personalDone = mySharedDone + personalSections.reduce((a, s) => a + s.items.filter(i => i.done).length, 0);
+    const personalPercent = personalTotal ? Math.round(personalDone / personalTotal * 100) : 0;
+
+    const isCondivisa = tab === 'condivisa';
+    const isCategoria = viewMode === 'categoria';
+
+    const essentialsCats = this.essentialsState.categories.map(c => ({
+      id: c.id,
+      emoji: c.emoji,
+      name: c.name,
+      countLabel: `${c.entries.length} salvati`,
+      setActive: () => this.setActiveEssential(c.id),
+      tileStyle: `background:#fff;border-radius:20px;border:${this.essentialsState.activeId === c.id ? '1.5px solid #2a8fd8' : '1px solid #f0e2c8'};padding:16px 14px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);cursor:pointer;`,
+    }));
+    const activeEssentialCat = this.essentialsState.categories.find(c => c.id === this.essentialsState.activeId);
+    const activeEssential = activeEssentialCat ? {
+      emoji: activeEssentialCat.emoji,
+      name: activeEssentialCat.name,
+      gradient: activeEssentialCat.gradient,
+      close: () => this.setActiveEssential(activeEssentialCat.id),
+      addEntry: () => this.addEssentialEntry(activeEssentialCat.id),
+      entries: activeEssentialCat.entries.map(en => this.essentialEntryView(activeEssentialCat, en)),
+    } : null;
+
+    return {
+      essentialsCats,
+      hasActiveEssential: !!activeEssential,
+      activeEssential: activeEssential || {},
+      tabCondivisaStyle: `flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;${isCondivisa ? 'background:#fff;color:#3a2a1c;box-shadow:0 4px 10px -6px rgba(120,90,40,.4);' : 'color:#a9906f;'}`,
+      tabValigiaStyle: `flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;${!isCondivisa ? 'background:#fff;color:#3a2a1c;box-shadow:0 4px 10px -6px rgba(120,90,40,.4);' : 'color:#a9906f;'}`,
+      setTabCondivisa: () => this.setTab('condivisa'),
+      setTabValigia: () => this.setTab('valigia'),
+      isCondivisa,
+      activityGroups,
+      hasActivityGroups,
+
+      viewCatStyle: `flex:1;text-align:center;padding:8px 0;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;${isCategoria ? 'background:#fff;color:#3a2a1c;box-shadow:0 3px 8px -5px rgba(120,90,40,.4);' : 'color:#a9906f;'}`,
+      viewPersonStyle: `flex:1;text-align:center;padding:8px 0;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;${!isCategoria ? 'background:#fff;color:#3a2a1c;box-shadow:0 3px 8px -5px rgba(120,90,40,.4);' : 'color:#a9906f;'}`,
+      setViewCategoria: () => this.setViewMode('categoria'),
+      setViewPersona: () => this.setViewMode('persona'),
+      isCategoria,
+
+      heroTitle: `${doneItems} di ${totalItems} cose pronte`,
+      progressWidth: `${percent}%`,
+      percentLabel: `${percent}% completato`,
+      categoriesCount: categories.length,
+      assignedToYou,
+      remaining: totalItems - doneItems,
+
+      categoriesView,
+      personGroups,
+      addCategory: () => this.addCategory(),
+
+      mySharedItems,
+      mySharedCountLabel: `${mySharedDone}/${mySharedItems.length}`,
+      personalSectionsView,
+      addPersonalSection: () => this.addPersonalSection(),
+
+      personalHeroTitle: `${personalDone} di ${personalTotal} pronte`,
+      personalProgressWidth: `${personalPercent}%`,
+      personalPercentLabel: `${personalPercent}% completato`,
+
+      showCelebrateCondivisa: totalItems > 0 && doneItems === totalItems,
+      showCelebrateValigia: personalTotal > 0 && personalDone === personalTotal,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

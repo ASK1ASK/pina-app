@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; }
+  @keyframes pina-pop { 0% { opacity:0; transform:scale(.9); } 100% { opacity:1; transform:scale(1); } }
+  @keyframes pina-fade { 0% { opacity:0; transform:translateY(6px); } 100% { opacity:1; transform:translateY(0); } }
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;justify-content:center;padding:48px 16px;">
+  <div data-screen-label="Onboarding" style="width:390px;height:844px;background:#fbf6ec;border-radius:48px;border:10px solid #2b2118;box-shadow:0 34px 80px -20px rgba(80,50,20,.35);position:relative;overflow:hidden;flex-shrink:0;">
+
+    <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#2b2118;border-radius:20px;z-index:30;"></div>
+
+    <!-- 1. SPLASH -->
+    <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#ffb627,#ff5f6d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;" onClick="{{ goWelcome }}">
+        <div style="font-size:56px;animation:pina-pop .5s ease;">🦩</div>
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-weight:700;font-size:30px;color:#fff;animation:pina-pop .6s ease;">Piña</div>
+        <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:.04em;">Travel together</div>
+      </div>
+    </sc-if>
+
+    <!-- 2. WELCOME -->
+    <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+        <div style="height:52%;position:relative;background:linear-gradient(135deg,#ffb627,#ff5f6d);background-image:radial-gradient(rgba(255,255,255,.16) 1.5px, transparent 1.5px), linear-gradient(135deg,#ffb627,#ff5f6d);background-size:16px 16px, 100% 100%;">
+          <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:#3a2a1c;font-size:17px;">‹</a>
+          <div style="position:absolute;bottom:12px;left:14px;width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 8px 16px -6px rgba(0,0,0,.35);">🦩</div>
+        </div>
+        <div style="flex:1;padding:22px 24px 26px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-weight:700;font-size:24px;line-height:1.15;color:#3a2a1c;margin-bottom:10px;">Vivere viaggi indimenticabili, insieme.</div>
+            <div style="font-size:12.5px;color:#a9906f;font-weight:600;line-height:1.5;">Un unico spazio condiviso con la vostra crew: pianificazione, spese, ricordi.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:13px 0;border-radius:999px;cursor:pointer;" onClick="{{ goLoginForCreate }}">Crea un viaggio</div>
+            <div style="background:#fbf6ec;border:1px solid #f0e2c8;color:#3a2a1c;text-align:center;font-size:13.5px;font-weight:700;padding:12px 0;border-radius:999px;cursor:pointer;" onClick="{{ goJoinCode }}">Unisciti a un viaggio</div>
+            <div style="text-align:center;color:#d9481f;font-size:12.5px;font-weight:700;padding:8px 0;cursor:pointer;" onClick="{{ goLoginForAccess }}">I tuoi viaggi / Accedi</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- 3. LOGIN -->
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;padding:100px 28px 40px;display:flex;flex-direction:column;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;display:flex;align-items:center;justify-content:center;color:#3a2a1c;font-size:17px;cursor:pointer;position:absolute;top:58px;left:22px;" onClick="{{ goWelcome }}">‹</div>
+        <div style="font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:20px;color:#d9481f;margin-bottom:8px;text-align:center;">🦩 Piña</div>
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;text-align:center;margin-bottom:28px;color:#3a2a1c;">{{ loginTitle }}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid #f0e2c8;border-radius:999px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;" onClick="{{ afterLogin }}"><span>🔵</span> Continua con Google</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid #f0e2c8;border-radius:999px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;" onClick="{{ afterLogin }}"><span>🍎</span> Continua con Apple</div>
+          <div style="{{ emailAuthStyle }}" onClick="{{ selectEmailAuth }}">✉️ Continua con Email</div>
+          <div style="{{ phoneAuthStyle }}" onClick="{{ selectPhoneAuth }}">📱 Continua con il numero</div>
+
+          <sc-if value="{{ authMethod }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+              <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ authInputRef }}" style="flex:1;font-size:13px;font-weight:600;background:#fff;border:1.5px solid #f0e2c8;border-radius:999px;padding:11px 16px;outline:none;cursor:text;color:#3a2a1c;" style-focus="outline:2px solid #ffb627;">{{ authPlaceholder }}</div>
+              <div style="background:#3a2a1c;color:#fff;font-size:12.5px;font-weight:700;padding:11px 18px;border-radius:999px;cursor:pointer;white-space:nowrap;flex-shrink:0;" onClick="{{ sendAuth }}">{{ authCta }}</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- 4. CREATE TRIP -->
+    <sc-if value="{{ isCreateTrip }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 22px 30px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;display:flex;align-items:center;justify-content:center;color:#3a2a1c;font-size:17px;cursor:pointer;flex-shrink:0;" onClick="{{ goBackFromCreate }}">‹</div>
+          <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;color:#3a2a1c;">{{ createTripTitle }}</div>
+        </div>
+        <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="{{ tripNameStyle }}" style-focus="outline:2px solid #ffb627;" onFocus="{{ onFocusTripName }}" onBlur="{{ saveTripName }}">{{ tripNameDisplay }}</div>
+
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin-bottom:12px;color:#3a2a1c;">Quando partiamo?</div>
+        <div style="background:#fff;border:1px solid #f0e2c8;border-radius:18px;padding:14px;margin-bottom:26px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+            <span style="width:22px;height:22px;border-radius:50%;background:#fbf6ec;color:#3a2a1c;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ prevMonth }}">‹</span>
+            <span style="font-size:12.5px;font-weight:700;color:#3a2a1c;white-space:nowrap;">{{ monthLabel }}</span>
+            <span style="width:22px;height:22px;border-radius:50%;background:#fbf6ec;color:#3a2a1c;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ nextMonth }}">›</span>
+          </div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:#d9481f;white-space:nowrap;margin-bottom:8px;">{{ tripDates }}</div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+            <sc-for list="{{ weekdayLabels }}" as="wd" hint-placeholder-count="7">
+              <div style="text-align:center;font-size:9.5px;font-weight:700;color:#c2a97e;">{{ wd }}</div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">
+            <sc-for list="{{ calendarDays }}" as="d" hint-placeholder-count="31">
+              <div style="{{ d.style }}" onClick="{{ d.select }}">{{ d.num }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin-bottom:4px;color:#3a2a1c;">Che tipo di viaggio sarà?</div>
+        <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-bottom:12px;">Scegline quante vuoi</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <sc-for list="{{ moods }}" as="m" hint-placeholder-count="9">
+            <div style="{{ m.style }}" onClick="{{ m.toggle }}">
+              {{ m.label }}
+              <sc-if value="{{ m.custom }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-left:6px;opacity:.6;" onClick="{{ m.remove }}">×</span>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ !addingMood }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;flex-shrink:0;background:#fff;border:1.5px dashed #d9b98a;color:#b8703a;" onClick="{{ startAddMood }}">+ Aggiungi</div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ addingMood }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:26px;">
+            <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ newMoodRef }}" style="flex:1;font-size:12.5px;font-weight:600;background:#fff;border:1.5px dashed #d9b98a;border-radius:999px;padding:9px 14px;outline:none;cursor:text;color:#a9906f;font-style:italic;" onFocus="{{ onFocusNewMood }}" onKeyDown="{{ onNewMoodKeyDown }}">😍 emoji + nome del mood</div>
+            <div style="background:#3a2a1c;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;" onClick="{{ addCustomMood }}">+</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ !addingMood }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-bottom:14px;"></div>
+        </sc-if>
+
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:18px;margin-bottom:4px;color:#3a2a1c;">Chi viene con te?</div>
+        <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-bottom:12px;">Aggiungi i nomi della tua crew</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <sc-for list="{{ participantChips }}" as="p" hint-placeholder-count="4">
+            <div style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #f0e2c8;border-radius:999px;padding:7px 8px 7px 12px;font-size:12.5px;font-weight:700;color:#3a2a1c;white-space:nowrap;flex-shrink:0;">
+              {{ p.name }}
+              <sc-if value="{{ p.removable }}" hint-placeholder-val="{{ true }}">
+                <span style="width:16px;height:16px;border-radius:50%;background:#f0e5d1;color:#a9906f;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ p.remove }}">×</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:28px;">
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ newParticipantRef }}" style="flex:1;font-size:12.5px;font-weight:600;background:#fff;border:1.5px dashed #d9b98a;border-radius:999px;padding:9px 14px;outline:none;cursor:text;color:#3a2a1c;" onKeyDown="{{ onParticipantKeyDown }}"></div>
+          <div style="background:#3a2a1c;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;" onClick="{{ addParticipant }}">+</div>
+        </div>
+
+        <sc-if value="{{ editReturnStep }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);" onClick="{{ openCoverPicker }}">
+            <div style="{{ coverPreviewStyle }}"></div>
+            <div style="flex:1;font-weight:700;font-size:13.5px;color:#3a2a1c;">Scegli la tua copertina</div>
+            <span style="color:#c2a97e;font-size:15px;">›</span>
+          </div>
+
+          <div style="text-align:center;font-size:12.5px;font-weight:700;color:#c2445a;cursor:pointer;margin-bottom:10px;" onClick="{{ askDeleteTrip }}">🗑 Elimina viaggio</div>
+        </sc-if>
+
+        <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;" onClick="{{ saveCreateTrip }}">{{ createTripCta }}</div>
+      </div>
+    </sc-if>
+
+    <!-- COVER COLOR SHEET -->
+    <sc-if value="{{ coverPickerOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeCoverPicker }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:#3a2a1c;margin-bottom:16px;">Scegli un colore</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+            <sc-for list="{{ coverSwatches }}" as="cs" hint-placeholder-count="9">
+              <div style="{{ cs.style }}" onClick="{{ cs.select }}"></div>
+            </sc-for>
+            <div style="width:100%;aspect-ratio:1;border-radius:50%;background:#fff;border:1.5px dashed #d9b98a;color:#b8703a;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;" onClick="{{ openUploadMenu }}">+</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- UPLOAD MENU -->
+    <sc-if value="{{ uploadMenuOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:41;display:flex;align-items:flex-end;justify-content:center;" onClick="{{ closeUploadMenu }}">
+        <div style="width:100%;background:#fbf6ec;border-radius:24px 24px 0 0;padding:22px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);" onClick="{{ stopPropagation }}">
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:#3a2a1c;margin-bottom:14px;">Carica una copertina</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerCameraUpload }}"><span style="font-size:16px;">📷</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Scatta foto</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerLibraryUpload }}"><span style="font-size:16px;">🖼</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica dalla libreria</span></div>
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ triggerFileUpload }}"><span style="font-size:16px;">📁</span><span style="font-weight:700;font-size:13px;color:#3a2a1c;">Carica da file</span></div>
+          </div>
+          <div style="text-align:center;margin-top:14px;font-size:12.5px;font-weight:700;color:#a9906f;cursor:pointer;" onClick="{{ closeUploadMenu }}">Annulla</div>
+        </div>
+      </div>
+    </sc-if>
+    <input type="file" accept="image/*" capture="environment" ref="{{ cameraFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" accept="image/*" ref="{{ libraryFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+    <input type="file" ref="{{ fileFileRef }}" onChange="{{ onCoverFileChosen }}" style="display:none;" />
+
+    <!-- DELETE CONFIRM -->
+    <sc-if value="{{ deleteConfirmOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:center;justify-content:center;padding:34px;">
+        <div style="background:#fff;border-radius:22px;padding:24px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);text-align:center;">
+          <div style="font-size:32px;margin-bottom:10px;">⚠️</div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:#3a2a1c;margin-bottom:8px;">Sei sicuro di voler eliminare {{ tripName }}?</div>
+          <div style="font-size:12px;color:#a9906f;font-weight:600;margin-bottom:20px;">L'azione non si può annullare</div>
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;background:#fbf6ec;border:1px solid #f0e2c8;color:#3a2a1c;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;border-radius:999px;cursor:pointer;" onClick="{{ cancelDeleteTrip }}">Annulla</div>
+            <div style="flex:1;background:#c2445a;color:#fff;text-align:center;font-size:12.5px;font-weight:700;padding:12px 0;border-radius:999px;cursor:pointer;" onClick="{{ confirmDeleteTrip }}">Elimina</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- 4b. PREPARING (animated) -->
+    <sc-if value="{{ isPreparing }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:{{ coverGradient }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div style="font-size:44px;animation:pina-pop .4s ease;">🦩</div>
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:#fff;animation:pina-fade .4s ease;">{{ preparingPhrase }}</div>
+      </div>
+    </sc-if>
+
+    <!-- 5. COVER / RECAP (creation wow-moment, or return visit before departure) -->
+    <sc-if value="{{ isCover }}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; background: {{ coverGradient }}; background-image: radial-gradient(rgba(255,255,255,.14) 1.5px, transparent 1.5px), {{ coverGradient }}; background-size: 16px 16px, 100% 100%; overflow-y: auto; left: -4px; top: -1px">
+        <sc-if value="{{ recapMode }}" hint-placeholder-val="{{ false }}">
+          <a href="Pi%C3%B1a%20-%20Home.dc.html" style="text-decoration:none;position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:#3a2a1c;font-size:17px;">‹</a>
+        </sc-if>
+        <div style="font-size:15px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:18px;letter-spacing:.06em;text-transform:uppercase;">{{ coverEyebrow }}</div>
+        <div style="font-size:46px;margin-bottom:14px;">🦩</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:30px;color:#fff;line-height:1.1;margin-bottom:10px;">{{ tripName }}</div>
+        <div style="font-size:13.5px;font-weight:700;color:rgba(255,255,255,.92);margin-bottom:14px;">{{ tripDates }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:22px;">
+          <sc-for list="{{ selectedMoodChips }}" as="mc" hint-placeholder-count="2">
+            <span style="font-size:11.5px;font-weight:700;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);padding:5px 11px;border-radius:999px;color:#fff;">{{ mc }}</span>
+          </sc-for>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:18px;">Crew {{ joinedCount }}/{{ crewTotal }}</div>
+
+        <sc-if value="{{ recapMode }}" hint-placeholder-val="{{ false }}">
+          <div style="width:100%;display:flex;flex-direction:column;gap:10px;">
+            <div style="background:#fff;color:#3a2a1c;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;" onClick="{{ goToJourney }}">Vai al viaggio →</div>
+            <div style="display:flex;gap:10px;">
+              <div style="flex:1;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:12.5px;font-weight:700;padding:12px 0;border-radius:999px;cursor:pointer;" onClick="{{ goInvite }}">Invita crew</div>
+              <div style="flex:1;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:12.5px;font-weight:700;padding:12px 0;border-radius:999px;cursor:pointer;" onClick="{{ goEditDetails }}">Impostazioni</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ !recapMode }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#fff;color:#3a2a1c;font-size:13.5px;font-weight:700;padding:14px 30px;border-radius:999px;cursor:pointer;margin-top:8px;" onClick="{{ goInvite }}">Condividi con la crew</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- 6. INVITE -->
+    <sc-if value="{{ isInvite }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 22px 30px;">
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin-bottom:4px;color:#3a2a1c;">Invita la crew</div>
+        <div style="font-size:12px;color:#a9906f;font-weight:600;margin-bottom:20px;">Tre modi per unirsi, stessa destinazione</div>
+
+        <div style="border-radius:24px;padding:22px;background:{{ coverGradient }};color:#fff;box-shadow:0 18px 36px -18px rgba(255,110,70,.45);margin-bottom:22px;">
+          <div style="font-size:26px;margin-bottom:8px;">🦩</div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:21px;">{{ tripName }}</div>
+          <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85);margin-top:2px;">{{ tripDates }} · {{ crewTotal }} Crew</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+            <span style="font-size:20px;">🔗</span>
+            <div style="flex:1;"><div style="font-weight:700;font-size:13.5px;">Link di invito</div><div style="font-size:11px;color:#a9906f;font-weight:600;">Perfetto per WhatsApp o Telegram</div></div>
+            <div style="background:#fbf6ec;color:#3a2a1c;font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer;" onClick="{{ copyLink }}">{{ linkCopyLabel }}</div>
+          </div>
+          <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+            <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;border:1px solid #f0e2c8;background-image:url({{ qrImageUrl }});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>
+            <div style="flex:1;"><div style="font-weight:700;font-size:13.5px;">Codice QR</div><div style="font-size:11px;color:#a9906f;font-weight:600;">Comodo quando siete già insieme</div></div>
+            <div style="background:#fbf6ec;color:#3a2a1c;font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer;" onClick="{{ showQr }}">Mostra</div>
+          </div>
+          <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+            <span style="font-size:20px;">🔑</span>
+            <div style="flex:1;"><div style="font-weight:700;font-size:13.5px;">Codice</div><div style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:#d9481f;letter-spacing:.03em;">{{ inviteCode }}</div></div>
+            <div style="background:#fbf6ec;color:#3a2a1c;font-size:11.5px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer;" onClick="{{ copyCode }}">{{ codeCopyLabel }}</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:26px;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);padding:13px 0;border-radius:999px;cursor:pointer;" onClick="{{ goCrewForming }}">Continua</div>
+      </div>
+    </sc-if>
+
+    <!-- QR OVERLAY -->
+    <sc-if value="{{ qrOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:rgba(20,12,6,.75);z-index:40;display:flex;align-items:center;justify-content:center;padding:40px;" onClick="{{ hideQr }}">
+        <div style="background:#fff;border-radius:24px;padding:26px;text-align:center;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);">
+          <div style="width:180px;height:180px;border-radius:12px;margin-bottom:14px;background-image:url({{ qrImageUrl }});background-size:contain;background-position:center;background-repeat:no-repeat;"></div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:#3a2a1c;">{{ tripName }}</div>
+          <div style="font-size:11.5px;color:#a9906f;font-weight:600;">Inquadra per unirti</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- 7. CREW FORMING (organizer manages) -->
+    <sc-if value="{{ isCrewForming }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 22px 30px;">
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin-bottom:4px;color:#3a2a1c;">La crew si sta formando</div>
+        <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:22px;">{{ joinedCount }} di {{ crewTotal }} già a bordo · tocca per simulare l'arrivo</div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px;">
+          <div style="background:#fff;border:1.5px solid #ffb627;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+            <span style="font-size:18px;">✅</span>
+            <span style="flex:1;font-weight:700;font-size:13.5px;color:#3a2a1c;">{{ identityName }}</span>
+            <span style="font-size:11px;font-weight:700;color:#d9481f;">Tu · organizzatore</span>
+          </div>
+          <sc-for list="{{ crewRows }}" as="c" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);cursor:pointer;" onClick="{{ c.toggle }}">
+              <span style="font-size:18px;">{{ c.statusIcon }}</span>
+              <span style="flex:1;font-weight:700;font-size:13.5px;color:#3a2a1c;">{{ c.name }}</span>
+              <span style="font-size:11px;font-weight:700;color:{{ c.statusColor }};">{{ c.statusLabel }}</span>
+              <span style="width:20px;height:20px;border-radius:50%;background:transparent;color:#c2a97e;font-size:15px;display:flex;align-items:center;justify-content:center;" onClick="{{ c.remove }}">×</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;margin-bottom:10px;" onClick="{{ goRitual }}">Vai al tuo viaggio →</div>
+        <sc-if value="{{ !allJoined }}" hint-placeholder-val="{{ true }}">
+          <div style="text-align:center;font-size:11.5px;font-weight:600;color:#a9906f;">Puoi proseguire anche se qualcuno non si è ancora unito</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- 8. RITUAL (organizer path, once crew complete) -->
+    <sc-if value="{{ isRitual }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:{{ coverGradient }};display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:34px;">
+        <div style="font-size:44px;margin-bottom:16px;">🦩</div>
+        <div style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">{{ ritualEyebrow }}</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:27px;color:#fff;line-height:1.15;margin-bottom:10px;">{{ tripName }}<br>si parte {{ countdownLabel }}</div>
+        <div style="margin-top:24px;background:#fff;color:#3a2a1c;font-size:14px;font-weight:700;padding:15px 40px;border-radius:999px;cursor:pointer;" onClick="{{ enterApp }}">Let's go 👇</div>
+      </div>
+    </sc-if>
+
+    <!-- GUEST: join hub — 3 modi per unirsi -->
+    <sc-if value="{{ isJoinCode }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 22px 30px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #f0e2c8;display:flex;align-items:center;justify-content:center;color:#3a2a1c;font-size:17px;cursor:pointer;flex-shrink:0;" onClick="{{ goWelcome }}">‹</div>
+          <div style="font-family:'Fraunces',serif;font-weight:600;font-size:19px;color:#3a2a1c;">Unisciti a un viaggio</div>
+        </div>
+        <div style="font-size:12px;color:#a9906f;font-weight:600;margin:2px 0 22px 44px;">Tre modi per raggiungere la tua crew</div>
+
+        <sc-if value="{{ joinError }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fdeceb;border:1px solid #f0b8ab;border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
+            <span style="font-size:16px;">⚠️</span>
+            <div style="flex:1;font-size:12px;font-weight:600;color:#a3392a;line-height:1.4;">{{ joinError }}</div>
+            <span style="font-size:13px;color:#a3392a;cursor:pointer;flex-shrink:0;" onClick="{{ dismissJoinError }}">×</span>
+          </div>
+        </sc-if>
+
+        <!-- 1. LINK -->
+        <div style="background:#fff;border:1px solid #f0e2c8;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:17px;">🔗</span><span style="font-weight:700;font-size:13.5px;color:#3a2a1c;">Hai un link di invito?</span></div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ joinLinkRef }}" style="font-size:12.5px;font-weight:600;background:#fbf6ec;border:1px solid #f0e2c8;border-radius:12px;padding:11px 14px;margin-bottom:10px;outline:none;cursor:text;color:#a9906f;" style-focus="outline:1.5px solid #ffb627;" onFocus="{{ onFocusJoinLink }}">https://pina.app/join/...</div>
+          <div style="background:#3a2a1c;color:#fff;text-align:center;font-size:12.5px;font-weight:700;padding:11px 0;border-radius:999px;cursor:pointer;" onClick="{{ confirmJoinLink }}">Conferma</div>
+        </div>
+
+        <!-- 2. CODICE -->
+        <div style="background:#fff;border:1px solid #f0e2c8;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:17px;">🔑</span><span style="font-weight:700;font-size:13.5px;color:#3a2a1c;">Hai un codice dalla crew?</span></div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" ref="{{ joinCodeRef }}" style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;text-align:center;letter-spacing:.04em;background:#fbf6ec;border:1px solid #f0e2c8;border-radius:12px;padding:11px 14px;margin-bottom:10px;outline:none;cursor:text;color:#a9906f;" style-focus="outline:1.5px solid #ffb627;" onFocus="{{ onFocusJoinCode }}">PINA-XXXXX</div>
+          <div style="background:#3a2a1c;color:#fff;text-align:center;font-size:12.5px;font-weight:700;padding:11px 0;border-radius:999px;cursor:pointer;" onClick="{{ confirmJoinCode }}">Conferma</div>
+        </div>
+
+        <!-- 3. QR CAMERA -->
+        <div style="background:#fff;border:1px solid #f0e2c8;border-radius:18px;padding:16px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:17px;">📷</span><span style="font-weight:700;font-size:13.5px;color:#3a2a1c;">Inquadra il QR code</span></div>
+          <div style="font-size:11.5px;color:#a9906f;font-weight:600;margin-bottom:10px;">Comodo quando siete già insieme</div>
+          <div style="background:#fbf6ec;border:1px solid #f0e2c8;color:#3a2a1c;text-align:center;font-size:12.5px;font-weight:700;padding:11px 0;border-radius:999px;cursor:pointer;" onClick="{{ openCamera }}">Apri fotocamera</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- QR CAMERA OVERLAY (mock viewfinder) -->
+    <sc-if value="{{ cameraOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:#0c0805;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;">
+        <div style="position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;cursor:pointer;" onClick="{{ closeCamera }}">‹</div>
+        <div style="width:220px;height:220px;border:3px solid rgba(255,255,255,.7);border-radius:24px;margin-bottom:22px;position:relative;">
+          <div style="position:absolute;inset:-3px;border-radius:24px;border:3px solid #ffb627;border-top-color:transparent;border-left-color:transparent;"></div>
+        </div>
+        <div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.75);margin-bottom:24px;">Inquadra il QR code del viaggio</div>
+        <div style="background:#fff;color:#3a2a1c;font-size:12.5px;font-weight:700;padding:12px 26px;border-radius:999px;cursor:pointer;" onClick="{{ simulateScan }}">Simula scansione</div>
+      </div>
+    </sc-if>
+
+    <!-- 9. JOIN preview (guest sees who's already in) -->
+    <sc-if value="{{ isJoin }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 26px 30px;display:flex;flex-direction:column;align-items:center;text-align:center;">
+        <div style="font-size:34px;margin-bottom:14px;">🦩</div>
+        <div style="font-size:12.5px;font-weight:700;color:#a9906f;margin-bottom:6px;">Sei stato invitato a</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:24px;color:#3a2a1c;margin-bottom:10px;">{{ tripName }}</div>
+        <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:22px;">{{ tripDates }}</div>
+
+        <div style="width:100%;background:#fff;border:1px solid #f0e2c8;border-radius:18px;padding:16px;margin-bottom:26px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);text-align:left;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:10px;">Ti unirai a questa crew</div>
+          <sc-for list="{{ joinPreviewCrew }}" as="c" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+              <span style="font-size:15px;">{{ c.statusIcon }}</span>
+              <span style="font-size:13px;font-weight:700;color:#3a2a1c;">{{ c.name }}</span>
+            </div>
+          </sc-for>
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+            <span style="font-size:15px;">🆕</span>
+            <span style="font-size:13px;font-weight:700;color:#d9481f;">Tu</span>
+          </div>
+        </div>
+
+        <div style="width:100%;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;" onClick="{{ goWhoAreYou }}">Unisciti al viaggio</div>
+      </div>
+    </sc-if>
+
+    <!-- 10. WHO ARE YOU (travel identity) -->
+    <sc-if value="{{ isWhoAreYou }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;overflow-y:auto;padding:58px 22px 30px;">
+        <div style="font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin-bottom:4px;color:#3a2a1c;">Scegli la tua identità di viaggio</div>
+        <div style="font-size:12px;color:#a9906f;font-weight:600;margin-bottom:24px;">Così la crew saprà sempre che sei tu</div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:22px;">
+          <div style="width:76px;height:76px;border-radius:50%;background:{{ identityColor }};display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:12px;box-shadow:0 10px 20px -8px rgba(0,0,0,.25);">{{ identityEmoji }}</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:6px;">Come ti chiami</div>
+          <div contentEditable="true" suppressContentEditableWarning="{{ true }}" style="font-family:'Fraunces',serif;font-weight:700;font-size:19px;outline:none;cursor:text;text-align:center;color:#3a2a1c;" style-focus="outline:2px solid #ffb627;border-radius:6px;padding:1px 4px;" onBlur="{{ saveIdentityName }}">{{ identityName }}</div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Colore</div>
+        <div style="display:flex;gap:10px;margin-bottom:22px;">
+          <sc-for list="{{ colorOptions }}" as="c" hint-placeholder-count="5">
+            <div style="{{ c.style }}" onClick="{{ c.select }}"></div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Qual è la tua vibe?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;">
+          <sc-for list="{{ vibeOptions }}" as="v" hint-placeholder-count="7">
+            <div style="{{ v.style }}" onClick="{{ v.select }}">{{ v.emoji }} {{ v.label }}</div>
+          </sc-for>
+        </div>
+
+        <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;text-align:center;font-size:13.5px;font-weight:700;padding:14px 0;border-radius:999px;cursor:pointer;" onClick="{{ goEnteredGuest }}">Entra nel viaggio</div>
+      </div>
+    </sc-if>
+
+    <!-- 11. ENTERED (guest) -->
+    <sc-if value="{{ isEnteredGuest }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 30px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#fffaf0;border:1px solid #f0dfc0;border-radius:999px;padding:9px 16px;font-size:12.5px;font-weight:700;color:#8a6a3e;margin-bottom:26px;">🦩 {{ identityName }} si è unito al viaggio</div>
+        <div style="font-size:40px;margin-bottom:14px;">{{ crewStatusEmoji }}</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;color:#3a2a1c;margin-bottom:8px;">{{ crewStatusTitle }}</div>
+        <div style="font-size:12.5px;color:#a9906f;font-weight:600;margin-bottom:30px;">{{ crewStatusSub }}</div>
+        <a href="Pi%C3%B1a%20-%20Today.dc.html" style="text-decoration:none;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;font-size:13.5px;font-weight:700;padding:14px 30px;border-radius:999px;">Vai al viaggio</a>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const recap = params.get('step') === 'recap';
+    const stepParam = params.get('step');
+    const forcedStep = (stepParam === 'welcome' || stepParam === 'createTrip') ? stepParam : null;
+    return {
+      step: recap ? 'cover' : (forcedStep || 'splash'),
+      recapMode: recap,
+      editReturnStep: null,
+      settingsOpen: false,
+      tripName: recap ? 'Spain Roadtrip' : '',
+      monthIndex: 1,
+      startDay: recap ? 14 : null,
+      endDay: recap ? 26 : null,
+      moodIds: [],
+      participants: recap ? ['Marco', 'Sara', 'Giulia'] : [],
+      newParticipantName: '',
+      addingMood: false,
+      preparingIndex: 0,
+      crew: recap ? [{ name: 'Marco', status: 'joined' }, { name: 'Sara', status: 'joined' }, { name: 'Giulia', status: 'pending' }] : null,
+      qrOpen: false,
+      linkCopied: false,
+      codeCopied: false,
+      identityName: 'Andrea',
+      identityEmoji: '😎',
+      identityColorId: 'coral',
+      vibe: 'chill',
+      authMethod: null, // null | 'email' | 'phone'
+      authSent: false,
+      joinError: null,
+      cameraOpen: false,
+      loginIntent: 'create', // 'create' | 'access'
+      coverColorId: (() => {
+        if (!recap) return 'fiesta';
+        try {
+          const stored = JSON.parse(localStorage.getItem('pina-journey-colors')) || {};
+          return stored['spain-roadtrip'] || 'fiesta';
+        } catch (e) { return 'fiesta'; }
+      })(),
+      deleteConfirmOpen: false,
+      coverPickerOpen: false,
+      uploadMenuOpen: false,
+      coverPhoto: null,
+    };
+  })();
+
+  slugify(name) {
+    return (name || 'trip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  loadStoredColors() {
+    try { return JSON.parse(localStorage.getItem('pina-journey-colors')) || {}; } catch (e) { return {}; }
+  }
+  saveStoredColorFor(name, id) {
+    const stored = this.loadStoredColors();
+    stored[this.slugify(name)] = id;
+    try { localStorage.setItem('pina-journey-colors', JSON.stringify(stored)); } catch (e) {}
+  }
+
+  // stessa palette di Home (senza il marrone "study" — riservato all'upload foto)
+  coverPaletteDefs = [
+    { id: 'fiesta', gradient: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' },
+    { id: 'sunrise', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)' },
+    { id: 'romantic', gradient: 'linear-gradient(135deg,#ff5f96,#ff5f6d)' },
+    { id: 'terracotta', gradient: 'linear-gradient(135deg,#d9481f,#8a2f42)' },
+    { id: 'relax', gradient: 'linear-gradient(135deg,#ffb627,#ff8a5b)' },
+    { id: 'culture', gradient: 'linear-gradient(135deg,#e8b74e,#b8792e)' },
+    { id: 'camper', gradient: 'linear-gradient(135deg,#7a9d54,#4f8f4f)' },
+    { id: 'nature', gradient: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)' },
+    { id: 'beach', gradient: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' },
+  ];
+
+  moodDefs = [
+    { id: 'fiesta', label: '🎉 Festival' },
+    { id: 'beach', label: '🌊 Mare' },
+    { id: 'camper', label: '🏕 Camper' },
+    { id: 'food', label: '🍷 Food' },
+    { id: 'nature', label: '🌄 Natura' },
+    { id: 'romantic', label: '😍 Romantico' },
+    { id: 'study', label: '📚 Studio' },
+    { id: 'culture', label: '🏛 Cultura' },
+    { id: 'relax', label: '🎡 Relax' },
+  ];
+
+  moodGradients = {
+    fiesta: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)',
+    beach: 'linear-gradient(135deg,#2fbfae,#2a8fd8)',
+    camper: 'linear-gradient(135deg,#7a9d54,#4f8f4f)',
+    food: 'linear-gradient(135deg,#c2445a,#8a2f42)',
+    nature: 'linear-gradient(135deg,#4f8f4f,#2d6a4f)',
+    romantic: 'linear-gradient(135deg,#ff5f96,#ff5f6d)',
+    study: 'linear-gradient(135deg,#8a6a3e,#5a4326)',
+    culture: 'linear-gradient(135deg,#e8b74e,#b8792e)',
+    relax: 'linear-gradient(135deg,#ffb627,#ff8a5b)',
+  };
+
+  colorDefs = [
+    { id: 'coral', hex: '#ff8a5b' },
+    { id: 'teal', hex: '#3ddbc5' },
+    { id: 'green', hex: '#7a9d54' },
+    { id: 'pink', hex: '#ff5f96' },
+    { id: 'yellow', hex: '#ffb627' },
+  ];
+
+  vibeDefs = [
+    { id: 'chill', emoji: '😎', label: 'Chill' },
+    { id: 'party', emoji: '🍻', label: 'Party' },
+    { id: 'explorer', emoji: '📸', label: 'Explorer' },
+    { id: 'beach', emoji: '🌊', label: 'Beach' },
+    { id: 'camper', emoji: '🏕', label: 'Camper' },
+    { id: 'festival', emoji: '🎶', label: 'Festival' },
+    { id: 'foodie', emoji: '🍕', label: 'Foodie' },
+  ];
+
+  preparingPhrases = ['Preparando il tuo viaggio...', 'Generando la cover...', 'Impacchettando i ricordi...', 'Quasi pronto...'];
+
+  monthDefs = (() => {
+    const names = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const defs = [];
+    let y = 2026, m = 6; // luglio 2026
+    while (y < 2031) {
+      const firstWeekday = new Date(y, m, 1).getDay(); // 0=Sun..6=Sat
+      const leadingBlanks = (firstWeekday + 6) % 7; // convert to Mon-first count
+      defs.push({ label: `${names[m]} ${y}`, short: names[m].toLowerCase(), days: new Date(y, m + 1, 0).getDate(), leadingBlanks });
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return defs;
+  })();
+
+  prevMonth = () => this.setState(s => ({ monthIndex: Math.max(0, s.monthIndex - 1), startDay: null, endDay: null }));
+  nextMonth = () => this.setState(s => ({ monthIndex: Math.min(this.monthDefs.length - 1, s.monthIndex + 1), startDay: null, endDay: null }));
+
+  goStep = (step) => this.setState({ step });
+
+  componentDidMount() {
+    this._t = setTimeout(() => { if (this.state.step === 'splash') this.setState({ step: 'welcome' }); }, 1800);
+  }
+  componentWillUnmount() {
+    clearTimeout(this._t);
+    clearInterval(this._prepInterval);
+  }
+
+  saveTripName = (e) => this.setState({ tripName: e.target.textContent.trim() });
+  onFocusTripName = (e) => { if (!this.state.tripName) e.target.textContent = ''; };
+
+  startAddMood = () => this.setState({ addingMood: true });
+  onFocusNewMood = (e) => { if (e.target.textContent.trim() === '😍 emoji + nome del mood') e.target.textContent = ''; };
+  onNewMoodKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.addCustomMood(); }
+  };
+  addCustomMood = () => {
+    const el = this._newMoodEl;
+    let text = el ? el.textContent.trim() : '';
+    if (text === '😍 emoji + nome del mood') text = '';
+    if (!text) { this.setState({ addingMood: false }); return; }
+    const id = 'custom' + Date.now();
+    this.customMoodDefs = this.customMoodDefs || [];
+    this.customMoodDefs.push({ id, label: text });
+    this.setState(s => ({ moodIds: [...s.moodIds, id], addingMood: false }));
+  };
+  removeCustomMood = (id) => {
+    this.customMoodDefs = (this.customMoodDefs || []).filter(m => m.id !== id);
+    this.setState(s => ({ moodIds: s.moodIds.filter(m => m !== id) }));
+  };
+  saveIdentityName = (e) => this.setState({ identityName: e.target.textContent.trim() || this.state.identityName });
+
+  selectDay = (day) => {
+    this.setState(s => {
+      if (s.startDay && s.endDay) return { startDay: day, endDay: null };
+      if (s.startDay && !s.endDay) {
+        return day >= s.startDay ? { endDay: day } : { startDay: day, endDay: null };
+      }
+      return { startDay: day, endDay: null };
+    });
+  };
+
+  toggleMood = (id) => {
+    this.setState(s => {
+      const has = s.moodIds.includes(id);
+      return { moodIds: has ? s.moodIds.filter(m => m !== id) : [...s.moodIds, id] };
+    });
+  };
+
+  addParticipant = () => {
+    const el = this._newParticipantEl;
+    const name = el ? el.textContent.trim() : '';
+    if (name) {
+      this.setState(s => ({ participants: [...s.participants, name] }));
+      if (el) el.textContent = '';
+    }
+  };
+
+  onParticipantKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.addParticipant(); }
+  };
+
+  removeParticipant = (idx) => {
+    this.setState(s => ({ participants: s.participants.filter((_, i) => i !== idx) }));
+  };
+
+  onFocusJoinLink = (e) => { if (e.target.textContent.trim() === 'https://pina.app/join/...') e.target.textContent = ''; e.target.style.color = '#3a2a1c'; };
+  onFocusJoinCode = (e) => { if (e.target.textContent.trim() === 'PINA-XXXXX') e.target.textContent = ''; e.target.style.color = '#3a2a1c'; };
+  dismissJoinError = () => this.setState({ joinError: null });
+
+  confirmJoinLink = () => {
+    const el = this._joinLinkEl;
+    const text = el ? el.textContent.trim() : '';
+    if (!text || text === 'https://pina.app/join/...' || !text.includes('pina.app/join/')) {
+      this.setState({ joinError: 'Problemi di accesso: link non valido o incompleto. Controlla di averlo copiato per intero o contatta l\'assistenza.' });
+      return;
+    }
+    this.setState({ joinError: null });
+    this.goStep('join');
+  };
+
+  confirmJoinCode = () => {
+    const el = this._joinCodeEl;
+    const text = el ? el.textContent.trim() : '';
+    if (!text || text === 'PINA-XXXXX' || !/^PINA-[A-Z0-9]{4,6}$/i.test(text)) {
+      this.setState({ joinError: 'Problemi di accesso: il codice non è valido. Verifica con chi te lo ha condiviso o contatta l\'assistenza.' });
+      return;
+    }
+    this.setState({ joinError: null });
+    this.goStep('join');
+  };
+
+  openCamera = () => this.setState({ cameraOpen: true, joinError: null });
+  closeCamera = () => this.setState({ cameraOpen: false });
+  simulateScan = () => { this.setState({ cameraOpen: false }); this.goStep('join'); };
+
+  goLoginForAccess = () => this.setState({ step: 'login', loginIntent: 'access' });
+  goLoginForCreate = () => this.setState({ step: 'login', loginIntent: 'create' });
+  afterLogin = () => {
+    if (this.state.loginIntent === 'access') {
+      window.location.href = 'Pi%C3%B1a%20-%20Home.dc.html';
+    } else {
+      this.goStep('createTrip');
+    }
+  };
+  selectEmailAuth = () => this.setState({ authMethod: 'email' });
+  selectPhoneAuth = () => this.setState({ authMethod: 'phone' });
+  sendAuth = () => this.afterLogin();
+
+  goEditDetails = () => this.setState({ step: 'createTrip', editReturnStep: 'cover', settingsOpen: false });
+  goBackFromCreate = () => {
+    const { editReturnStep } = this.state;
+    this.setState({ step: editReturnStep || 'login', editReturnStep: null });
+  };
+  saveCreateTrip = () => {
+    if (this.state.editReturnStep) {
+      this.setState({ step: this.state.editReturnStep, editReturnStep: null });
+    } else {
+      this.goPreparing();
+    }
+  };
+  goToJourney = () => { window.location.href = 'Pi%C3%B1a%20-%20Journey.dc.html'; };
+  stopPropagation = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+  openCoverPicker = () => this.setState({ coverPickerOpen: true });
+  closeCoverPicker = () => this.setState({ coverPickerOpen: false });
+  selectCoverColor = (id) => {
+    this.setState({ coverColorId: id, coverPickerOpen: false, coverPhoto: null });
+    this.saveStoredColorFor(this.state.tripName, id);
+  };
+
+  openUploadMenu = () => this.setState({ uploadMenuOpen: true });
+  closeUploadMenu = () => this.setState({ uploadMenuOpen: false });
+  triggerCameraUpload = () => { if (this._cameraFileEl) this._cameraFileEl.click(); };
+  triggerLibraryUpload = () => { if (this._libraryFileEl) this._libraryFileEl.click(); };
+  triggerFileUpload = () => { if (this._fileFileEl) this._fileFileEl.click(); };
+  onCoverFileChosen = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => this.setState({ coverPhoto: reader.result, uploadMenuOpen: false, coverPickerOpen: false });
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  askDeleteTrip = () => this.setState({ deleteConfirmOpen: true });
+  cancelDeleteTrip = () => this.setState({ deleteConfirmOpen: false });
+  confirmDeleteTrip = () => {
+    this.setState({ deleteConfirmOpen: false });
+    window.location.href = 'Pi%C3%B1a%20-%20Home.dc.html';
+  };
+
+  goPreparing = () => {
+    this.setState({ step: 'preparing', preparingIndex: 0 });
+    let i = 0;
+    this._prepInterval = setInterval(() => {
+      i++;
+      if (i >= this.preparingPhrases.length) {
+        clearInterval(this._prepInterval);
+        this.setState({ step: 'cover' });
+      } else {
+        this.setState({ preparingIndex: i });
+      }
+    }, 550);
+  };
+
+  buildCrew = () => {
+    const crew = this.state.participants.map(name => ({ name, status: 'pending' }));
+    this.setState({ crew });
+  };
+
+  goCrewForming = () => {
+    if (!this.state.crew) this.buildCrew();
+    this.setState({ step: 'crewForming' });
+  };
+
+  toggleCrewStatus = (idx) => {
+    this.setState(s => ({
+      crew: s.crew.map((c, i) => i !== idx ? c : { ...c, status: c.status === 'joined' ? 'pending' : 'joined' }),
+    }));
+  };
+
+  removeCrewMember = (idx) => {
+    this.setState(s => ({ crew: s.crew.filter((_, i) => i !== idx) }));
+  };
+
+  copyLink = () => {
+    const url = `https://pina.app/join/${this.slug()}`;
+    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    this.setState({ linkCopied: true });
+    setTimeout(() => this.setState({ linkCopied: false }), 1600);
+  };
+
+  copyCode = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(this.inviteCode()).catch(() => {});
+    this.setState({ codeCopied: true });
+    setTimeout(() => this.setState({ codeCopied: false }), 1600);
+  };
+
+  slug() {
+    return (this.state.tripName || 'trip').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
+  inviteCode() {
+    // deterministico per viaggio: stesso nome → stesso codice, viaggi diversi → codici diversi
+    const s = this.slug();
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    return 'PINA-' + hash.toString(36).toUpperCase().slice(0, 5);
+  }
+
+  inviteUrl() {
+    return `https://pina.app/join/${this.slug()}`;
+  }
+
+  selectColor = (id) => this.setState({ identityColorId: id });
+  selectVibe = (id, emoji) => this.setState({ vibe: id, identityEmoji: emoji });
+
+  renderVals() {
+    const {
+      step, tripName, monthIndex, startDay, endDay, moodIds, participants,
+      preparingIndex, crew, qrOpen, linkCopied, codeCopied,
+      identityName, identityEmoji, identityColorId, vibe,
+      recapMode, editReturnStep, authMethod, addingMood,
+      joinError, cameraOpen, loginIntent, coverColorId, deleteConfirmOpen, coverPickerOpen,
+      uploadMenuOpen, coverPhoto,
+    } = this.state;
+
+    const loginTitle = loginIntent === 'access' ? 'Accedi ai tuoi viaggi' : 'Inizia il tuo viaggio';
+
+    const tripNameDisplay = tripName || 'Il nome del tuo viaggio...';
+    const tripNameBaseStyle = "font-family:'Fraunces',serif;font-size:24px;background:#fff;border:1px solid #f0e2c8;border-radius:16px;padding:14px 16px;margin-bottom:26px;outline:none;cursor:text;font-style:normal;";
+    const tripNameStyle = tripNameBaseStyle + (tripName ? 'color:#3a2a1c;font-weight:700;' : 'color:#b39a78;font-weight:600;');
+
+    const selectedStyle = 'display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #3a2a1c;border-radius:999px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;';
+    const unselectedStyle = 'display:flex;align-items:center;justify-content:center;gap:8px;background:#fbf6ec;border:1px solid #f0e2c8;border-radius:999px;padding:12px 0;font-size:13px;font-weight:700;cursor:pointer;';
+    const emailAuthStyle = authMethod === 'email' ? selectedStyle : unselectedStyle;
+    const phoneAuthStyle = authMethod === 'phone' ? selectedStyle : unselectedStyle;
+    const authPlaceholder = authMethod === 'email' ? 'tuamail@esempio.com' : '+39 333 1234567';
+    const authCta = authMethod === 'email' ? 'Invia link' : 'Invia codice';
+
+    const primaryMood = moodIds[0] || 'fiesta';
+    const coverPaletteById = {};
+    this.coverPaletteDefs.forEach(p => { coverPaletteById[p.id] = p.gradient; });
+    const coverGradient = coverPaletteById[coverColorId] || this.moodGradients[primaryMood] || this.moodGradients.fiesta;
+    const coverSwatches = this.coverPaletteDefs.map(p => ({
+      id: p.id,
+      style: `width:100%;aspect-ratio:1;border-radius:50%;background:${p.gradient};cursor:pointer;${coverColorId === p.id ? 'box-shadow:0 0 0 3px #fbf6ec, 0 0 0 5px #3a2a1c;' : ''}`,
+      select: () => this.selectCoverColor(p.id),
+    }));
+    const coverPreviewStyle = coverPhoto
+      ? `width:34px;height:34px;border-radius:50%;flex-shrink:0;background:url(${coverPhoto});background-size:cover;background-position:center;`
+      : `width:34px;height:34px;border-radius:50%;flex-shrink:0;background:${coverPaletteById[coverColorId] || coverPaletteById.fiesta};`;
+
+    const activeMonth = this.monthDefs[monthIndex] || this.monthDefs[1];
+    const tripDates = startDay && endDay
+      ? `${startDay} → ${endDay} ${activeMonth.short}`
+      : (startDay ? `${startDay} ${activeMonth.short} → ?` : 'Scegli le date');
+
+    const blanks = Array.from({ length: activeMonth.leadingBlanks || 0 }, () => ({ num: '', style: 'padding:7px 0;', select: () => {} }));
+    const days = Array.from({ length: activeMonth.days }, (_, i) => {
+      const day = i + 1;
+      const inRange = startDay && endDay && day >= startDay && day <= endDay;
+      const isEdge = day === startDay || day === endDay;
+      let style = 'text-align:center;font-size:12px;font-weight:700;padding:7px 0;border-radius:8px;cursor:pointer;color:#3a2a1c;';
+      if (isEdge) style += 'background:#d9481f;color:#fff;';
+      else if (inRange) style += 'background:#fde3d0;color:#b8703a;';
+      return { num: day, style, select: () => this.selectDay(day) };
+    });
+    const calendarDays = [...blanks, ...days];
+
+    const moods = [...this.moodDefs.map(m => ({ ...m, custom: false })), ...(this.customMoodDefs || []).map(m => ({ ...m, custom: true }))].map(m => {
+      const active = moodIds.includes(m.id);
+      return {
+        id: m.id,
+        label: m.label,
+        custom: m.custom,
+        toggle: () => this.toggleMood(m.id),
+        remove: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.removeCustomMood(m.id); },
+        style: `font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;flex-shrink:0;${active ? 'background:#3a2a1c;color:#fff;' : 'background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;'}`,
+      };
+    });
+
+    const participantChips = participants.map((name, i) => ({
+      name,
+      removable: true,
+      remove: () => this.removeParticipant(i),
+    }));
+
+    const crewTotal = (crew ? crew.length : participants.length) + 1; // +1 = organizer/you
+    const joinedCount = crew ? crew.filter(c => c.status === 'joined').length + 1 : 1;
+
+    const crewRows = (crew || []).map((c, i) => ({
+      name: c.name,
+      statusIcon: c.status === 'joined' ? '✅' : '⏳',
+      statusLabel: c.status === 'joined' ? 'A bordo' : 'In attesa',
+      statusColor: c.status === 'joined' ? '#4f8f4f' : '#c2a97e',
+      toggle: () => this.toggleCrewStatus(i),
+      remove: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.removeCrewMember(i); },
+    }));
+
+    const allJoined = !!crew && crew.length > 0 && crew.every(c => c.status === 'joined');
+
+    const joinPreviewCrew = participants.map(name => ({ name, statusIcon: '✅' }));
+
+    let crewStatusEmoji = '👋', crewStatusTitle = 'Benvenuto nella crew', crewStatusSub = `${joinedCount}/${crewTotal} in viaggio`;
+
+    const colorOptions = this.colorDefs.map(c => ({
+      id: c.id,
+      style: `width:38px;height:38px;border-radius:50%;background:${c.hex};cursor:pointer;${identityColorId === c.id ? 'box-shadow:0 0 0 3px #fbf6ec, 0 0 0 5px ' + c.hex + ';' : ''}`,
+      select: () => this.selectColor(c.id),
+    }));
+
+    const vibeOptions = this.vibeDefs.map(v => ({
+      id: v.id,
+      emoji: v.emoji,
+      label: v.label,
+      select: () => this.selectVibe(v.id, v.emoji),
+      style: `font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;flex-shrink:0;${vibe === v.id ? 'background:#3a2a1c;color:#fff;' : 'background:#fff;border:1px solid #f0e2c8;color:#3a2a1c;'}`,
+    }));
+
+    const activeColor = this.colorDefs.find(c => c.id === identityColorId) || this.colorDefs[0];
+
+    return {
+      isSplash: step === 'splash',
+      isWelcome: step === 'welcome',
+      isLogin: step === 'login',
+      isCreateTrip: step === 'createTrip',
+      isPreparing: step === 'preparing',
+      isCover: step === 'cover',
+      isInvite: step === 'invite',
+      isCrewForming: step === 'crewForming',
+      isRitual: step === 'ritual',
+      isJoinCode: step === 'joinCode',
+      isJoin: step === 'join',
+      isWhoAreYou: step === 'whoAreYou',
+      isEnteredGuest: step === 'enteredGuest',
+
+      recapMode,
+      coverEyebrow: recapMode ? 'Il tuo viaggio' : 'Il viaggio è pronto',
+      editReturnStep,
+      goEditDetails: this.goEditDetails,
+      goBackFromCreate: this.goBackFromCreate,
+      saveCreateTrip: this.saveCreateTrip,
+      createTripTitle: editReturnStep ? 'Modifica il viaggio' : 'Crea il tuo viaggio',
+      createTripCta: editReturnStep ? 'Salva modifiche' : 'Crea il viaggio',
+      goToJourney: this.goToJourney,
+      stopPropagation: this.stopPropagation,
+      coverSwatches,
+      coverPreviewStyle,
+      coverPickerOpen,
+      openCoverPicker: this.openCoverPicker,
+      closeCoverPicker: this.closeCoverPicker,
+      uploadMenuOpen,
+      openUploadMenu: this.openUploadMenu,
+      closeUploadMenu: this.closeUploadMenu,
+      triggerCameraUpload: this.triggerCameraUpload,
+      triggerLibraryUpload: this.triggerLibraryUpload,
+      triggerFileUpload: this.triggerFileUpload,
+      onCoverFileChosen: this.onCoverFileChosen,
+      cameraFileRef: (el) => { this._cameraFileEl = el; },
+      libraryFileRef: (el) => { this._libraryFileEl = el; },
+      fileFileRef: (el) => { this._fileFileEl = el; },
+      deleteConfirmOpen,
+      askDeleteTrip: this.askDeleteTrip,
+      cancelDeleteTrip: this.cancelDeleteTrip,
+      confirmDeleteTrip: this.confirmDeleteTrip,
+
+      authMethod,
+      emailAuthStyle,
+      phoneAuthStyle,
+      authPlaceholder,
+      authCta,
+      selectEmailAuth: this.selectEmailAuth,
+      selectPhoneAuth: this.selectPhoneAuth,
+      sendAuth: this.sendAuth,
+
+      goWelcome: () => this.goStep('welcome'),
+      goLogin: () => this.goStep('login'),
+      goLoginForCreate: this.goLoginForCreate,
+      goLoginForAccess: this.goLoginForAccess,
+      afterLogin: this.afterLogin,
+      loginTitle,
+      goJoinCode: () => this.goStep('joinCode'),
+      goJoin: () => this.goStep('join'),
+      joinError,
+      dismissJoinError: this.dismissJoinError,
+      joinLinkRef: (el) => { this._joinLinkEl = el; },
+      onFocusJoinLink: this.onFocusJoinLink,
+      confirmJoinLink: this.confirmJoinLink,
+      joinCodeRef: (el) => { this._joinCodeEl = el; },
+      onFocusJoinCode: this.onFocusJoinCode,
+      confirmJoinCode: this.confirmJoinCode,
+      cameraOpen,
+      openCamera: this.openCamera,
+      closeCamera: this.closeCamera,
+      simulateScan: this.simulateScan,
+      goCreateTrip: () => this.goStep('createTrip'),
+      goPreparing: this.goPreparing,
+      goInvite: () => this.goStep('invite'),
+      goCrewForming: this.goCrewForming,
+      goRitual: () => this.goStep('ritual'),
+      goWhoAreYou: () => this.goStep('whoAreYou'),
+      goEnteredGuest: () => this.goStep('enteredGuest'),
+      enterApp: () => { window.location.href = 'Pi%C3%B1a%20-%20Journey.dc.html'; },
+
+      tripName,
+      tripNameDisplay,
+      tripNameStyle,
+      onFocusTripName: this.onFocusTripName,
+      saveTripName: this.saveTripName,
+      addingMood,
+      startAddMood: this.startAddMood,
+      newMoodRef: (el) => { this._newMoodEl = el; },
+      onFocusNewMood: this.onFocusNewMood,
+      onNewMoodKeyDown: this.onNewMoodKeyDown,
+      addCustomMood: this.addCustomMood,
+      tripDates,
+      monthLabel: activeMonth.label,
+      prevMonth: this.prevMonth,
+      nextMonth: this.nextMonth,
+      weekdayLabels: ['L', 'M', 'M', 'G', 'V', 'S', 'D'],
+      calendarDays,
+
+      moods,
+      selectedMoodChips: moodIds.map(id => ([...this.moodDefs, ...(this.customMoodDefs || [])].find(m => m.id === id) || {}).label).filter(Boolean),
+      coverGradient,
+
+      participantChips,
+      newParticipantRef: (el) => { this._newParticipantEl = el; },
+      onParticipantKeyDown: this.onParticipantKeyDown,
+      addParticipant: this.addParticipant,
+
+      preparingPhrase: this.preparingPhrases[preparingIndex],
+
+      crewTotal,
+      joinedCount,
+      crewRows,
+      allJoined,
+      countdownLabel: 'tra 12 giorni',
+      ritualEyebrow: allJoined ? 'La crew è al completo' : 'Si parte con chi c\'è già',
+
+      qrOpen,
+      showQr: () => this.setState({ qrOpen: true }),
+      hideQr: () => this.setState({ qrOpen: false }),
+      linkCopyLabel: linkCopied ? 'Copiato ✓' : 'Copia',
+      codeCopyLabel: codeCopied ? 'Copiato ✓' : 'Copia',
+      copyLink: this.copyLink,
+      copyCode: this.copyCode,
+      inviteCode: this.inviteCode(),
+      qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(this.inviteUrl())}`,
+
+      joinPreviewCrew,
+
+      identityName,
+      saveIdentityName: this.saveIdentityName,
+      identityEmoji,
+      identityColor: activeColor.hex,
+      colorOptions,
+      vibeOptions,
+
+      crewStatusEmoji,
+      crewStatusTitle,
+      crewStatusSub,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f2ede3; font-family: 'Manrope', system-ui, sans-serif; color: #3a2a1c; }
+  .ds-wrap { max-width: 900px; margin: 0 auto; padding: 48px 32px 100px; }
+  .ds-h1 { font-family: 'Fraunces', serif; font-weight: 700; font-size: 34px; margin-bottom: 4px; }
+  .ds-sub { font-size: 13.5px; color: #a9906f; font-weight: 600; margin-bottom: 40px; }
+  .ds-section { margin-bottom: 44px; }
+  .ds-h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; margin-bottom: 4px; border-top: 1px solid #e6d5b3; padding-top: 28px; }
+  .ds-note { font-size: 12.5px; color: #a9906f; font-weight: 600; margin-bottom: 18px; line-height: 1.5; max-width: 640px; }
+  .ds-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+</style>
+</helmet>
+
+<div class="ds-wrap">
+  <div class="ds-h1">🦩 Piña — Design System</div>
+  <div class="ds-sub">Libreria unificata di componenti · v1 · post-audit</div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Colori</div>
+    <div class="ds-note">Palette mediterranea. Sfondo app crema, mai bianco puro. Un solo colore d'accento (coral) per azioni primarie e link.</div>
+    <div class="ds-row">
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:#fbf6ec;border:1px solid #e6d5b3;"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Sfondo #fbf6ec</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:#d9481f;"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Coral #d9481f</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Sunset gradient</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,#ffb627,#ff8a5b);"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Mango gradient</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,#2fbfae,#2a8fd8);"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Ocean gradient</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:#3a2a1c;"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Testo #3a2a1c</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:#a9906f;"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Testo sec. #a9906f</div></div>
+      <div style="text-align:center;"><div style="width:72px;height:72px;border-radius:16px;background:#b39a78;"></div><div style="font-size:10.5px;font-weight:700;margin-top:5px;">Eyebrow #b39a78</div></div>
+    </div>
+    <div class="ds-note" style="margin-top:16px;">Palette persone (fissa, riusata ovunque ci siano avatar):</div>
+    <div class="ds-row">
+      <div style="text-align:center;"><div style="width:44px;height:44px;border-radius:50%;background:#ff8a5b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">A</div></div>
+      <div style="text-align:center;"><div style="width:44px;height:44px;border-radius:50%;background:#3ddbc5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">L</div></div>
+      <div style="text-align:center;"><div style="width:44px;height:44px;border-radius:50%;background:#7a9d54;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">M</div></div>
+      <div style="text-align:center;"><div style="width:44px;height:44px;border-radius:50%;background:#ff5f96;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">S</div></div>
+      <div style="text-align:center;"><div style="width:44px;height:44px;border-radius:50%;background:#ffb627;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">G</div></div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Tipografia</div>
+    <div class="ds-note">Fraunces = titoli, numeri chiave, nomi città. Manrope = tutto il resto.</div>
+    <div style="font-family:'Fraunces',serif;font-weight:700;font-size:28px;margin-bottom:6px;">Titolo Hero — Fraunces 700 28px</div>
+    <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:6px;">Titolo Pagina — Fraunces 600 24px</div>
+    <div style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;margin-bottom:6px;">Titolo Card — Fraunces 600 17px</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Corpo enfatizzato — Manrope 700 14px</div>
+    <div style="font-size:13px;font-weight:600;color:#3a2a1c;margin-bottom:6px;">Corpo — Manrope 600 13px</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;">Eyebrow / Section Label — Manrope 700 11px, tracking .06em, uppercase, #b39a78 (canonico — sostituisce tutte le altre varianti)</div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Cornice telefono (canonica)</div>
+    <div class="ds-note">Un solo bezel per tutte le schermate. Radius 48px, bordo 10px #2b2118, ombra `0 34px 80px -20px rgba(80,50,20,.35)`.</div>
+    <div style="width:220px;height:476px;background:#fbf6ec;border-radius:28px;border:6px solid #2b2118;box-shadow:0 20px 46px -12px rgba(80,50,20,.35);position:relative;">
+      <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);width:68px;height:15px;background:#2b2118;border-radius:12px;"></div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Card base</div>
+    <div class="ds-note">Radius 20px, bordo 1px #f0e2c8, ombra `0 8px 18px -14px rgba(120,90,40,.25)`. Usata per ogni contenitore neutro (liste, widget, sezioni).</div>
+    <div style="width:280px;background:#fff;border:1px solid #f0e2c8;border-radius:20px;box-shadow:0 8px 18px -14px rgba(120,90,40,.25);padding:16px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b39a78;margin-bottom:8px;">Section label</div>
+      <div style="font-weight:700;font-size:14px;">Contenuto della card</div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Hero / card protagonista</div>
+    <div class="ds-note">Una sola per schermata, sempre in cima. Due varianti: gradiente pieno (contenuto operativo/celebrativo) o foto + mood scrim (solo Journey, dove il mood guida l'atmosfera). Today deve adottare la variante gradiente invece di restare testo piatto.</div>
+    <div class="ds-row">
+      <div style="width:280px;border-radius:26px;padding:20px;background:linear-gradient(135deg,#ffb627,#ff8a5b);color:#fff;box-shadow:0 18px 36px -18px rgba(255,150,60,.5);">
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:4px;">Eyebrow</div>
+        <div style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;">Titolo hero</div>
+      </div>
+      <div style="width:280px;height:130px;border-radius:26px;overflow:hidden;position:relative;color:#fff;box-shadow:0 18px 36px -16px rgba(255,110,70,.45);">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,110,70,.7),rgba(255,182,39,.6)),url(https://picsum.photos/seed/ds-hero/400/200);background-size:cover;"></div>
+        <div style="position:relative;z-index:1;padding:14px;">
+          <div style="display:inline-flex;font-size:11px;font-weight:700;background:rgba(255,255,255,.24);border:1px solid rgba(255,255,255,.4);padding:4px 10px;border-radius:999px;margin-bottom:8px;">🎉 Mood</div>
+          <div style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;">Foto + scrim</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Pulsanti — 3 varianti, uso definito</div>
+    <div class="ds-note">Primario: 1 sola volta per schermata, azione principale. Secondario: azioni multiple pari-livello. FAB: solo su schermate "galleria/registro" (Memories, Spese) dove l'azione è "aggiungi nuovo elemento" continuo.</div>
+    <div class="ds-row" style="align-items:center;">
+      <div style="background:linear-gradient(135deg,#ff8a5b,#ff5f6d);color:#fff;font-size:13px;font-weight:700;padding:12px 22px;border-radius:999px;">Primario</div>
+      <div style="background:#fbf6ec;border:1px solid #f0e2c8;color:#3a2a1c;font-size:13px;font-weight:700;padding:11px 20px;border-radius:999px;">Secondario</div>
+      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#ff8a5b,#ff5f6d);box-shadow:0 12px 24px -8px rgba(255,90,60,.55);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;">＋</div>
+      <div style="text-align:center;padding:10px 16px;border-radius:14px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12.5px;font-weight:700;">+ Aggiungi (inline)</div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Bordo tratteggiato — significati disambiguati</div>
+    <div class="ds-note">Stesso pattern visivo, tre colori/usi distinti: ambra scuro = azione "aggiungi"; tan chiaro = stato vuoto; nessun terzo colore per "celebrazione" — la celebrazione riusa lo stato vuoto con contenuto diverso.</div>
+    <div class="ds-row">
+      <div style="width:180px;text-align:center;padding:14px;border-radius:16px;border:1.5px dashed #d9b98a;color:#b8703a;font-size:12px;font-weight:700;">#d9b98a — Aggiungi</div>
+      <div style="width:180px;text-align:center;padding:14px;border-radius:16px;border:1.5px dashed #e6d5b3;color:#a9906f;font-size:12px;font-weight:700;">#e6d5b3 — Stato vuoto</div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Fenicottero placeholder (unico componente)</div>
+    <div class="ds-note">Stesso cerchio hatching in ogni occorrenza, finché non ci sono le illustrazioni reali. Dimensione varia solo per contesto (84px stati importanti, 64px story ring), stile identico.</div>
+    <div class="ds-row" style="align-items:center;">
+      <div style="width:84px;height:84px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);display:flex;align-items:center;justify-content:center;font:600 8.5px ui-monospace, monospace;color:#b8703a;text-align:center;padding:6px;">fenicottero con zaino</div>
+      <div style="width:64px;height:64px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 5px,#fff1e0 5px,#fff1e0 10px);display:flex;align-items:center;justify-content:center;font:600 6.5px ui-monospace, monospace;color:#b8703a;text-align:center;padding:4px;">fenicottero fotocamera</div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Segmented control (tab)</div>
+    <div class="ds-note">Un'unica misura per qualunque switch a 2-3 opzioni (era duplicato con due taglie diverse in Checklist).</div>
+    <div style="width:280px;display:flex;background:#f0e5d1;border-radius:13px;padding:4px;">
+      <div style="flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:12.5px;font-weight:700;background:#fff;box-shadow:0 4px 10px -6px rgba(120,90,40,.4);">Attivo</div>
+      <div style="flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:12.5px;font-weight:700;color:#a9906f;">Inattivo</div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Bottom Navigation (nuovo)</div>
+    <div class="ds-note">Non esisteva ancora in nessuna schermata. 7 tab come da roadmap, icone emoji, etichetta sotto, tab attivo in coral su sfondo crema pieno.</div>
+    <div style="width:390px;background:#fffaf0;border-top:1px solid #f0e2c8;border-radius:0 0 24px 24px;padding:10px 6px 14px;display:flex;justify-content:space-around;box-shadow:0 -8px 20px -16px rgba(120,90,40,.3);">
+      <div style="text-align:center;color:#d9481f;"><div style="font-size:18px;">🗺</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Journey</div></div>
+      <div style="text-align:center;color:#c2a97e;"><div style="font-size:18px;">☀️</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Today</div></div>
+      <div style="text-align:center;color:#c2a97e;"><div style="font-size:18px;">💰</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Spese</div></div>
+      <div style="text-align:center;color:#c2a97e;"><div style="font-size:18px;">🎒</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Checklist</div></div>
+      <div style="text-align:center;color:#c2a97e;"><div style="font-size:18px;">📸</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Memories</div></div>
+      <div style="text-align:center;color:#c2a97e;"><div style="font-size:18px;">👤</div><div style="font-size:9px;font-weight:700;margin-top:2px;">Profilo</div></div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Stat / numero chiave</div>
+    <div class="ds-note">Fraunces 600, sempre preceduto da un'emoji, mai un numero nudo.</div>
+    <div style="display:flex;gap:20px;">
+      <div style="text-align:center;"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:18px;">🌍 12 giorni</div></div>
+      <div style="text-align:center;"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:18px;">📸 248 ricordi</div></div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Riga lista / voce checklist</div>
+    <div class="ds-note">Checkbox tondo (vuoto = bordo #e6d5b3, fatto = pieno coral con ✓), testo editabile inline, avatar assegnatario, × per eliminare.</div>
+    <div style="width:280px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #faf3e2;background:#fff;">
+        <div style="width:22px;height:22px;border-radius:50%;background:#d9481f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;">✓</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:#b7a586;text-decoration:line-through;">Voce completata</div>
+        <div style="width:22px;height:22px;border-radius:50%;background:#ff8a5b;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">A</div>
+        <div style="color:#c2a97e;font-size:15px;">×</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Input / campo editabile inline</div>
+    <div class="ds-note">Nessun form tradizionale: ogni testo è direttamente editabile (contentEditable), con outline amber al focus. Canonico ovunque.</div>
+    <div style="width:220px;padding:8px 10px;background:#fbf6ec;border-radius:10px;outline:2px solid #ffb627;font-family:'Fraunces',serif;font-weight:600;font-size:15px;">Testo in modifica</div>
+  </div>
+
+  <div class="ds-section">
+    <div class="ds-h2">Stato vuoto</div>
+    <div class="ds-note">Fenicottero + titolo Fraunces + sottotitolo + 1-2 CTA. Riusato identico per Memories (nessun ricordo) ed estendibile a qualunque lista vuota futura.</div>
+    <div style="width:280px;text-align:center;padding:32px 20px;border-radius:22px;border:1.5px dashed #e6d5b3;">
+      <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:50%;background:repeating-linear-gradient(45deg,#ffe6cf,#ffe6cf 6px,#fff1e0 6px,#fff1e0 12px);"></div>
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin-bottom:4px;">Titolo stato vuoto</div>
+      <div style="font-size:12px;color:#a9906f;font-weight:600;">Sottotitolo che invita all'azione</div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>
