@@ -121,6 +121,8 @@ export interface MonthDef {
   short: string
   days: number
   leadingBlanks: number
+  year: number
+  month: number // 0-indexed, come Date
 }
 
 export function buildMonthDefs(): MonthDef[] {
@@ -135,6 +137,8 @@ export function buildMonthDefs(): MonthDef[] {
       short: MONTH_NAMES[m].toLowerCase(),
       days: new Date(y, m + 1, 0).getDate(),
       leadingBlanks,
+      year: y,
+      month: m,
     })
     m++
     if (m > 11) {
@@ -143,6 +147,13 @@ export function buildMonthDefs(): MonthDef[] {
     }
   }
   return defs
+}
+
+// YYYY-MM-DD per le colonne `date` di Supabase.
+export function isoDate(year: number, month: number, day: number): string {
+  const mm = String(month + 1).padStart(2, '0')
+  const dd = String(day).padStart(2, '0')
+  return `${year}-${mm}-${dd}`
 }
 
 export const preparingPhrases = [

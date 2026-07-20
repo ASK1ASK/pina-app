@@ -18,6 +18,7 @@ import {
   allMoodDefs,
   buildMonthDefs,
   initialOnboardingState,
+  isoDate,
   moodLabelFor,
   preparingPhrases,
   type OnboardingState,
@@ -95,6 +96,63 @@ export function Onboarding() {
     // in caso di successo, onAuthStateChange aggiorna la sessione e l'effect sopra avanza da solo
   }
 
+  // Una volta creato davvero su Supabase, l'id reale del viaggio (usato per il routing
+  // al posto dello slug locale, che serve solo come fallback per il viaggio demo).
+  const [realTripId, setRealTripId] = useState<string | null>(null)
+  const [createTripError, setCreateTripError] = useState<string | null>(null)
+  const [creatingTrip, setCreatingTrip] = useState(false)
+
+  async function createTripInSupabase(): Promise<string | null> {
+    if (!session?.user) {
+      setCreateTripError('Devi accedere per creare un viaggio.')
+      return null
+    }
+    if (!state.tripName || !state.startDay) {
+      setCreateTripError('Inserisci almeno il nome e la data del viaggio.')
+      return null
+    }
+    setCreatingTrip(true)
+    setCreateTripError(null)
+
+    const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
+    const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
+    const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
+
+    const { data: trip, error: tripError } = await supabase
+      .from('trips')
+      .insert({
+        name: state.tripName,
+        start_date: startDateStr,
+        end_date: endDateStr,
+        cover_color_id: state.coverColorId,
+        created_by: session.user.id,
+      })
+      .select()
+      .single()
+
+    if (tripError || !trip) {
+      setCreateTripError(tripError?.message || 'Errore durante la creazione del viaggio.')
+      setCreatingTrip(false)
+      return null
+    }
+
+    const organizerName = session.user.email ? session.user.email.split('@')[0] : 'Organizzatore'
+    const memberRows = [
+      { trip_id: trip.id, user_id: session.user.id, display_name: organizerName, role: 'organizer' as const, status: 'joined' as const },
+      ...state.participants.map((name) => ({ trip_id: trip.id, display_name: name, role: 'member' as const, status: 'invited' as const })),
+    ]
+    const { error: membersError } = await supabase.from('trip_members').insert(memberRows)
+    if (membersError) {
+      setCreateTripError(membersError.message)
+      setCreatingTrip(false)
+      return null
+    }
+
+    setRealTripId(trip.id)
+    setCreatingTrip(false)
+    return trip.id
+  }
+
   const tripNameRef = useRef<HTMLDivElement>(null)
   const newMoodRef = useRef<HTMLDivElement>(null)
   const newParticipantRef = useRef<HTMLDivElement>(null)
@@ -116,7 +174,7 @@ export function Onboarding() {
   useEffect(() => () => window.clearInterval(prepIntervalRef.current), [])
 
   const goStep = (step: OnboardingStep) => patch({ step })
-  const tripId = () => slugify(state.tripName) || 'demo'
+  const tripId = () => realTripId || slugify(state.tripName) || 'demo'
 
   const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
   const tripDates =
@@ -189,12 +247,13 @@ export function Onboarding() {
     }, 550)
   }
 
-  function saveCreateTrip() {
+  async function saveCreateTrip() {
     if (state.editReturnStep) {
       patch((s) => ({ step: s.editReturnStep as OnboardingStep, editReturnStep: null }))
-    } else {
-      goPreparing()
+      return
     }
+    const id = await createTripInSupabase()
+    if (id) goPreparing()
   }
 
   function buildCrew() {
@@ -565,8 +624,11 @@ export function Onboarding() {
           </>
         )}
 
-        <button type="button" className={primaryBtnClass} style={primaryBtnStyle} onClick={saveCreateTrip}>
-          {state.editReturnStep ? 'Salva modifiche' : 'Crea il viaggio'}
+        {createTripError && (
+          <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{createTripError}</div>
+        )}
+        <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={creatingTrip} onClick={saveCreateTrip}>
+          {creatingTrip ? 'Creazione...' : state.editReturnStep ? 'Salva modifiche' : 'Crea il viaggio'}
         </button>
 
         {coverSheets}

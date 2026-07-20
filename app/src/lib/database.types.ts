@@ -12,6 +12,7 @@ export interface Database {
         Row: { id: string; display_name: string; created_at: string }
         Insert: { id: string; display_name?: string }
         Update: { display_name?: string }
+        Relationships: []
       }
       trips: {
         Row: {
@@ -34,6 +35,7 @@ export interface Database {
           created_by: string
         }
         Update: Partial<Database['public']['Tables']['trips']['Insert']>
+        Relationships: []
       }
       trip_members: {
         Row: {
@@ -60,11 +62,13 @@ export interface Database {
           status?: TripMemberStatus
         }
         Update: Partial<Database['public']['Tables']['trip_members']['Insert']>
+        Relationships: []
       }
       invites: {
         Row: { id: string; trip_id: string; code: string; created_at: string }
         Insert: { id?: string; trip_id: string; code: string }
         Update: Partial<Database['public']['Tables']['invites']['Insert']>
+        Relationships: []
       }
       stops: {
         Row: {
@@ -95,16 +99,19 @@ export interface Database {
           position?: number
         }
         Update: Partial<Database['public']['Tables']['stops']['Insert']>
+        Relationships: []
       }
       stop_stays: {
         Row: { id: string; stop_id: string; name: string; link: string; night_date: string | null; created_at: string }
         Insert: { id?: string; stop_id: string; name?: string; link?: string; night_date?: string | null }
         Update: Partial<Database['public']['Tables']['stop_stays']['Insert']>
+        Relationships: []
       }
       stop_categories: {
         Row: { id: string; stop_id: string; icon: string; label: string; position: number; created_at: string }
         Insert: { id?: string; stop_id: string; icon?: string; label: string; position?: number }
         Update: Partial<Database['public']['Tables']['stop_categories']['Insert']>
+        Relationships: []
       }
       stop_items: {
         Row: {
@@ -137,16 +144,19 @@ export interface Database {
           position?: number
         }
         Update: Partial<Database['public']['Tables']['stop_items']['Insert']>
+        Relationships: []
       }
       stop_item_checklist: {
         Row: { id: string; item_id: string; label: string; done: boolean; position: number }
         Insert: { id?: string; item_id: string; label: string; done?: boolean; position?: number }
         Update: Partial<Database['public']['Tables']['stop_item_checklist']['Insert']>
+        Relationships: []
       }
       schedule_orders: {
         Row: { trip_id: string; schedule_date: string; ordered_item_ids: string[]; updated_at: string }
         Insert: { trip_id: string; schedule_date: string; ordered_item_ids?: string[] }
         Update: Partial<Database['public']['Tables']['schedule_orders']['Insert']>
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -171,66 +181,79 @@ export interface Database {
           expense_date?: string
         }
         Update: Partial<Database['public']['Tables']['expenses']['Insert']>
+        Relationships: []
       }
       expense_splits: {
         Row: { expense_id: string; member_id: string }
         Insert: { expense_id: string; member_id: string }
         Update: Partial<Database['public']['Tables']['expense_splits']['Insert']>
+        Relationships: []
       }
       settlements: {
         Row: { id: string; trip_id: string; from_member_id: string; to_member_id: string; amount: number; settlement_date: string; created_at: string }
         Insert: { id?: string; trip_id: string; from_member_id: string; to_member_id: string; amount: number; settlement_date?: string }
         Update: Partial<Database['public']['Tables']['settlements']['Insert']>
+        Relationships: []
       }
       cassa_contributions: {
         Row: { id: string; trip_id: string; member_id: string; amount: number; contribution_date: string; created_at: string }
         Insert: { id?: string; trip_id: string; member_id: string; amount: number; contribution_date?: string }
         Update: Partial<Database['public']['Tables']['cassa_contributions']['Insert']>
+        Relationships: []
       }
       checklist_categories: {
         Row: { id: string; trip_id: string; emoji: string; name: string; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; emoji?: string; name: string; position?: number }
         Update: Partial<Database['public']['Tables']['checklist_categories']['Insert']>
+        Relationships: []
       }
       checklist_items: {
         Row: { id: string; category_id: string; label: string; done: boolean; assignee_member_id: string | null; position: number; created_at: string }
         Insert: { id?: string; category_id: string; label: string; done?: boolean; assignee_member_id?: string | null; position?: number }
         Update: Partial<Database['public']['Tables']['checklist_items']['Insert']>
+        Relationships: []
       }
       personal_checklist_sections: {
         Row: { id: string; trip_id: string; member_id: string; emoji: string; name: string; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; member_id: string; emoji?: string; name: string; position?: number }
         Update: Partial<Database['public']['Tables']['personal_checklist_sections']['Insert']>
+        Relationships: []
       }
       personal_checklist_items: {
         Row: { id: string; section_id: string; label: string; done: boolean; position: number; created_at: string }
         Insert: { id?: string; section_id: string; label: string; done?: boolean; position?: number }
         Update: Partial<Database['public']['Tables']['personal_checklist_items']['Insert']>
+        Relationships: []
       }
       essentials_categories: {
         Row: { id: string; trip_id: string; emoji: string; name: string; gradient: string | null; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; emoji?: string; name: string; gradient?: string | null; position?: number }
         Update: Partial<Database['public']['Tables']['essentials_categories']['Insert']>
+        Relationships: []
       }
       essentials_entries: {
         Row: { id: string; category_id: string; title: string; subtitle: string; tag: string; href: string; attachment_url: string | null; position: number; created_at: string }
         Insert: { id?: string; category_id: string; title: string; subtitle?: string; tag?: string; href?: string; attachment_url?: string | null; position?: number }
         Update: Partial<Database['public']['Tables']['essentials_entries']['Insert']>
+        Relationships: []
       }
       emergency_contacts: {
         Row: { id: string; trip_id: string; title: string; subtitle: string; href: string; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; title: string; subtitle?: string; href?: string; position?: number }
         Update: Partial<Database['public']['Tables']['emergency_contacts']['Insert']>
+        Relationships: []
       }
       trip_links: {
         Row: { id: string; trip_id: string; emoji: string; label: string; subtitle: string; url: string; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; emoji?: string; label: string; subtitle?: string; url: string; position?: number }
         Update: Partial<Database['public']['Tables']['trip_links']['Insert']>
+        Relationships: []
       }
       memory_days: {
         Row: { id: string; trip_id: string; label: string; memory_date: string; cover_url: string | null; position: number; created_at: string }
         Insert: { id?: string; trip_id: string; label: string; memory_date: string; cover_url?: string | null; position?: number }
         Update: Partial<Database['public']['Tables']['memory_days']['Insert']>
+        Relationships: []
       }
       memories: {
         Row: {
@@ -255,12 +278,18 @@ export interface Database {
           author_member_id?: string | null
         }
         Update: Partial<Database['public']['Tables']['memories']['Insert']>
+        Relationships: []
       }
       activity_log: {
         Row: { id: string; trip_id: string; member_id: string | null; action: string; created_at: string }
         Insert: { id?: string; trip_id: string; member_id?: string | null; action: string }
         Update: Partial<Database['public']['Tables']['activity_log']['Insert']>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }

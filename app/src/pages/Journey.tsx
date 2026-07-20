@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
+import { isUuid } from '../lib/uuid'
 import {
   coverGradientById,
   loadStoredColors,
@@ -14,6 +15,7 @@ import { loadStops, saveStops, stopNights, type Stop } from '../lib/tripData'
 import { AddStopSheet, type AddStopDraft } from './journey/AddStopSheet'
 import { computeStopKind, computeTripPhase, stopMoodDefs, thingsSummary } from './journey/helpers'
 import { StopDetailSheet } from './journey/StopDetailSheet'
+import { fetchStops, fetchTripMeta, persistStops, updateTripCover, type TripMeta } from './journey/supabaseJourney'
 
 const TRIP_NAME = 'Spain Roadtrip'
 const TRIP_YEAR = 2026
@@ -37,6 +39,9 @@ const initialActivity: ActivityEntry[] = [
 const emptyDraft: AddStopDraft = { name: '', startDay: null, endDay: null, moodId: null, photo: null, error: null }
 
 export function Journey() {
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+
   const [stops, setStops] = useState<Stop[]>([])
   const [editMode, setEditMode] = useState(false)
   const [coverColorId, setCoverColorId] = useState<CoverColorId>('fiesta')
@@ -58,18 +63,47 @@ export function Journey() {
   const [activeDayByCategory, setActiveDayByCategory] = useState<Record<string, number>>({})
   const [activeDayForStay, setActiveDayForStay] = useState<Record<string, number>>({})
 
+  const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
+  const [loading, setLoading] = useState(isRealTrip)
+
   useEffect(() => {
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)]).then(([meta, fetchedStops]) => {
+        setTripMeta(meta)
+        setStops(fetchedStops)
+        if (meta) {
+          setCoverColorId((meta.coverColorId as CoverColorId) || 'fiesta')
+          setCoverPhoto(meta.coverPhotoUrl)
+        }
+        setLoading(false)
+      })
+      return
+    }
     setStops(loadStops())
     const colors = loadStoredColors()
     const photos = loadStoredPhotos()
     const slug = slugify(TRIP_NAME)
     setCoverColorId((colors[slug] as CoverColorId) || 'fiesta')
     setCoverPhoto(photos[slug] || null)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
+
+  const tripName = isRealTrip && tripMeta ? tripMeta.name : TRIP_NAME
+  const tripStartDate = isRealTrip && tripMeta ? tripMeta.startDate : TRIP_START
+  const tripEndDate = isRealTrip && tripMeta ? tripMeta.endDate : TRIP_END
+  const friendsCount = isRealTrip && tripMeta ? tripMeta.membersCount : FRIENDS_COUNT
+  const refYear = isRealTrip && tripMeta ? tripMeta.startDate.getFullYear() : TRIP_YEAR
+  const refMonth = isRealTrip && tripMeta ? tripMeta.startDate.getMonth() : TRIP_MONTH
+  const monthLabel = tripStartDate.toLocaleDateString('it-IT', { month: 'long' })
 
   function persist(next: Stop[]) {
     setStops(next)
-    saveStops(next)
+    if (isRealTrip && tripMeta) {
+      persistStops(tripMeta.id, next, refYear, refMonth).catch((err) => console.error('Errore salvataggio tappe', err))
+    } else {
+      saveStops(next)
+    }
   }
 
   function logActivity(action: string) {
@@ -80,10 +114,10 @@ export function Journey() {
     persist(stops.map((s) => (s.id !== stopId ? s : fn(s))))
   }
 
-  const trip = computeTripPhase(TRIP_START, TRIP_END)
+  const trip = computeTripPhase(tripStartDate, tripEndDate)
   const isPre = trip.phase === 'pre'
   const isTripDone = trip.phase === 'done'
-  const todayStop = stops.find((s) => s.kind === 'today')
+  const todayStop = stops.find((s) => computeStopKind(s, isPre, refYear, refMonth) === 'today')
 
   const statusPillLabel = isPre
     ? `🗓 Si parte tra ${trip.daysUntil} giorn${trip.daysUntil === 1 ? 'o' : 'i'}`
@@ -101,7 +135,7 @@ export function Journey() {
   const dayBoxValue = isPre ? `-${trip.daysUntil}` : `${trip.currentDay}/${trip.totalDays}`
   const dayBoxLabel = isPre ? 'al via' : 'giorno'
 
-  const tripDatesLabel = `${TRIP_START.toLocaleDateString('it-IT', { day: 'numeric' })} → ${TRIP_END.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`
+  const tripDatesLabel = `${tripStartDate.toLocaleDateString('it-IT', { day: 'numeric' })} → ${tripEndDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`
 
   const heroBackground = coverPhoto ? `url(${coverPhoto}) center/cover no-repeat` : coverGradientById[coverColorId] || coverGradientById.fiesta
 
@@ -109,8 +143,12 @@ export function Journey() {
     setCoverColorId(id)
     setCoverPhoto(null)
     setCoverPickerOpen(false)
-    saveStoredColorFor(TRIP_NAME, id)
-    saveStoredPhotoFor(TRIP_NAME, null)
+    if (isRealTrip && tripMeta) {
+      updateTripCover(tripMeta.id, { coverColorId: id, coverPhotoUrl: null })
+    } else {
+      saveStoredColorFor(TRIP_NAME, id)
+      saveStoredPhotoFor(TRIP_NAME, null)
+    }
   }
 
   function onFileChosen(file: File) {
@@ -121,7 +159,11 @@ export function Journey() {
         setUploadMenuOpen(false)
       } else {
         setCoverPhoto(reader.result as string)
-        saveStoredPhotoFor(TRIP_NAME, reader.result as string)
+        if (isRealTrip && tripMeta) {
+          updateTripCover(tripMeta.id, { coverPhotoUrl: reader.result as string })
+        } else {
+          saveStoredPhotoFor(TRIP_NAME, reader.result as string)
+        }
         setUploadMenuOpen(false)
         setCoverPickerOpen(false)
       }
@@ -181,7 +223,7 @@ export function Journey() {
     const mood = stopMoodDefs.find((m) => m.id === draft.moodId) || stopMoodDefs[0]
     const startDay = draft.startDay
     const endDay = draft.endDay || draft.startDay
-    const dates = endDay !== startDay ? `${startDay} → ${endDay} agosto` : `${startDay} agosto`
+    const dates = endDay !== startDay ? `${startDay} → ${endDay} ${monthLabel}` : `${startDay} ${monthLabel}`
 
     if (editingStopId) {
       const next = stops
@@ -235,7 +277,9 @@ export function Journey() {
         </Link>
       </div>
 
-      {stops.length > 0 ? (
+      {loading ? (
+        <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento viaggio...</div>
+      ) : stops.length > 0 ? (
         <>
           <div className="mb-4">
             <div className="inline-flex items-center gap-1.75 whitespace-nowrap rounded-full border border-[#f0dfc0] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#8a6a3e]">
@@ -248,7 +292,7 @@ export function Journey() {
             <div className="absolute inset-x-0 bottom-0 top-[38%]" style={{ background: 'linear-gradient(180deg,transparent,rgba(20,12,8,.82) 55%)' }} />
             <button type="button" className="absolute right-3.5 top-3.5 z-10 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/28 text-sm" onClick={() => setCoverPickerOpen(true)}>🎨</button>
             <div className="relative z-[1] flex flex-col justify-end px-5 pb-5.5 pt-4.5">
-              <div className="mb-1 font-display text-[26px] font-bold leading-tight">{TRIP_NAME}</div>
+              <div className="mb-1 font-display text-[26px] font-bold leading-tight">{tripName}</div>
               <div className="mb-4 text-[13px] font-semibold text-white/88">{tripDatesLabel}</div>
               <div className="mb-2 h-2 overflow-hidden rounded-full bg-white/28">
                 <div className="h-full rounded-full bg-white" style={{ width: `${progressPct}%` }} />
@@ -264,7 +308,7 @@ export function Journey() {
                   <div className="mt-1 text-[11px] font-bold text-white">tappe</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-display text-[22px] font-bold leading-none">{FRIENDS_COUNT}</div>
+                  <div className="font-display text-[22px] font-bold leading-none">{friendsCount}</div>
                   <div className="mt-1 text-[11px] font-bold text-white">amici</div>
                 </div>
               </div>
@@ -419,8 +463,8 @@ export function Journey() {
         <AddStopSheet
           editing={!!editingStopId}
           draft={draft}
-          tripStartDay={TRIP_START.getDate()}
-          tripEndDay={TRIP_END.getDate()}
+          tripStartDay={tripStartDate.getDate()}
+          tripEndDay={tripEndDate.getDate()}
           onChangeName={(text) => setDraft((d) => ({ ...d, name: text }))}
           onSelectDay={(day) =>
             setDraft((d) => {
