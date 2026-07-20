@@ -81,8 +81,8 @@ export function Onboarding() {
   }
 
   async function verifyAuthCode() {
-    if (!authCode || authCode.trim().length < 6) {
-      setAuthError('Inserisci il codice a 6 cifre ricevuto via email.')
+    if (!authCode || authCode.trim().length < 4) {
+      setAuthError('Inserisci il codice ricevuto via email.')
       setAuthStatus('error')
       return
     }
@@ -447,8 +447,8 @@ export function Onboarding() {
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                placeholder="123456"
-                maxLength={6}
+                placeholder="Codice"
+                maxLength={10}
                 value={authCode}
                 onChange={(e) => { setAuthCode(e.target.value.replace(/\D/g, '')); setAuthError(null) }}
                 onKeyDown={(e) => { if (e.key === 'Enter') verifyAuthCode() }}
