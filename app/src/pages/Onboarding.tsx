@@ -118,17 +118,36 @@ export function Onboarding() {
     const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
     const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
 
-    const { data: trip, error: tripError } = await supabase
-      .from('trips')
-      .insert({
-        name: state.tripName,
-        start_date: startDateStr,
-        end_date: endDateStr,
-        cover_color_id: state.coverColorId,
-        created_by: session.user.id,
-      })
-      .select()
-      .single()
+    // Subito dopo il login la sessione a volte non è ancora pienamente
+    // riconosciuta dal database (propagazione delle chiavi JWT): ritenta
+    // in automatico un paio di volte prima di arrendersi.
+    async function withRlsRetry<T>(
+      fn: () => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
+    ): Promise<{ data: T | null; error: { code?: string; message: string } | null }> {
+      let lastError: { code?: string; message: string } | null = null
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 2000))
+        const { data, error } = await fn()
+        if (!error) return { data, error: null }
+        lastError = error
+        if (error.code !== '42501') break
+      }
+      return { data: null, error: lastError }
+    }
+
+    const { data: trip, error: tripError } = await withRlsRetry<{ id: string }>(() =>
+      supabase
+        .from('trips')
+        .insert({
+          name: state.tripName,
+          start_date: startDateStr,
+          end_date: endDateStr,
+          cover_color_id: state.coverColorId,
+          created_by: session.user.id,
+        })
+        .select()
+        .single(),
+    )
 
     if (tripError || !trip) {
       setCreateTripError(tripError?.message || 'Errore durante la creazione del viaggio.')
@@ -141,7 +160,7 @@ export function Onboarding() {
       { trip_id: trip.id, user_id: session.user.id, display_name: organizerName, role: 'organizer' as const, status: 'joined' as const },
       ...state.participants.map((name) => ({ trip_id: trip.id, display_name: name, role: 'member' as const, status: 'invited' as const })),
     ]
-    const { error: membersError } = await supabase.from('trip_members').insert(memberRows)
+    const { error: membersError } = await withRlsRetry<null>(() => supabase.from('trip_members').insert(memberRows))
     if (membersError) {
       setCreateTripError(membersError.message)
       setCreatingTrip(false)
