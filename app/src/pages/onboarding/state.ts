@@ -60,7 +60,8 @@ export interface OnboardingState {
 export function initialOnboardingState(search: URLSearchParams): OnboardingState {
   const recap = search.get('step') === 'recap'
   const stepParam = search.get('step')
-  const forcedStep = stepParam === 'welcome' || stepParam === 'createTrip' ? stepParam : null
+  const forcedStep =
+    stepParam === 'welcome' || stepParam === 'createTrip' || stepParam === 'joinCode' ? stepParam : null
 
   let coverColorId = 'fiesta'
   if (recap) {

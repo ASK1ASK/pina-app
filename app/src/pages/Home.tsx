@@ -166,6 +166,13 @@ export function Home() {
           >
             + Crea viaggio
           </Link>
+
+          <Link
+            to="/onboarding?step=joinCode"
+            className="mt-2.5 block text-center text-[12.5px] font-bold text-[var(--color-coral)]"
+          >
+            Hai un codice? Unisciti a un viaggio
+          </Link>
         </>
       ) : (
         <div className="flex flex-col gap-3">
@@ -195,6 +202,13 @@ export function Home() {
             <div className="mb-2 text-2xl">🌅</div>
             <div className="mb-1 font-display text-[17px] font-bold">Pronti a esplorare?</div>
             <div className="text-xs font-semibold text-white/90">La tua nuova avventura inizia da qui.</div>
+          </Link>
+
+          <Link
+            to="/onboarding?step=joinCode"
+            className="block text-center text-[12.5px] font-bold text-[var(--color-coral)]"
+          >
+            Hai un codice? Unisciti a un viaggio
           </Link>
         </div>
       )}
