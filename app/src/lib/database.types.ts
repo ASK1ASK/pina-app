@@ -300,6 +300,26 @@ export interface Database {
         }
         Returns: Database['public']['Tables']['trips']['Row']
       }
+      get_trip_preview_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          trip_id: string
+          name: string
+          start_date: string | null
+          end_date: string | null
+          cover_color_id: string
+          cover_photo_url: string | null
+          members_count: number
+        }[]
+      }
+      join_trip_by_code: {
+        Args: { p_code: string; p_display_name: string }
+        Returns: Database['public']['Tables']['trips']['Row']
+      }
+      get_or_create_trip_invite: {
+        Args: { p_trip_id: string }
+        Returns: string
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

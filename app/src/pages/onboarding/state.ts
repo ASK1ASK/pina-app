@@ -49,7 +49,7 @@ export interface OnboardingState {
   authMethod: 'email' | 'phone' | null
   joinError: string | null
   cameraOpen: boolean
-  loginIntent: 'create' | 'access'
+  loginIntent: 'create' | 'access' | 'join'
   coverColorId: string
   deleteConfirmOpen: boolean
   coverPickerOpen: boolean

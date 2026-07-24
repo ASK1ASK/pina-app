@@ -18,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/join/:code" element={<Onboarding />} />
           <Route path="/trip/:tripId" element={<TripLayout />}>
             <Route index element={<Navigate to="journey" replace />} />
             <Route path="journey" element={<Journey />} />

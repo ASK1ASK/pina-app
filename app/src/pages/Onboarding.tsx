@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
@@ -8,7 +8,6 @@ import {
   coverGradientById,
   coverPaletteDefs,
   identityColorDefs,
-  inviteCode as computeInviteCode,
   moodGradients,
   saveStoredColorFor,
   slugify,
@@ -39,6 +38,7 @@ const secondaryBtnClass =
 
 export function Onboarding() {
   const [search] = useSearchParams()
+  const { code: routeJoinCode } = useParams<{ code?: string }>()
   const navigate = useNavigate()
   const monthDefs = useMemo(buildMonthDefs, [])
   const { session } = useAuth()
@@ -53,10 +53,60 @@ export function Onboarding() {
   const [authStatus, setAuthStatus] = useState<'idle' | 'sending' | 'verifying' | 'error'>('idle')
   const [authError, setAuthError] = useState<string | null>(null)
 
+  // Anteprima reale di un viaggio raggiunto via /join/:code o via link/codice
+  // incollati a mano: presa da get_trip_preview_by_code, leggibile anche da chi
+  // non è ancora membro (è tutto il senso di un invito).
+  const [joinCode, setJoinCode] = useState<string | null>(null)
+  const [joinPreview, setJoinPreview] = useState<{
+    tripId: string
+    name: string
+    startDate: string | null
+    endDate: string | null
+    membersCount: number
+  } | null>(null)
+  const [joinBusy, setJoinBusy] = useState(false)
+  const [joinFinalizing, setJoinFinalizing] = useState(false)
+  const [joinFinalizeError, setJoinFinalizeError] = useState<string | null>(null)
+
+  async function loadJoinPreview(code: string) {
+    const clean = code.trim().toUpperCase()
+    if (!clean) return false
+    setJoinBusy(true)
+    patch({ joinError: null })
+    const { data, error } = await supabase.rpc('get_trip_preview_by_code', { p_code: clean }).maybeSingle()
+    setJoinBusy(false)
+    if (error || !data) {
+      patch({ joinError: 'Codice non valido o viaggio non trovato. Verifica con chi te lo ha condiviso.' })
+      return false
+    }
+    setJoinCode(clean)
+    setJoinPreview({
+      tripId: data.trip_id,
+      name: data.name,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      membersCount: data.members_count,
+    })
+    patch({ joinError: null, step: 'join' })
+    return true
+  }
+
+  // Arrivo diretto via link di invito (/join/:code).
+  useEffect(() => {
+    if (routeJoinCode) {
+      // Passa dalla schermata "joinCode" (mostra l'errore lì se il codice non è
+      // valido, invece di restare in silenzio sulla welcome).
+      patch({ step: 'joinCode' })
+      loadJoinPreview(routeJoinCode)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeJoinCode])
+
   // Una volta autenticati, prosegui automaticamente.
   useEffect(() => {
     if (session && state.step === 'login') {
       if (state.loginIntent === 'access') navigate('/')
+      else if (state.loginIntent === 'join') goStep('whoAreYou')
       else goStep('createTrip')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,6 +161,26 @@ export function Onboarding() {
   const [realTripId, setRealTripId] = useState<string | null>(null)
   const [createTripError, setCreateTripError] = useState<string | null>(null)
   const [creatingTrip, setCreatingTrip] = useState(false)
+
+  // Codice invito vero, generato/riusato lato database per il viaggio appena
+  // creato (get_or_create_trip_invite). Per il viaggio demo (nessun realTripId)
+  // resta il codice finto calcolato in locale, che non porta da nessuna parte.
+  const [realInviteCode, setRealInviteCode] = useState<string | null>(null)
+  useEffect(() => {
+    if (state.step === 'invite' && realTripId && !realInviteCode) {
+      supabase.rpc('get_or_create_trip_invite', { p_trip_id: realTripId }).then(({ data, error }) => {
+        if (!error && data) setRealInviteCode(data)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step, realTripId])
+
+  // Il codice "vero" (dal DB) non ha prefisso; per il viaggio demo, senza un
+  // invito reale a cui appoggiarsi, ne calcoliamo uno finto solo per mostrare
+  // qualcosa — quel link/QR non porterà comunque a nulla di reale.
+  const rawShareCode = realInviteCode || slugify(state.tripName).toUpperCase().replace(/-/g, '').slice(0, 6) || 'DEMO'
+  const shareUrl = `${window.location.origin}/join/${rawShareCode}`
+  const displayShareCode = `PINA-${rawShareCode}`
 
   async function createTripInSupabase(): Promise<string | null> {
     if (!session?.user) {
@@ -257,6 +327,29 @@ export function Onboarding() {
     if (id) goPreparing()
   }
 
+  // Unione reale al viaggio (join_trip_by_code): solo se siamo arrivati qui con
+  // un invito vero verificato. Senza (es. dal vecchio percorso "Simula scansione"
+  // della fotocamera) restiamo sul comportamento dimostrativo di prima.
+  async function finalizeJoin() {
+    if (!joinCode || !session?.user) {
+      goStep('enteredGuest')
+      return
+    }
+    setJoinFinalizing(true)
+    setJoinFinalizeError(null)
+    const { data: trip, error } = await supabase.rpc('join_trip_by_code', {
+      p_code: joinCode,
+      p_display_name: state.identityName,
+    })
+    setJoinFinalizing(false)
+    if (error || !trip) {
+      setJoinFinalizeError(error?.message || "Errore durante l'ingresso nel viaggio.")
+      return
+    }
+    setRealTripId(trip.id)
+    goStep('enteredGuest')
+  }
+
   function buildCrew() {
     patch((s) => ({ crew: s.participants.map((name) => ({ name, status: 'pending' as const })) }))
   }
@@ -274,34 +367,34 @@ export function Onboarding() {
   }
 
   function copyLink() {
-    const url = `https://pina.app/join/${slugify(state.tripName)}`
-    navigator.clipboard?.writeText(url).catch(() => {})
+    navigator.clipboard?.writeText(shareUrl).catch(() => {})
     patch({ linkCopied: true })
     setTimeout(() => patch({ linkCopied: false }), 1600)
   }
 
   function copyCode() {
-    navigator.clipboard?.writeText(computeInviteCode(slugify(state.tripName))).catch(() => {})
+    navigator.clipboard?.writeText(displayShareCode).catch(() => {})
     patch({ codeCopied: true })
     setTimeout(() => patch({ codeCopied: false }), 1600)
   }
 
-  function confirmJoinLink() {
+  async function confirmJoinLink() {
     const text = joinLinkRef.current?.textContent?.trim() ?? ''
-    if (!text || text === 'https://pina.app/join/...' || !text.includes('pina.app/join/')) {
+    const match = text.match(/\/join\/([a-z0-9]+)\/?$/i)
+    if (!match) {
       patch({ joinError: "Problemi di accesso: link non valido o incompleto. Controlla di averlo copiato per intero o contatta l'assistenza." })
       return
     }
-    patch({ joinError: null, step: 'join' })
+    await loadJoinPreview(match[1])
   }
 
-  function confirmJoinCode() {
-    const text = joinCodeRef.current?.textContent?.trim() ?? ''
-    if (!text || text === 'PINA-XXXXX' || !/^PINA-[A-Z0-9]{4,6}$/i.test(text)) {
+  async function confirmJoinCode() {
+    const text = (joinCodeRef.current?.textContent?.trim() ?? '').replace(/^PINA-/i, '')
+    if (!text || text === 'XXXXX') {
       patch({ joinError: 'Problemi di accesso: il codice non è valido. Verifica con chi te lo ha condiviso o contatta l\'assistenza.' })
       return
     }
-    patch({ joinError: null, step: 'join' })
+    await loadJoinPreview(text)
   }
 
   // ---------- shared bits ----------
@@ -715,13 +808,13 @@ export function Onboarding() {
             <button type="button" className="rounded-full bg-[var(--color-bg)] px-3.5 py-2 text-[11.5px] font-bold text-[var(--color-text)]" onClick={copyLink}>{state.linkCopied ? 'Copiato ✓' : 'Copia'}</button>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-            <div className="h-10 w-10 shrink-0 rounded-[10px] border border-[var(--color-card-border)] bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(`https://pina.app/join/${slugify(state.tripName)}`)})` }} />
+            <div className="h-10 w-10 shrink-0 rounded-[10px] border border-[var(--color-card-border)] bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(shareUrl)})` }} />
             <div className="flex-1"><div className="text-[13.5px] font-bold">Codice QR</div><div className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Comodo quando siete già insieme</div></div>
             <button type="button" className="rounded-full bg-[var(--color-bg)] px-3.5 py-2 text-[11.5px] font-bold text-[var(--color-text)]" onClick={() => patch({ qrOpen: true })}>Mostra</button>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <span className="text-xl">🔑</span>
-            <div className="flex-1"><div className="text-[13.5px] font-bold">Codice</div><div className="font-display text-sm font-semibold tracking-[.03em] text-[var(--color-coral)]">{computeInviteCode(slugify(state.tripName))}</div></div>
+            <div className="flex-1"><div className="text-[13.5px] font-bold">Codice</div><div className="font-display text-sm font-semibold tracking-[.03em] text-[var(--color-coral)]">{displayShareCode}</div></div>
             <button type="button" className="rounded-full bg-[var(--color-bg)] px-3.5 py-2 text-[11.5px] font-bold text-[var(--color-text)]" onClick={copyCode}>{state.codeCopied ? 'Copiato ✓' : 'Copia'}</button>
           </div>
         </div>
@@ -731,7 +824,7 @@ export function Onboarding() {
         {state.qrOpen && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-10" onClick={() => patch({ qrOpen: false })}>
             <div className="rounded-3xl bg-white p-6.5 text-center shadow-[0_30px_60px_-20px_rgba(0,0,0,.5)]">
-              <div className="mb-3.5 h-45 w-45 rounded-xl bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(`https://pina.app/join/${slugify(state.tripName)}`)})` }} />
+              <div className="mb-3.5 h-45 w-45 rounded-xl bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(shareUrl)})` }} />
               <div className="font-display text-base font-bold text-[var(--color-text)]">{state.tripName}</div>
               <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">Inquadra per unirti</div>
             </div>
@@ -797,14 +890,14 @@ export function Onboarding() {
 
         <div className="mb-3.5 rounded-3xl border border-[var(--color-card-border)] bg-white p-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
           <div className="mb-2.5 flex items-center gap-2"><span className="text-[17px]">🔗</span><span className="text-[13.5px] font-bold text-[var(--color-text)]">Hai un link di invito?</span></div>
-          <EditableText ref={joinLinkRef} initialText="https://pina.app/join/..." className="mb-2.5 rounded-xl border border-[var(--color-card-border)] bg-[var(--color-bg)] px-3.5 py-2.75 text-[12.5px] font-semibold text-[var(--color-text-secondary)]" onFocus={(e) => { if (e.currentTarget.textContent?.trim() === 'https://pina.app/join/...') { e.currentTarget.textContent = ''; e.currentTarget.style.color = '#3a2a1c' } }} />
-          <button type="button" className="w-full rounded-full bg-[var(--color-text-strong)] py-2.75 text-center text-[12.5px] font-bold text-white" onClick={confirmJoinLink}>Conferma</button>
+          <EditableText ref={joinLinkRef} initialText={`${window.location.origin}/join/...`} className="mb-2.5 rounded-xl border border-[var(--color-card-border)] bg-[var(--color-bg)] px-3.5 py-2.75 text-[12.5px] font-semibold text-[var(--color-text-secondary)]" onFocus={(e) => { if (e.currentTarget.textContent?.trim() === `${window.location.origin}/join/...`) { e.currentTarget.textContent = ''; e.currentTarget.style.color = '#3a2a1c' } }} />
+          <button type="button" className="w-full rounded-full bg-[var(--color-text-strong)] py-2.75 text-center text-[12.5px] font-bold text-white disabled:opacity-60" disabled={joinBusy} onClick={confirmJoinLink}>{joinBusy ? '...' : 'Conferma'}</button>
         </div>
 
         <div className="mb-3.5 rounded-3xl border border-[var(--color-card-border)] bg-white p-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
           <div className="mb-2.5 flex items-center gap-2"><span className="text-[17px]">🔑</span><span className="text-[13.5px] font-bold text-[var(--color-text)]">Hai un codice dalla crew?</span></div>
           <EditableText ref={joinCodeRef} initialText="PINA-XXXXX" className="mb-2.5 rounded-xl border border-[var(--color-card-border)] bg-[var(--color-bg)] px-3.5 py-2.75 text-center font-display text-base font-bold tracking-[.04em] text-[var(--color-text-secondary)]" onFocus={(e) => { if (e.currentTarget.textContent?.trim() === 'PINA-XXXXX') { e.currentTarget.textContent = ''; e.currentTarget.style.color = '#3a2a1c' } }} />
-          <button type="button" className="w-full rounded-full bg-[var(--color-text-strong)] py-2.75 text-center text-[12.5px] font-bold text-white" onClick={confirmJoinCode}>Conferma</button>
+          <button type="button" className="w-full rounded-full bg-[var(--color-text-strong)] py-2.75 text-center text-[12.5px] font-bold text-white disabled:opacity-60" disabled={joinBusy} onClick={confirmJoinCode}>{joinBusy ? '...' : 'Conferma'}</button>
         </div>
 
         <div className="rounded-3xl border border-[var(--color-card-border)] bg-white p-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
@@ -824,22 +917,39 @@ export function Onboarding() {
       </div>
     )
   } else if (state.step === 'join') {
+    const previewDates = joinPreview?.startDate && joinPreview?.endDate
+      ? `${new Date(joinPreview.startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → ${new Date(joinPreview.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`
+      : tripDates
     body = (
       <div className="flex min-h-svh flex-col items-center overflow-y-auto px-6.5 pb-8 pt-14.5 text-center">
         <div className="mb-3.5 text-[34px]">🦩</div>
         <div className="mb-1.5 text-[12.5px] font-bold text-[var(--color-text-secondary)]">Sei stato invitato a</div>
-        <div className="mb-2.5 font-display text-2xl font-bold text-[var(--color-text)]">{state.tripName || 'Spain Roadtrip'}</div>
-        <div className="mb-5.5 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">{tripDates}</div>
+        <div className="mb-2.5 font-display text-2xl font-bold text-[var(--color-text)]">{joinPreview ? joinPreview.name : (state.tripName || 'Spain Roadtrip')}</div>
+        <div className="mb-5.5 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">{previewDates}</div>
 
         <div className="mb-6.5 w-full rounded-3xl border border-[var(--color-card-border)] bg-white p-4 text-left shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
           <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Ti unirai a questa crew</div>
-          {state.participants.map((name, i) => (
-            <div key={i} className="flex items-center gap-2 py-1.5"><span className="text-[15px]">✅</span><span className="text-[13px] font-bold text-[var(--color-text)]">{name}</span></div>
-          ))}
+          {joinPreview ? (
+            <div className="flex items-center gap-2 py-1.5"><span className="text-[15px]">👥</span><span className="text-[13px] font-bold text-[var(--color-text)]">{joinPreview.membersCount} già a bordo</span></div>
+          ) : (
+            state.participants.map((name, i) => (
+              <div key={i} className="flex items-center gap-2 py-1.5"><span className="text-[15px]">✅</span><span className="text-[13px] font-bold text-[var(--color-text)]">{name}</span></div>
+            ))
+          )}
           <div className="flex items-center gap-2 py-1.5"><span className="text-[15px]">🆕</span><span className="text-[13px] font-bold text-[var(--color-coral)]">Tu</span></div>
         </div>
 
-        <button type="button" className="w-full rounded-full py-3.5 text-[13.5px] font-bold text-white" style={primaryBtnStyle} onClick={() => goStep('whoAreYou')}>Unisciti al viaggio</button>
+        <button
+          type="button"
+          className="w-full rounded-full py-3.5 text-[13.5px] font-bold text-white"
+          style={primaryBtnStyle}
+          onClick={() => {
+            if (joinPreview && !session) { patch({ step: 'login', loginIntent: 'join' }); return }
+            goStep('whoAreYou')
+          }}
+        >
+          Unisciti al viaggio
+        </button>
       </div>
     )
   } else if (state.step === 'whoAreYou') {
@@ -876,7 +986,12 @@ export function Onboarding() {
           ))}
         </div>
 
-        <button type="button" className={primaryBtnClass} style={primaryBtnStyle} onClick={() => goStep('enteredGuest')}>Entra nel viaggio</button>
+        {joinFinalizeError && (
+          <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{joinFinalizeError}</div>
+        )}
+        <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={joinFinalizing} onClick={finalizeJoin}>
+          {joinFinalizing ? 'Ingresso...' : 'Entra nel viaggio'}
+        </button>
       </div>
     )
   } else if (state.step === 'enteredGuest') {
