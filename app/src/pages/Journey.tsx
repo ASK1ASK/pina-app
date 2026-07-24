@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
+import { useAuth } from '../lib/authContext'
 import { isUuid } from '../lib/uuid'
+import { useTripRealtime } from '../lib/useTripRealtime'
 import {
   coverGradientById,
   loadStoredColors,
@@ -41,6 +43,7 @@ const emptyDraft: AddStopDraft = { name: '', startDay: null, endDay: null, moodI
 export function Journey() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
+  const { user } = useAuth()
 
   const [stops, setStops] = useState<Stop[]>([])
   const [editMode, setEditMode] = useState(false)
@@ -88,6 +91,27 @@ export function Journey() {
     setCoverPhoto(photos[slug] || null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeTripId])
+
+  // Aggiornamenti live da altri membri (dati viaggio + chi è online ora),
+  // solo per i viaggi reali. Su un cambio arrivato da un altro utente
+  // ricarichiamo solo i metadati del viaggio (leggeri), non l'intero Journey.
+  const { online } = useTripRealtime(isRealTrip ? routeTripId ?? null : null, {
+    userId: user?.id ?? null,
+    displayName: user?.email ? user.email.split('@')[0] : 'Viaggiatore',
+    onTripChange: () => {
+      if (!routeTripId) return
+      fetchTripMeta(routeTripId).then((meta) => {
+        if (!meta) return
+        setTripMeta(meta)
+        setCoverColorId((meta.coverColorId as CoverColorId) || 'fiesta')
+        setCoverPhoto(meta.coverPhotoUrl)
+      })
+    },
+    onMembersChange: () => {
+      if (!routeTripId) return
+      fetchTripMeta(routeTripId).then((meta) => meta && setTripMeta(meta))
+    },
+  })
 
   const tripName = isRealTrip && tripMeta ? tripMeta.name : TRIP_NAME
   const tripStartDate = isRealTrip && tripMeta ? tripMeta.startDate : TRIP_START
@@ -276,6 +300,25 @@ export function Journey() {
           🏠 Home
         </Link>
       </div>
+
+      {online.length > 0 && (
+        <div className="mb-3.5 flex items-center gap-1.5">
+          <div className="flex -space-x-2">
+            {online.slice(0, 5).map((m) => (
+              <div
+                key={m.userId}
+                title={m.name}
+                className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-cream)] bg-[var(--color-coral)] text-[10px] font-bold uppercase text-white"
+              >
+                {m.name.slice(0, 1)}
+              </div>
+            ))}
+          </div>
+          <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">
+            {online.length === 1 ? 'online ora' : `${online.length} online ora`}
+          </span>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento viaggio...</div>

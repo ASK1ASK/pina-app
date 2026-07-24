@@ -288,7 +288,19 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      create_trip_with_members: {
+        Args: {
+          p_name: string
+          p_start_date: string
+          p_end_date: string
+          p_cover_color_id: string
+          p_organizer_display_name: string
+          p_participant_names?: string[]
+        }
+        Returns: Database['public']['Tables']['trips']['Row']
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

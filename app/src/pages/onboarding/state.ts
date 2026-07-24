@@ -95,7 +95,7 @@ export function initialOnboardingState(search: URLSearchParams): OnboardingState
     qrOpen: false,
     linkCopied: false,
     codeCopied: false,
-    identityName: 'Andrea',
+    identityName: recap ? 'Andrea' : '',
     identityEmoji: '😎',
     identityColorId: 'coral',
     vibe: 'chill',

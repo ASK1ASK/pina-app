@@ -62,6 +62,16 @@ export function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
+  // Suggerisce un nome di partenza per l'organizzatore (dal prefisso della mail),
+  // ma resta modificabile: la lasciamo vuota finché non sappiamo chi è.
+  useEffect(() => {
+    if (session?.user?.email && !state.identityName) {
+      const guess = session.user.email.split('@')[0]
+      patch({ identityName: guess.charAt(0).toUpperCase() + guess.slice(1) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
+
   async function sendAuthCode() {
     if (!authEmail || !authEmail.includes('@')) {
       setAuthError('Inserisci un indirizzo email valido.')
@@ -117,52 +127,24 @@ export function Onboarding() {
     const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
     const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
     const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
+    const organizerName = state.identityName.trim() || (session.user.email ? session.user.email.split('@')[0] : 'Organizzatore')
 
-    // Subito dopo il login la sessione a volte non è ancora pienamente
-    // riconosciuta dal database (propagazione delle chiavi JWT): ritenta
-    // in automatico un paio di volte prima di arrendersi.
-    async function withRlsRetry<T>(
-      fn: () => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
-    ): Promise<{ data: T | null; error: { code?: string; message: string } | null }> {
-      let lastError: { code?: string; message: string } | null = null
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 2000))
-        const { data, error } = await fn()
-        if (!error) return { data, error: null }
-        lastError = error
-        if (error.code !== '42501') break
-      }
-      return { data: null, error: lastError }
-    }
-
-    const { data: trip, error: tripError } = await withRlsRetry<{ id: string }>(() =>
-      supabase
-        .from('trips')
-        .insert({
-          name: state.tripName,
-          start_date: startDateStr,
-          end_date: endDateStr,
-          cover_color_id: state.coverColorId,
-          created_by: session.user.id,
-        })
-        .select()
-        .single(),
-    )
+    // Viaggio + membership organizzatore (+ partecipanti) creati insieme, in
+    // un'unica funzione lato database (vedi 0002_create_trip_with_members.sql):
+    // creandoli con due insert separati dal client, nell'istante fra i due
+    // l'organizzatore non è ancora membro del viaggio appena creato, e la RLS
+    // rifiuta la richiesta come se la policy fosse sbagliata.
+    const { data: trip, error: tripError } = await supabase.rpc('create_trip_with_members', {
+      p_name: state.tripName,
+      p_start_date: startDateStr,
+      p_end_date: endDateStr,
+      p_cover_color_id: state.coverColorId,
+      p_organizer_display_name: organizerName,
+      p_participant_names: state.participants,
+    })
 
     if (tripError || !trip) {
       setCreateTripError(tripError?.message || 'Errore durante la creazione del viaggio.')
-      setCreatingTrip(false)
-      return null
-    }
-
-    const organizerName = session.user.email ? session.user.email.split('@')[0] : 'Organizzatore'
-    const memberRows = [
-      { trip_id: trip.id, user_id: session.user.id, display_name: organizerName, role: 'organizer' as const, status: 'joined' as const },
-      ...state.participants.map((name) => ({ trip_id: trip.id, display_name: name, role: 'member' as const, status: 'invited' as const })),
-    ]
-    const { error: membersError } = await withRlsRetry<null>(() => supabase.from('trip_members').insert(memberRows))
-    if (membersError) {
-      setCreateTripError(membersError.message)
       setCreatingTrip(false)
       return null
     }
@@ -544,6 +526,20 @@ export function Onboarding() {
             {state.editReturnStep ? 'Modifica il viaggio' : 'Crea il tuo viaggio'}
           </div>
         </div>
+
+        {!state.editReturnStep && (
+          <>
+            <div className="mb-2 font-display text-lg font-semibold text-[var(--color-text)]">Come ti chiami?</div>
+            <EditableText
+              key={`identity-${state.step}`}
+              initialText={state.identityName || 'Il tuo nome'}
+              className="mb-6.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3.5 font-display text-lg"
+              style={{ color: state.identityName ? '#3a2a1c' : '#b39a78', fontWeight: state.identityName ? 700 : 600 }}
+              onFocus={(e) => { if (!state.identityName) e.currentTarget.textContent = '' }}
+              onBlurText={(text) => patch({ identityName: text })}
+            />
+          </>
+        )}
 
         <EditableText
           key={`name-${state.step}`}
