@@ -11,10 +11,3 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
-
-// TODO: rimuovere quando il debug in produzione non serve più.
-// Espone il client sulla console del browser (window.supabase) per poter
-// diagnosticare problemi di auth/RLS anche sul sito pubblicato.
-if (typeof window !== 'undefined') {
-  ;(window as typeof window & { supabase?: typeof supabase }).supabase = supabase
-}
