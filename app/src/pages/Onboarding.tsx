@@ -102,22 +102,50 @@ export function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeJoinCode])
 
-  // Una volta autenticati, prosegui automaticamente.
+  // Una volta autenticati, prosegui automaticamente. Per chi crea un viaggio,
+  // il nome si chiede una volta sola: se il profilo ce l'ha già (da una sessione
+  // precedente) si salta dritti a "createTrip", altrimenti si passa da "yourName".
   useEffect(() => {
     if (session && state.step === 'login') {
-      if (state.loginIntent === 'access') navigate('/')
-      else if (state.loginIntent === 'join') goStep('whoAreYou')
-      else goStep('createTrip')
+      if (state.loginIntent === 'access') { navigate('/'); return }
+      if (state.loginIntent === 'join') { goStep('whoAreYou'); return }
+      supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', session.user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const name = data?.display_name?.trim()
+          if (name && name !== 'Viaggiatore') {
+            patch({ identityName: name })
+            goStep('createTrip')
+          } else {
+            goStep('yourName')
+          }
+        })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  // Suggerisce un nome di partenza per l'organizzatore (dal prefisso della mail),
-  // ma resta modificabile: la lasciamo vuota finché non sappiamo chi è.
+  // Copre l'arrivo diretto su una schermata già autenticati (es. da Home, senza
+  // passare da "login"): recupera il nome vero dal profilo se c'è già, altrimenti
+  // un prefisso email come ripiego provvisorio finché non lo confermano.
   useEffect(() => {
-    if (session?.user?.email && !state.identityName) {
-      const guess = session.user.email.split('@')[0]
-      patch({ identityName: guess.charAt(0).toUpperCase() + guess.slice(1) })
+    if (session?.user && !state.identityName) {
+      supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', session.user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const name = data?.display_name?.trim()
+          if (name && name !== 'Viaggiatore') {
+            patch({ identityName: name })
+            return
+          }
+          const guess = session.user.email ? session.user.email.split('@')[0] : ''
+          if (guess) patch({ identityName: guess.charAt(0).toUpperCase() + guess.slice(1) })
+        })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
@@ -161,6 +189,29 @@ export function Onboarding() {
   const [realTripId, setRealTripId] = useState<string | null>(null)
   const [createTripError, setCreateTripError] = useState<string | null>(null)
   const [creatingTrip, setCreatingTrip] = useState(false)
+
+  // Nome salvato una volta per tutte nel profilo, subito dopo il login: da qui
+  // in avanti niente più "come ti chiami" dentro la creazione del viaggio.
+  const [savingName, setSavingName] = useState(false)
+  const [yourNameError, setYourNameError] = useState<string | null>(null)
+
+  async function saveYourName() {
+    if (!session?.user) return
+    const name = state.identityName.trim()
+    if (!name) {
+      setYourNameError('Inserisci il tuo nome.')
+      return
+    }
+    setSavingName(true)
+    setYourNameError(null)
+    const { error } = await supabase.from('profiles').update({ display_name: name }).eq('id', session.user.id)
+    setSavingName(false)
+    if (error) {
+      setYourNameError(error.message)
+      return
+    }
+    goStep('createTrip')
+  }
 
   // Codice invito vero, generato/riusato lato database per il viaggio appena
   // creato (get_or_create_trip_invite). Per il viaggio demo (nessun realTripId)
@@ -604,6 +655,28 @@ export function Onboarding() {
         </div>
       </div>
     )
+  } else if (state.step === 'yourName') {
+    body = (
+      <div className="relative flex min-h-svh flex-col items-center justify-center px-7 pb-10 pt-25 text-center">
+        <button type="button" className={`${backBtnClass} absolute left-5.5 top-14.5`} onClick={() => navigate('/')}>‹</button>
+        <div className="mb-3.5 text-[34px]">🦩</div>
+        <div className="mb-1.5 font-display text-xl font-semibold text-[var(--color-text)]">Come ti chiami?</div>
+        <div className="mb-6.5 text-xs font-semibold text-[var(--color-text-secondary)]">Lo useremo per te ogni volta, non te lo richiediamo più</div>
+        <EditableText
+          key="your-name"
+          initialText={state.identityName || 'Il tuo nome'}
+          className="mb-7 text-center font-display text-2xl font-bold text-[var(--color-text)]"
+          onFocus={(e) => { if (!state.identityName) e.currentTarget.textContent = '' }}
+          onBlurText={(text) => patch({ identityName: text })}
+        />
+        {yourNameError && (
+          <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{yourNameError}</div>
+        )}
+        <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={savingName} onClick={saveYourName}>
+          {savingName ? 'Salvataggio...' : 'Continua'}
+        </button>
+      </div>
+    )
   } else if (state.step === 'createTrip') {
     const moods = allMoodDefs(state.customMoods)
     const blanks = Array.from({ length: activeMonth.leadingBlanks }, (_, i) => <div key={`b${i}`} />)
@@ -639,20 +712,6 @@ export function Onboarding() {
             {state.editReturnStep ? 'Modifica il viaggio' : 'Crea il tuo viaggio'}
           </div>
         </div>
-
-        {!state.editReturnStep && (
-          <>
-            <div className="mb-2 font-display text-lg font-semibold text-[var(--color-text)]">Come ti chiami?</div>
-            <EditableText
-              key={`identity-${state.step}`}
-              initialText={state.identityName || 'Il tuo nome'}
-              className="mb-6.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3.5 font-display text-lg"
-              style={{ color: state.identityName ? '#3a2a1c' : '#b39a78', fontWeight: state.identityName ? 700 : 600 }}
-              onFocus={(e) => { if (!state.identityName) e.currentTarget.textContent = '' }}
-              onBlurText={(text) => patch({ identityName: text })}
-            />
-          </>
-        )}
 
         <EditableText
           key={`name-${state.step}`}
@@ -941,7 +1000,8 @@ export function Onboarding() {
       ? `${new Date(joinPreview.startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} → ${new Date(joinPreview.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}`
       : tripDates
     body = (
-      <div className="flex min-h-svh flex-col items-center overflow-y-auto px-6.5 pb-8 pt-14.5 text-center">
+      <div className="relative flex min-h-svh flex-col items-center overflow-y-auto px-6.5 pb-8 pt-14.5 text-center">
+        <button type="button" className={`${backBtnClass} absolute left-5.5 top-8`} onClick={() => goStep('joinCode')}>‹</button>
         <div className="mb-3.5 text-[34px]">🦩</div>
         <div className="mb-1.5 text-[12.5px] font-bold text-[var(--color-text-secondary)]">Sei stato invitato a</div>
         <div className="mb-2.5 font-display text-2xl font-bold text-[var(--color-text)]">{joinPreview ? joinPreview.name : (state.tripName || 'Spain Roadtrip')}</div>
@@ -976,6 +1036,7 @@ export function Onboarding() {
     const activeColor = identityColorDefs.find((c) => c.id === state.identityColorId) ?? identityColorDefs[0]
     body = (
       <div className="min-h-svh overflow-y-auto px-5.5 pb-8 pt-14.5">
+        <button type="button" className={`${backBtnClass} mb-3.5`} onClick={() => goStep('join')}>‹</button>
         <div className="mb-1 font-display text-xl font-semibold text-[var(--color-text)]">Scegli la tua identità di viaggio</div>
         <div className="mb-6 text-xs font-semibold text-[var(--color-text-secondary)]">Così la crew saprà sempre che sei tu</div>
 

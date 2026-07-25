@@ -4,6 +4,7 @@ export type OnboardingStep =
   | 'splash'
   | 'welcome'
   | 'login'
+  | 'yourName'
   | 'createTrip'
   | 'preparing'
   | 'cover'
