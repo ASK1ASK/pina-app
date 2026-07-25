@@ -1,43 +1,95 @@
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { useAuth } from '../lib/authContext'
+import { isUuid } from '../lib/uuid'
 import {
-  computeBalances,
   loadExpensesData,
   loadStops,
   saveExpensesData,
   people,
   personOrder,
   currentUser,
-  type CassaContribution,
-  type Expense,
-  type PersonId,
-  type Settlement,
   type Stop,
 } from '../lib/tripData'
-import { PersonPicker } from './spese/PersonPicker'
+import {
+  createCassaContribution,
+  createExpense,
+  createSettlement,
+  deleteExpense as deleteExpenseRemote,
+  fetchExpensesData,
+  fetchTripMembers,
+  updateExpense as updateExpenseRemote,
+  type RealMember,
+} from './spese/supabaseSpese'
+import { PersonPicker, type PickablePerson } from './spese/PersonPicker'
 
 type SheetMode = null | 'expense' | 'settlement' | 'cassa' | 'ledger'
+
+// Forma unificata: compatibile sia con i dati demo (PersonId, un carattere)
+// sia con i membri reali (id uuid da trip_members).
+interface UIExpense {
+  id: string
+  title: string
+  icon: string
+  amount: number
+  paidBy: string | 'cassa'
+  splitAmong: string[]
+  dateLabel: string
+  note: string
+}
+interface UISettlement {
+  id: string
+  from: string
+  to: string
+  amount: number
+  dateLabel?: string
+}
+interface UICassaContribution {
+  id: string
+  person: string
+  amount: number
+  dateLabel?: string
+}
 
 interface ExpenseForm {
   title: string
   amount: string
   icon: string
-  paidBy: PersonId
-  splitAmong: PersonId[]
+  paidBy: string
+  splitAmong: string[]
   note: string
 }
 interface SettleForm {
-  from: PersonId
-  to: PersonId
+  from: string
+  to: string
   amount: string
 }
 interface CassaForm {
-  person: PersonId
+  person: string
   amount: string
 }
 
 function fmtAmount(n: number) {
   return n.toFixed(n % 1 ? 2 : 0)
+}
+
+// Stesso calcolo di tripData.computeBalances, ma parametrizzato sui membri
+// veri del viaggio invece del cast demo fisso.
+function computeBalancesFor(expenses: UIExpense[], settlements: UISettlement[], memberIds: string[]): Record<string, number> {
+  const bal: Record<string, number> = {}
+  memberIds.forEach((id) => { bal[id] = 0 })
+  expenses.forEach((e) => {
+    const among = e.splitAmong.length ? e.splitAmong : memberIds
+    const share = e.amount / among.length
+    if (e.paidBy !== 'cassa' && bal[e.paidBy] !== undefined) bal[e.paidBy] += e.amount
+    among.forEach((id) => { if (bal[id] !== undefined) bal[id] -= share })
+  })
+  settlements.forEach((s) => {
+    if (bal[s.from] !== undefined) bal[s.from] += s.amount
+    if (bal[s.to] !== undefined) bal[s.to] -= s.amount
+  })
+  return bal
 }
 
 function AmountEditable({ value, onSave, placeholder = '0' }: { value: string; onSave: (text: string) => void; placeholder?: string }) {
@@ -55,33 +107,75 @@ function AmountEditable({ value, onSave, placeholder = '0' }: { value: string; o
 }
 
 export function Spese() {
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+  const { session } = useAuth()
+
+  const [loading, setLoading] = useState(isRealTrip)
+  const [realMembers, setRealMembers] = useState<RealMember[]>([])
   const [stops, setStops] = useState<Stop[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [settlements, setSettlements] = useState<Settlement[]>([])
-  const [cassaContributions, setCassaContributions] = useState<CassaContribution[]>([])
+  const [expenses, setExpenses] = useState<UIExpense[]>([])
+  const [settlements, setSettlements] = useState<UISettlement[]>([])
+  const [cassaContributions, setCassaContributions] = useState<UICassaContribution[]>([])
   const [sheetMode, setSheetMode] = useState<SheetMode>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<ExpenseForm>({ title: '', amount: '', icon: '💳', paidBy: currentUser, splitAmong: [...personOrder], note: '' })
-  const [settleForm, setSettleForm] = useState<SettleForm>({ from: personOrder[1] ?? personOrder[0], to: personOrder[0], amount: '' })
-  const [cassaForm, setCassaForm] = useState<CassaForm>({ person: currentUser, amount: '' })
   const [balancesExpanded, setBalancesExpanded] = useState(false)
 
+  // Elenco persone unificato: il cast demo, o i membri veri del viaggio.
+  const members: PickablePerson[] = isRealTrip
+    ? realMembers.map((m) => ({ id: m.id, name: m.name, color: m.color, initial: m.name.slice(0, 1).toUpperCase() }))
+    : personOrder.map((code) => ({ id: code, name: people[code].name, color: people[code].color, initial: code }))
+  const membersById: Record<string, { name: string; color: string }> = Object.fromEntries(members.map((m) => [m.id, m]))
+  const memberIds = members.map((m) => m.id)
+
+  const currentMemberId = isRealTrip
+    ? realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIds[0] ?? ''
+    : currentUser
+
+  const [form, setForm] = useState<ExpenseForm>({ title: '', amount: '', icon: '💳', paidBy: '', splitAmong: [], note: '' })
+  const [settleForm, setSettleForm] = useState<SettleForm>({ from: '', to: '', amount: '' })
+  const [cassaForm, setCassaForm] = useState<CassaForm>({ person: '', amount: '' })
+
   useEffect(() => {
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([fetchTripMembers(routeTripId), fetchExpensesData(routeTripId)]).then(([fetchedMembers, data]) => {
+        setRealMembers(fetchedMembers)
+        setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
+        setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
+        setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
+        setLoading(false)
+      })
+      return
+    }
     setStops(loadStops())
     const data = loadExpensesData()
     setExpenses(data.expenses)
     setSettlements(data.settlements)
     setCassaContributions(data.cassaContributions)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
 
-  function persist(patch: { expenses?: Expense[]; settlements?: Settlement[]; cassaContributions?: CassaContribution[] }) {
+  async function refetchReal() {
+    if (!routeTripId) return
+    const data = await fetchExpensesData(routeTripId)
+    setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
+    setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
+    setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
+  }
+
+  function persistDemo(patch: { expenses?: UIExpense[]; settlements?: UISettlement[]; cassaContributions?: UICassaContribution[] }) {
     const nextExpenses = patch.expenses ?? expenses
     const nextSettlements = patch.settlements ?? settlements
     const nextCassa = patch.cassaContributions ?? cassaContributions
     if (patch.expenses) setExpenses(patch.expenses)
     if (patch.settlements) setSettlements(patch.settlements)
     if (patch.cassaContributions) setCassaContributions(patch.cassaContributions)
-    saveExpensesData({ expenses: nextExpenses, settlements: nextSettlements, cassaContributions: nextCassa })
+    saveExpensesData({
+      expenses: nextExpenses as never,
+      settlements: nextSettlements as never,
+      cassaContributions: nextCassa as never,
+    })
   }
 
   function todayStopName() {
@@ -96,62 +190,84 @@ export function Spese() {
   function openAddExpense() {
     setSheetMode('expense')
     setEditingId(null)
-    setForm({ title: '', amount: '', icon: '💳', paidBy: currentUser, splitAmong: [...personOrder], note: '' })
+    setForm({ title: '', amount: '', icon: '💳', paidBy: currentMemberId, splitAmong: [...memberIds], note: '' })
   }
-  function openEditExpense(exp: Expense) {
+  function openEditExpense(exp: UIExpense) {
     setSheetMode('expense')
     setEditingId(exp.id)
-    setForm({ title: exp.title, amount: String(exp.amount), icon: exp.icon, paidBy: exp.paidBy as PersonId, splitAmong: [...exp.splitAmong], note: exp.note || '' })
+    setForm({ title: exp.title, amount: String(exp.amount), icon: exp.icon, paidBy: exp.paidBy, splitAmong: [...exp.splitAmong], note: exp.note || '' })
   }
 
-  function toggleSplit(code: PersonId) {
+  function toggleSplit(id: string) {
     setForm((f) => {
-      const has = f.splitAmong.includes(code)
-      const next = has ? f.splitAmong.filter((c) => c !== code) : [...f.splitAmong, code]
+      const has = f.splitAmong.includes(id)
+      const next = has ? f.splitAmong.filter((c) => c !== id) : [...f.splitAmong, id]
       return { ...f, splitAmong: next.length ? next : f.splitAmong }
     })
   }
 
-  function saveExpenseForm() {
+  async function saveExpenseForm() {
     const amount = parseFloat(String(form.amount).replace(',', '.')) || 0
     if (!form.title || amount <= 0) return
-    const split = form.splitAmong.length ? form.splitAmong : personOrder
-    if (editingId) {
-      persist({ expenses: expenses.map((e) => (e.id !== editingId ? e : { ...e, title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note })) })
+    const split = form.splitAmong.length ? form.splitAmong : memberIds
+
+    if (isRealTrip && routeTripId) {
+      const input = { title: form.title, icon: form.icon, amount, paidByMemberId: form.paidBy === 'cassa' ? null : form.paidBy || null, splitAmong: split, note: form.note }
+      if (editingId) await updateExpenseRemote(editingId, input)
+      else await createExpense(routeTripId, input)
+      await refetchReal()
+    } else if (editingId) {
+      persistDemo({ expenses: expenses.map((e) => (e.id !== editingId ? e : { ...e, title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note })) })
     } else {
-      const newExp: Expense = { id: 'e' + Date.now(), title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note, dateLabel: `Oggi · ${todayStopName()}` }
-      persist({ expenses: [newExp, ...expenses] })
+      const newExp: UIExpense = { id: 'e' + Date.now(), title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note, dateLabel: `Oggi · ${todayStopName()}` }
+      persistDemo({ expenses: [newExp, ...expenses] })
     }
     closeSheet()
   }
 
-  function deleteExpense() {
+  async function deleteExpense() {
     if (!editingId) return
-    persist({ expenses: expenses.filter((e) => e.id !== editingId) })
+    if (isRealTrip) {
+      await deleteExpenseRemote(editingId)
+      await refetchReal()
+    } else {
+      persistDemo({ expenses: expenses.filter((e) => e.id !== editingId) })
+    }
     closeSheet()
   }
 
   function openSettlement() {
     setSheetMode('settlement')
-    setSettleForm({ from: personOrder[1] ?? personOrder[0], to: personOrder[0], amount: '' })
+    const other = memberIds.find((id) => id !== currentMemberId) ?? memberIds[0] ?? ''
+    setSettleForm({ from: other, to: currentMemberId, amount: '' })
   }
-  function saveSettlement() {
+  async function saveSettlement() {
     const amount = parseFloat(String(settleForm.amount).replace(',', '.')) || 0
     if (!settleForm.from || !settleForm.to || settleForm.from === settleForm.to || amount <= 0) return
-    const rec: Settlement = { id: 's' + Date.now(), from: settleForm.from, to: settleForm.to, amount, dateLabel: `Oggi · ${todayStopName()}` }
-    persist({ settlements: [rec, ...settlements] })
+    if (isRealTrip && routeTripId) {
+      await createSettlement(routeTripId, { fromMemberId: settleForm.from, toMemberId: settleForm.to, amount })
+      await refetchReal()
+    } else {
+      const rec: UISettlement = { id: 's' + Date.now(), from: settleForm.from, to: settleForm.to, amount, dateLabel: `Oggi · ${todayStopName()}` }
+      persistDemo({ settlements: [rec, ...settlements] })
+    }
     closeSheet()
   }
 
   function openCassa() {
     setSheetMode('cassa')
-    setCassaForm({ person: currentUser, amount: '' })
+    setCassaForm({ person: currentMemberId, amount: '' })
   }
-  function saveCassaContribution() {
+  async function saveCassaContribution() {
     const amount = parseFloat(String(cassaForm.amount).replace(',', '.')) || 0
-    if (amount <= 0) return
-    const rec: CassaContribution = { id: 'c' + Date.now(), person: cassaForm.person, amount, dateLabel: `Oggi · ${todayStopName()}` }
-    persist({ cassaContributions: [rec, ...cassaContributions] })
+    if (amount <= 0 || !cassaForm.person) return
+    if (isRealTrip && routeTripId) {
+      await createCassaContribution(routeTripId, { memberId: cassaForm.person, amount })
+      await refetchReal()
+    } else {
+      const rec: UICassaContribution = { id: 'c' + Date.now(), person: cassaForm.person, amount, dateLabel: `Oggi · ${todayStopName()}` }
+      persistDemo({ cassaContributions: [rec, ...cassaContributions] })
+    }
     closeSheet()
   }
 
@@ -175,20 +291,20 @@ export function Spese() {
 
   // ---- derived ----
   const totalSpent = expenses.reduce((a, e) => a + e.amount, 0)
-  const balances = computeBalances(expenses, settlements)
+  const balances = computeBalancesFor(expenses, settlements, memberIds)
   const cassaTotal = cassaContributions.reduce((a, c) => a + c.amount, 0) - expenses.filter((e) => e.paidBy === 'cassa').reduce((a, e) => a + e.amount, 0)
 
-  const balanceChips = personOrder.map((code) => {
-    const p = people[code]
-    const rounded = Math.round((balances[code] || 0) * 100) / 100
+  const balanceChips = memberIds.map((id) => {
+    const p = membersById[id]
+    const rounded = Math.round((balances[id] || 0) * 100) / 100
     let statusLabel = 'in pari', amountLabel = '0€', amountColor = '#fff1d6'
     if (rounded > 0.01) { statusLabel = 'riceve'; amountLabel = `+${fmtAmount(rounded)}€`; amountColor = '#d7ffe0' }
     else if (rounded < -0.01) { statusLabel = 'deve'; amountLabel = `-${fmtAmount(Math.abs(rounded))}€`; amountColor = '#fff1d6' }
-    return { code, name: p.name, amountLabel, amountColor, statusLabel }
+    return { code: id, name: p?.name || '?', amountLabel, amountColor, statusLabel }
   })
   const visibleBalanceChips = balancesExpanded ? balanceChips : balanceChips.slice(0, 6)
 
-  const groupedRecentExpenses: { label: string; items: Expense[] }[] = []
+  const groupedRecentExpenses: { label: string; items: UIExpense[] }[] = []
   expenses.slice(0, 5).forEach((exp) => {
     const g = groupedRecentExpenses[groupedRecentExpenses.length - 1]
     if (!g || g.label !== exp.dateLabel) groupedRecentExpenses.push({ label: exp.dateLabel, items: [exp] })
@@ -197,29 +313,29 @@ export function Spese() {
 
   const badgeCls = (bg: string, color: string) => ({ background: bg, color })
   const expenseRows = expenses.map((e) => {
-    const among = e.splitAmong.length ? e.splitAmong : personOrder
-    const payer = e.paidBy !== 'cassa' ? people[e.paidBy] : null
+    const among = e.splitAmong.length ? e.splitAmong : memberIds
+    const payer = e.paidBy !== 'cassa' ? membersById[e.paidBy] : null
     return {
       id: e.id,
       date: e.dateLabel, desc: e.title, typeLabel: 'Uscita', badgeStyle: badgeCls('#fdeceb', '#c2445a'),
-      who: payer ? payer.name : 'Cassa comune', toWhom: among.map((c) => people[c]?.name || c).join(', '),
-      whoLine: `${payer ? payer.name : 'Cassa'} → ${among.map((c) => people[c]?.name || c).join(', ')}`,
+      who: payer ? payer.name : 'Cassa comune', toWhom: among.map((c) => membersById[c]?.name || c).join(', '),
+      whoLine: `${payer ? payer.name : 'Cassa'} → ${among.map((c) => membersById[c]?.name || c).join(', ')}`,
       amountLabel: `-${e.amount}€`, amountColor: '#c2445a', rawAmount: -e.amount,
     }
   })
   const settlementRows = settlements.map((s) => {
-    const fromP = people[s.from], toP = people[s.to]
+    const fromP = membersById[s.from], toP = membersById[s.to]
     return {
       id: s.id, date: s.dateLabel || 'Oggi', desc: 'Rimborso', typeLabel: 'Rimborso', badgeStyle: badgeCls('#e9f7f0', '#3f8f5f'),
-      who: fromP.name, toWhom: toP.name, whoLine: `${fromP.name} → ${toP.name}`,
+      who: fromP?.name || '?', toWhom: toP?.name || '?', whoLine: `${fromP?.name || '?'} → ${toP?.name || '?'}`,
       amountLabel: `${s.amount}€`, amountColor: '#3f8f5f', rawAmount: s.amount,
     }
   })
   const cassaRows = cassaContributions.map((c) => {
-    const p = people[c.person]
+    const p = membersById[c.person]
     return {
       id: c.id, date: c.dateLabel || 'Oggi', desc: 'Contributo cassa comune', typeLabel: 'Cassa', badgeStyle: badgeCls('#fdf3d9', '#b8792e'),
-      who: p.name, toWhom: 'Cassa comune', whoLine: `${p.name} → Cassa comune`,
+      who: p?.name || '?', toWhom: 'Cassa comune', whoLine: `${p?.name || '?'} → Cassa comune`,
       amountLabel: `${c.amount}€`, amountColor: '#b8792e', rawAmount: c.amount,
     }
   })
@@ -227,6 +343,14 @@ export function Spese() {
 
   const sheetTitle = editingId ? 'Modifica spesa' : 'Nuova spesa'
   const sheetSaveLabel = editingId ? 'Salva modifiche' : 'Aggiungi spesa'
+
+  if (loading) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
+        Caricamento...
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
@@ -287,9 +411,9 @@ export function Spese() {
               <div className="mx-0.5 mb-2 text-[11px] font-bold text-[var(--color-eyebrow)]">{grp.label}</div>
               <div className="flex flex-col gap-2.5">
                 {grp.items.map((exp) => {
-                  const among = exp.splitAmong.length ? exp.splitAmong : personOrder
+                  const among = exp.splitAmong.length ? exp.splitAmong : memberIds
                   const share = exp.amount / among.length
-                  const payer = exp.paidBy !== 'cassa' ? people[exp.paidBy] : null
+                  const payer = exp.paidBy !== 'cassa' ? membersById[exp.paidBy] : null
                   return (
                     <button key={exp.id} type="button" className="rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 text-left shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => openEditExpense(exp)}>
                       <div className="flex items-center gap-2.75">
@@ -302,8 +426,8 @@ export function Spese() {
                       </div>
                       <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-[var(--color-card-border)] pt-2.5">
                         <div className="flex">
-                          {among.map((code, i) => (
-                            <span key={code} className="flex h-5.5 w-5.5 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white" style={{ background: people[code].color, marginLeft: i === 0 ? 0 : -7 }}>{code}</span>
+                          {among.map((id, i) => (
+                            <span key={id} className="flex h-5.5 w-5.5 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white" style={{ background: membersById[id]?.color || '#c2a97e', marginLeft: i === 0 ? 0 : -7 }}>{membersById[id]?.name.slice(0, 1).toUpperCase() || '?'}</span>
                           ))}
                         </div>
                         <div className="text-[11.5px] font-semibold text-[#8a7256]">
@@ -349,10 +473,10 @@ export function Spese() {
             <AmountEditable value={form.amount} onSave={(text) => setForm((f) => ({ ...f, amount: text }))} />
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi ha pagato</div>
-            <PersonPicker isSelected={(c) => form.paidBy === c} onClick={(c) => setForm((f) => ({ ...f, paidBy: c }))} />
+            <PersonPicker members={members} isSelected={(c) => form.paidBy === c} onClick={(c) => setForm((f) => ({ ...f, paidBy: c }))} />
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Diviso tra</div>
-            <PersonPicker isSelected={(c) => form.splitAmong.includes(c)} onClick={toggleSplit} />
+            <PersonPicker members={members} isSelected={(c) => form.splitAmong.includes(c)} onClick={toggleSplit} />
             <div className="mt-2 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">Diviso tra {form.splitAmong.length} persone</div>
 
             <div className="mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Note (opzionale)</div>
@@ -383,9 +507,9 @@ export function Spese() {
               <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
             </div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi rimborsa</div>
-            <div className="mb-3.5"><PersonPicker isSelected={(c) => settleForm.from === c} onClick={(c) => setSettleForm((f) => ({ ...f, from: c }))} /></div>
+            <div className="mb-3.5"><PersonPicker members={members} isSelected={(c) => settleForm.from === c} onClick={(c) => setSettleForm((f) => ({ ...f, from: c }))} /></div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">A chi</div>
-            <div className="mb-3.5"><PersonPicker isSelected={(c) => settleForm.to === c} onClick={(c) => setSettleForm((f) => ({ ...f, to: c }))} /></div>
+            <div className="mb-3.5"><PersonPicker members={members} isSelected={(c) => settleForm.to === c} onClick={(c) => setSettleForm((f) => ({ ...f, to: c }))} /></div>
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Importo (€)</div>
             <AmountEditable value={settleForm.amount} onSave={(text) => setSettleForm((f) => ({ ...f, amount: text }))} />
             <button type="button" className="mt-5.5 w-full rounded-full py-3.25 text-center text-[13.5px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={saveSettlement}>Conferma rimborso</button>
@@ -401,7 +525,7 @@ export function Spese() {
               <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
             </div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi contribuisce</div>
-            <div className="mb-3.5"><PersonPicker isSelected={(c) => cassaForm.person === c} onClick={(c) => setCassaForm((f) => ({ ...f, person: c }))} /></div>
+            <div className="mb-3.5"><PersonPicker members={members} isSelected={(c) => cassaForm.person === c} onClick={(c) => setCassaForm((f) => ({ ...f, person: c }))} /></div>
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Importo (€)</div>
             <AmountEditable value={cassaForm.amount} onSave={(text) => setCassaForm((f) => ({ ...f, amount: text }))} />
             <button type="button" className="mt-5.5 w-full rounded-full py-3.25 text-center text-[13.5px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={saveCassaContribution}>Aggiungi</button>
@@ -430,6 +554,9 @@ export function Spese() {
                   </div>
                 </div>
               ))}
+              {ledgerRows.length === 0 && (
+                <div className="py-6 text-center text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Ancora nulla da mostrare.</div>
+              )}
             </div>
             <div className="border-t border-dashed border-[var(--color-sand)] px-5.5 py-3.5">
               <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Totale per persona</div>
