@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { useAuth } from '../lib/authContext'
+import { isUuid } from '../lib/uuid'
 import { loadMemories, saveMemories, type MemoryDay, type MemoryItem } from '../lib/tripData'
+import { fetchTripMembers } from './spese/supabaseSpese'
+import {
+  createMemory,
+  fetchMemories,
+  getOrCreateTodayMemoryDay,
+  toggleMemoryFavorite,
+  updateMemoryCaption,
+} from './memories/supabaseMemories'
 
-const PEOPLE = ['Andrea', 'Luca', 'Marco', 'Sara', 'Giulia']
+const DEMO_PEOPLE = ['Andrea', 'Luca', 'Marco', 'Sara', 'Giulia']
 
 interface ViewerState {
   ids: string[]
@@ -10,20 +21,42 @@ interface ViewerState {
 }
 
 export function Memories() {
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+  const { session } = useAuth()
+
+  const [loading, setLoading] = useState(isRealTrip)
   const [days, setDays] = useState<MemoryDay[]>([])
   const [items, setItems] = useState<MemoryItem[]>([])
   const [filter, setFilter] = useState<string | null>(null)
   const [viewer, setViewer] = useState<ViewerState | null>(null)
+  const [currentMemberId, setCurrentMemberId] = useState<string | null>(null)
+  const [currentMemberName, setCurrentMemberName] = useState('Tu')
+  const [people, setPeople] = useState<string[]>(isRealTrip ? [] : DEMO_PEOPLE)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([fetchMemories(routeTripId), fetchTripMembers(routeTripId)]).then(([data, members]) => {
+        setDays(data.days)
+        setItems(data.items)
+        setPeople(members.map((m) => m.name))
+        const me = members.find((m) => m.userId === session?.user?.id)
+        setCurrentMemberId(me?.id ?? null)
+        setCurrentMemberName(me?.name ?? 'Tu')
+        setLoading(false)
+      })
+      return
+    }
     const data = loadMemories()
     setDays(data.days)
     setItems(data.items)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
 
-  function persist(nextItems: MemoryItem[]) {
+  function persistDemo(nextItems: MemoryItem[]) {
     setItems(nextItems)
     saveMemories({ days, items: nextItems })
   }
@@ -37,21 +70,46 @@ export function Memories() {
   }
 
   function toggleFavorite(id: string) {
-    persist(items.map((it) => (it.id !== id ? it : { ...it, isFavorite: !it.isFavorite })))
+    const next = !items.find((it) => it.id === id)?.isFavorite
+    if (isRealTrip) {
+      setItems((its) => its.map((it) => (it.id !== id ? it : { ...it, isFavorite: next })))
+      toggleMemoryFavorite(id, next).catch((err) => console.error('Errore aggiornamento preferito', err))
+    } else {
+      persistDemo(items.map((it) => (it.id !== id ? it : { ...it, isFavorite: !it.isFavorite })))
+    }
   }
   function updateCaption(id: string, caption: string) {
-    persist(items.map((it) => (it.id !== id ? it : { ...it, caption: caption || it.caption })))
+    if (!caption) return
+    if (isRealTrip) {
+      setItems((its) => its.map((it) => (it.id !== id ? it : { ...it, caption })))
+      updateMemoryCaption(id, caption).catch((err) => console.error('Errore aggiornamento didascalia', err))
+    } else {
+      persistDemo(items.map((it) => (it.id !== id ? it : { ...it, caption: caption || it.caption })))
+    }
   }
 
   function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
+      const url = reader.result as string
+      const isVideo = file.type.startsWith('video')
+      if (isRealTrip && routeTripId) {
+        try {
+          const dayId = await getOrCreateTodayMemoryDay(routeTripId, 'Oggi')
+          const item = await createMemory({ tripId: routeTripId, dayId, url, isVideo, authorMemberId: currentMemberId, authorName: currentMemberName })
+          setItems((its) => [item, ...its])
+          setDays((ds) => (ds.some((d) => d.id === dayId) ? ds : [...ds, { id: dayId, label: 'Oggi', dateLabel: 'Oggi', cover: '', isToday: true }]))
+        } catch (err) {
+          console.error('Errore salvataggio ricordo', err)
+        }
+        return
+      }
       const id = 'i' + Date.now()
       const todayDay = days.find((d) => d.isToday) || days[0]
       if (!todayDay) return
-      persist([{ id, dayId: todayDay.id, url: reader.result as string, isVideo: file.type.startsWith('video'), isFavorite: false, caption: 'Nuovo ricordo', author: 'Tu' }, ...items])
+      persistDemo([{ id, dayId: todayDay.id, url, isVideo, isFavorite: false, caption: 'Nuovo ricordo', author: 'Tu' }, ...items])
     }
     reader.readAsDataURL(file)
     e.target.value = ''
@@ -91,7 +149,7 @@ export function Memories() {
     })),
   ]
 
-  const personStories = PEOPLE.map((name) => {
+  const personStories = people.map((name) => {
     const cover = personCover(name)
     return {
       id: 'person:' + name,
@@ -113,6 +171,14 @@ export function Memories() {
     .filter((d) => d.items.length > 0)
 
   const currentItem = viewer ? items.find((it) => it.id === viewer.ids[viewer.index]) : null
+
+  if (loading) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
+        Caricamento...
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
