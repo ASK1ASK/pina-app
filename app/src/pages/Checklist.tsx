@@ -19,7 +19,15 @@ import {
 } from '../lib/tripData'
 import { fetchTripMembers, type RealMember } from './spese/supabaseSpese'
 import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote } from './journey/supabaseJourney'
-import { fetchChecklist, persistChecklist } from './checklist/supabaseChecklist'
+import {
+  fetchChecklist,
+  fetchEssentials,
+  fetchPersonalSections,
+  persistChecklist,
+  persistEssentials as persistEssentialsRemote,
+  persistPersonalSections as persistPersonalSectionsRemote,
+  seedEssentials,
+} from './checklist/supabaseChecklist'
 import { ChecklistRow } from './checklist/ChecklistRow'
 import { defaultCategories, defaultPersonalSections } from './checklist/data'
 import { EssentialsPanel } from './checklist/EssentialsPanel'
@@ -62,9 +70,6 @@ export function Checklist() {
   const [viewMode, setViewMode] = useState<ViewMode>('categoria')
   const [loading, setLoading] = useState(isRealTrip)
   const [categories, setCategories] = useState<UIChecklistCategory[]>(isRealTrip ? [] : defaultCategories)
-  // "La mia valigia" ed Essentials non hanno ancora un salvataggio reale per i
-  // viaggi veri: per ora restano vuote invece di mostrare Girona/Barcellona
-  // finte, ma le modifiche fatte in sessione non sopravvivono a un reload.
   const [personalSections, setPersonalSections] = useState<UIPersonalSection[]>(isRealTrip ? [] : defaultPersonalSections)
   const [stops, setStops] = useState<Stop[]>([])
   const [essentialsCategories, setEssentialsCategories] = useState<EssentialsCategory[]>(isRealTrip ? EMPTY_ESSENTIALS_CATEGORIES : [])
@@ -92,8 +97,8 @@ export function Checklist() {
   useEffect(() => {
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchTripMembers(routeTripId), fetchChecklist(routeTripId), fetchStops(routeTripId), fetchTripMeta(routeTripId)]).then(
-        ([fetchedMembers, fetchedChecklist, fetchedStops, meta]) => {
+      Promise.all([fetchTripMembers(routeTripId), fetchChecklist(routeTripId), fetchStops(routeTripId), fetchTripMeta(routeTripId), fetchEssentials(routeTripId)]).then(
+        async ([fetchedMembers, fetchedChecklist, fetchedStops, meta, fetchedEssentials]) => {
           setRealMembers(fetchedMembers)
           setCategories(fetchedChecklist)
           setStops(fetchedStops)
@@ -102,6 +107,23 @@ export function Checklist() {
             setDaysUntilStart(days)
             setTripStartDate(meta.startDate)
           }
+          if (fetchedEssentials.length) {
+            setEssentialsCategories(fetchedEssentials)
+          } else {
+            // Il seed richiede di essere gia' membro del viaggio (RLS): se il
+            // viaggio non esiste o non siamo ancora membri, non blocchiamo
+            // il resto della pagina per questo.
+            try {
+              setEssentialsCategories(await seedEssentials(routeTripId))
+            } catch (err) {
+              console.error('Errore creazione essentials', err)
+            }
+          }
+
+          const me = fetchedMembers.find((m) => m.userId === session?.user?.id)
+          const myMemberId = me?.id ?? fetchedMembers[0]?.id ?? null
+          if (myMemberId) setPersonalSections(await fetchPersonalSections(routeTripId, myMemberId))
+
           loaded.current = true
           setLoading(false)
         },
@@ -123,6 +145,9 @@ export function Checklist() {
     if (!loaded.current) return
     if (isRealTrip && routeTripId) {
       persistChecklist(routeTripId, categories).catch((err) => console.error('Errore salvataggio checklist', err))
+      if (activeUser) {
+        persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) => console.error('Errore salvataggio valigia', err))
+      }
     } else {
       saveChecklistData({ categories, personalSections } as never)
     }
@@ -154,7 +179,11 @@ export function Checklist() {
 
   function persistEssentials(next: EssentialsCategory[]) {
     setEssentialsCategories(next)
-    saveEssentialsData({ categories: next })
+    if (isRealTrip && routeTripId) {
+      persistEssentialsRemote(routeTripId, next).catch((err) => console.error('Errore salvataggio essentials', err))
+    } else {
+      saveEssentialsData({ categories: next })
+    }
   }
 
   // ---- shared checklist mutations ----
