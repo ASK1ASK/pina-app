@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { useAuth } from '../lib/authContext'
+import { supabase } from '../lib/supabase'
 import {
   coverGradientById,
   loadStoredColors,
@@ -9,8 +10,9 @@ import {
   slugify,
   type CoverColorId,
 } from '../lib/palette'
+import { updateTripCover } from './journey/supabaseJourney'
 
-type JourneyStatus = 'live' | 'draft' | 'planned' | 'completed' | 'demo'
+type JourneyStatus = 'live' | 'planned' | 'completed' | 'demo'
 
 interface JourneyDef {
   id: string
@@ -19,29 +21,51 @@ interface JourneyDef {
   status: JourneyStatus
   href: string
   photo?: string
+  coverColorId?: CoverColorId
+  isReal: boolean
 }
 
-// TEMPO 0 — un utente nuovo ha in media 1 viaggio appena creato, non 4 di status diversi.
-const journeyDefs: JourneyDef[] = [
-  {
-    id: 'spain',
-    name: 'Spain Roadtrip',
-    sub: '14 → 26 agosto · 5 Crew',
-    status: 'demo',
-    href: '/trip/spain/journey',
-  },
-]
+// Il viaggio dimostrativo resta come riferimento/test, ma non è un viaggio
+// reale: non ha una riga su Supabase, va rimosso dai flussi che ci provano.
+const DEMO_JOURNEY: JourneyDef = {
+  id: 'spain',
+  name: 'Spain Roadtrip',
+  sub: '14 → 26 agosto · 5 Crew',
+  status: 'demo',
+  href: '/trip/spain/journey',
+  isReal: false,
+}
 
 const statusMeta: Record<JourneyStatus, string> = {
   live: '🟢 Live',
-  draft: '🟡 Draft',
   planned: '📅 Planned',
   completed: '✅ Completed',
   demo: '🧪 Demo',
 }
 
+// Stato derivato dalle date: vissuto, in corso, o ancora da vivere/in creazione.
+function tripStatus(startDate: string | null, endDate: string | null): JourneyStatus {
+  if (!startDate || !endDate) return 'planned'
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (today > end) return 'completed'
+  if (today >= start && today <= end) return 'live'
+  return 'planned'
+}
+
+function formatTripRange(startDate: string | null, endDate: string | null): string {
+  if (!startDate || !endDate) return 'Date da definire'
+  const start = new Date(startDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+  const end = new Date(endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+  return `${start} → ${end}`
+}
+
+const statusOrder: Record<JourneyStatus, number> = { live: 0, planned: 1, completed: 2, demo: 3 }
+
 export function Home() {
-  const { session } = useAuth()
+  const { session, loading: authLoading } = useAuth()
   const isLoggedIn = !!session?.user
   const userName = session?.user?.email ? session.user.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) : null
 
@@ -58,6 +82,8 @@ export function Home() {
       return false
     }
   })
+  const [realTrips, setRealTrips] = useState<JourneyDef[]>([])
+  const [loadingTrips, setLoadingTrips] = useState(false)
 
   function dismissDemo() {
     setDemoDismissed(true)
@@ -68,39 +94,111 @@ export function Home() {
     }
   }
 
-  const visibleJourneys = journeyDefs.filter((j) => j.status !== 'demo' || !demoDismissed)
-
+  // Colore del viaggio demo (unico che vive ancora in localStorage).
   useEffect(() => {
     const stored = loadStoredColors()
-    setJourneyColors((prev) => {
-      const merged = { ...prev }
-      journeyDefs.forEach((j) => {
-        const slug = slugify(j.name)
-        if (stored[slug]) merged[j.id] = stored[slug] as CoverColorId
-      })
-      return merged
-    })
+    const slug = slugify(DEMO_JOURNEY.name)
+    if (stored[slug]) setJourneyColors((prev) => ({ ...prev, [DEMO_JOURNEY.id]: stored[slug] as CoverColorId }))
   }, [])
 
+  // I viaggi veri: quelli in cui l'utente ha una riga trip_members (li ha
+  // creati come organizzatore, o vi è stato aggiunto ed è entrato davvero) —
+  // vissuti, in corso o ancora da vivere, tutti insieme, ordinati per stato.
+  useEffect(() => {
+    if (!session?.user) {
+      setRealTrips([])
+      return
+    }
+    let cancelled = false
+    setLoadingTrips(true)
+    supabase
+      .from('trip_members')
+      .select('trip_id')
+      .eq('user_id', session.user.id)
+      .then(async ({ data: memberships }) => {
+        const tripIds = Array.from(new Set((memberships || []).map((m) => m.trip_id)))
+        if (!tripIds.length) {
+          if (!cancelled) {
+            setRealTrips([])
+            setLoadingTrips(false)
+          }
+          return
+        }
+        const [{ data: trips }, { data: allMembers }] = await Promise.all([
+          supabase.from('trips').select('*').in('id', tripIds),
+          supabase.from('trip_members').select('trip_id').in('trip_id', tripIds).eq('status', 'joined'),
+        ])
+        if (cancelled) return
+
+        const crewCounts: Record<string, number> = {}
+        ;(allMembers || []).forEach((m) => {
+          crewCounts[m.trip_id] = (crewCounts[m.trip_id] || 0) + 1
+        })
+
+        const defs: JourneyDef[] = (trips || [])
+          .map((t) => ({
+            id: t.id,
+            name: t.name,
+            sub: `${formatTripRange(t.start_date, t.end_date)} · ${crewCounts[t.id] || 1} Crew`,
+            status: tripStatus(t.start_date, t.end_date),
+            href: `/trip/${t.id}/journey`,
+            photo: t.cover_photo_url ?? undefined,
+            coverColorId: (t.cover_color_id as CoverColorId) || 'fiesta',
+            isReal: true,
+          }))
+          .sort((a, b) => statusOrder[a.status] - statusOrder[b.status])
+
+        setJourneyColors((prev) => {
+          const merged = { ...prev }
+          defs.forEach((d) => {
+            if (d.coverColorId) merged[d.id] = d.coverColorId
+          })
+          return merged
+        })
+        setRealTrips(defs)
+        setLoadingTrips(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session])
+
+  const visibleJourneys = demoDismissed ? realTrips : [...realTrips, DEMO_JOURNEY]
   const hasJourneys = visibleJourneys.length > 0
 
   function selectColor(id: CoverColorId) {
     if (!pickerFor) return
-    const journeyDef = journeyDefs.find((j) => j.id === pickerFor)
     setJourneyColors((prev) => ({ ...prev, [pickerFor]: id }))
-    if (journeyDef) saveStoredColorFor(journeyDef.name, id)
+    if (pickerFor === DEMO_JOURNEY.id) {
+      saveStoredColorFor(DEMO_JOURNEY.name, id)
+    } else {
+      updateTripCover(pickerFor, { coverColorId: id }).catch((err) => console.error('Errore salvataggio copertina', err))
+    }
     setPickerFor(null)
   }
 
   function onCoverFileChosen(file: File) {
     if (!pickerFor) return
+    const target = pickerFor
     const reader = new FileReader()
     reader.onload = () => {
-      setCustomPhotos((prev) => ({ ...prev, [pickerFor]: reader.result as string }))
+      const dataUrl = reader.result as string
+      setCustomPhotos((prev) => ({ ...prev, [target]: dataUrl }))
       setUploadMenuOpen(false)
       setPickerFor(null)
+      if (target !== DEMO_JOURNEY.id) {
+        updateTripCover(target, { coverPhotoUrl: dataUrl }).catch((err) => console.error('Errore salvataggio copertina', err))
+      }
     }
     reader.readAsDataURL(file)
+  }
+
+  if (authLoading) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)]">
+        <div className="text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento...</div>
+      </div>
+    )
   }
 
   return (
@@ -110,7 +208,7 @@ export function Home() {
           🦩 Piña
         </div>
         <Link
-          to={`/trip/${journeyDefs[0]?.id ?? 'demo'}/profilo`}
+          to={`/trip/${visibleJourneys[0]?.id ?? 'demo'}/profilo`}
           className="flex h-8 w-8 items-center justify-center rounded-full text-[15px]"
           style={{ background: 'linear-gradient(135deg,#ffb627,#ff5f6d)' }}
         >
@@ -121,7 +219,9 @@ export function Home() {
       <div className="mb-0.5 font-display text-2xl font-semibold">{isLoggedIn ? `Ciao, ${userName}` : 'Benvenuto su Piña'}</div>
       <div className="mb-5.5 text-xs font-semibold text-[var(--color-text-secondary)]">Le tue avventure</div>
 
-      {hasJourneys ? (
+      {loadingTrips ? (
+        <div className="py-10 text-center text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento viaggi...</div>
+      ) : hasJourneys ? (
         <>
           <div className="flex flex-col gap-3">
             {visibleJourneys.map((j) => {
