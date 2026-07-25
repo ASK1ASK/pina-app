@@ -10,7 +10,7 @@ import {
   type CoverColorId,
 } from '../lib/palette'
 
-type JourneyStatus = 'live' | 'draft' | 'planned' | 'completed'
+type JourneyStatus = 'live' | 'draft' | 'planned' | 'completed' | 'demo'
 
 interface JourneyDef {
   id: string
@@ -27,7 +27,7 @@ const journeyDefs: JourneyDef[] = [
     id: 'spain',
     name: 'Spain Roadtrip',
     sub: '14 → 26 agosto · 5 Crew',
-    status: 'live',
+    status: 'demo',
     href: '/trip/spain/journey',
   },
 ]
@@ -37,6 +37,7 @@ const statusMeta: Record<JourneyStatus, string> = {
   draft: '🟡 Draft',
   planned: '📅 Planned',
   completed: '✅ Completed',
+  demo: '🧪 Demo',
 }
 
 export function Home() {
