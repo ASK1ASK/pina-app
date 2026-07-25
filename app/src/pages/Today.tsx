@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { moodGradients } from '../lib/palette'
-import { loadLinks, loadStops, starredItemsForDay, updateItem, type LinkEntry, type Stop, type StopItem } from '../lib/tripData'
+import { isUuid } from '../lib/uuid'
+import { loadLinks, loadStops, saveStops, starredItemsForDay, updateItem, type LinkEntry, type Stop, type StopItem } from '../lib/tripData'
+import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote, type TripMeta } from './journey/supabaseJourney'
 import { ScheduleItemSheet } from './today/ScheduleItemSheet'
 import {
   buildDays,
+  buildRealDays,
   loadScheduleOrder,
   saveScheduleOrder,
   statusMeta,
@@ -18,15 +21,40 @@ import {
 type SheetMode = 'schedule' | 'list' | 'addExpense' | null
 interface ScheduleTarget { stopId: string; catId: string; itemId: string }
 
-const days: Day[] = buildDays()
+const EMPTY_DAY: Day = {
+  dayOfMonth: 0,
+  city: '',
+  moodId: 'fiesta',
+  mood: '',
+  dateLabel: '',
+  subtitle: null,
+  stayName: '',
+  stayLabel: '',
+  stayLink: '',
+  schedule: [],
+  checklist: [],
+  tickets: [],
+  usefulLinks: [],
+  expenses: [],
+  memoryPhotos: [],
+}
 
 export function Today() {
-  const [dayIndex, setDayIndex] = useState(2)
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+  const tripBase = `/trip/${routeTripId ?? 'spain'}`
+
+  const [days, setDays] = useState<Day[]>(isRealTrip ? [] : buildDays())
+  const [loading, setLoading] = useState(isRealTrip)
+  const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
+  const [dayIndex, setDayIndex] = useState(isRealTrip ? 0 : 2)
   const [now, setNow] = useState(new Date())
   const [sheetMode, setSheetMode] = useState<SheetMode>(null)
   const [sheetTarget, setSheetTarget] = useState<ScheduleTarget | null>(null)
   const [listType, setListType] = useState<'tickets' | 'links' | null>(null)
-  const [dayStatus, setDayStatus] = useState<Record<number, DayStatus>>({ 0: 'done', 1: 'done', 2: 'inprogress', 3: 'ready' })
+  const [dayStatus, setDayStatus] = useState<Record<number, DayStatus>>(
+    isRealTrip ? {} : { 0: 'done', 1: 'done', 2: 'inprogress', 3: 'ready' },
+  )
   const [checklistDone, setChecklistDone] = useState<Record<number, Record<number, boolean>>>({})
   const [extraChecklist, setExtraChecklist] = useState<Record<number, string[]>>({})
   const [checklistLabels, setChecklistLabels] = useState<Record<number, Record<number, string>>>({})
@@ -40,11 +68,31 @@ export function Today() {
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
+
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)]).then(([meta, fetchedStops]) => {
+        setTripMeta(meta)
+        setStops(fetchedStops)
+        if (meta) {
+          const realDays = buildRealDays(meta.startDate, meta.endDate, fetchedStops)
+          setDays(realDays)
+          const today = new Date()
+          const sameMonth = today.getFullYear() === meta.startDate.getFullYear() && today.getMonth() === meta.startDate.getMonth()
+          const todayIdx = sameMonth ? realDays.findIndex((d) => d.dayOfMonth === today.getDate()) : -1
+          setDayIndex(todayIdx >= 0 ? todayIdx : 0)
+        }
+        setLoading(false)
+      })
+      return () => clearInterval(t)
+    }
+
     setScheduleOrder(loadScheduleOrder())
     setStops(loadStops())
     setTripLinks(loadLinks())
     return () => clearInterval(t)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
 
   useEffect(() => {
     if (!focusChecklistKey) return
@@ -60,16 +108,23 @@ export function Today() {
     setFocusChecklistKey(null)
   }, [focusChecklistKey])
 
-  const day = days[dayIndex]
+  const day = days[dayIndex] || EMPTY_DAY
 
-  function persistStops(next: Stop[]) {
+  function persist(next: Stop[]) {
     setStops(next)
+    if (isRealTrip && tripMeta) {
+      persistStopsRemote(tripMeta.id, next, tripMeta.startDate.getFullYear(), tripMeta.startDate.getMonth()).catch((err) =>
+        console.error('Errore salvataggio tappe', err),
+      )
+    } else if (!isRealTrip) {
+      saveStops(next)
+    }
   }
 
   function updateSheetItem(patch: Partial<StopItem>) {
     if (!sheetTarget) return
     const next = updateItem(stops, sheetTarget.stopId, sheetTarget.catId, sheetTarget.itemId, patch)
-    persistStops(next)
+    persist(next)
   }
 
   const dayKey = String(day.dayOfMonth)
@@ -199,189 +254,210 @@ export function Today() {
         <Link to="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</Link>
       </div>
 
-      <div className="mb-3.5 flex items-center justify-center gap-3.5">
-        <button
-          type="button"
-          disabled={dayIndex === 0}
-          className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-sand)] bg-white text-sm text-[#8a6a3e]"
-          style={{ opacity: dayIndex === 0 ? 0.35 : 1 }}
-          onClick={() => setDayIndex((i) => Math.max(0, i - 1))}
-        >‹</button>
-        <div className="text-xs font-bold tracking-[.02em] text-[var(--color-text-secondary)]">Giorno {day.dayOfMonth - 14 + 1}</div>
-        <button
-          type="button"
-          disabled={dayIndex === days.length - 1}
-          className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-sand)] bg-white text-sm text-[#8a6a3e]"
-          style={{ opacity: dayIndex === days.length - 1 ? 0.35 : 1 }}
-          onClick={() => setDayIndex((i) => Math.min(days.length - 1, i + 1))}
-        >›</button>
-      </div>
-
-      <div className="mb-4 rounded-[26px] p-5 text-white shadow-[0_18px_36px_-18px_rgba(80,50,20,.4)]" style={{ background: moodGradients[day.moodId] || moodGradients.fiesta }}>
-        <div className="mb-1 text-xs font-bold text-white/85">{day.mood}</div>
-        <div className="flex items-baseline justify-between">
-          <div className="font-display text-[26px] font-bold uppercase">{day.city}</div>
-          <button type="button" className="inline-flex shrink-0 items-center gap-1.25 whitespace-nowrap rounded-full border border-white/35 bg-white/22 px-2.75 py-1.25 text-[11px] font-bold" onClick={cycleStatus}>
-            {meta.icon} {meta.label}
-          </button>
+      {loading ? (
+        <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento...</div>
+      ) : !days.length ? (
+        <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">
+          Aggiungi le date al tuo viaggio da Journey per vedere qui il programma di ogni giorno.
         </div>
-        <div className="text-xs font-semibold text-white/85">{day.dateLabel}</div>
-      </div>
+      ) : (
+        <>
+          <div className="mb-3.5 flex items-center justify-center gap-3.5">
+            <button
+              type="button"
+              disabled={dayIndex === 0}
+              className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-sand)] bg-white text-sm text-[#8a6a3e]"
+              style={{ opacity: dayIndex === 0 ? 0.35 : 1 }}
+              onClick={() => setDayIndex((i) => Math.max(0, i - 1))}
+            >‹</button>
+            <div className="text-xs font-bold tracking-[.02em] text-[var(--color-text-secondary)]">Giorno {day.dayOfMonth - days[0].dayOfMonth + 1}</div>
+            <button
+              type="button"
+              disabled={dayIndex === days.length - 1}
+              className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-sand)] bg-white text-sm text-[#8a6a3e]"
+              style={{ opacity: dayIndex === days.length - 1 ? 0.35 : 1 }}
+              onClick={() => setDayIndex((i) => Math.min(days.length - 1, i + 1))}
+            >›</button>
+          </div>
 
-      <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="mb-2.5 flex items-baseline justify-between">
-          <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Programma di oggi</div>
-          <div className="text-[10.5px] font-bold text-[#c2a97e]">ora {currentTimeLabel}</div>
-        </div>
-        {hasSchedule ? (
-          <div className="flex flex-col gap-1.5">
-            {ordered.map((it, i) => {
-              const hasTime = !!it.time
-              const isPast = hasTime && i < currentIndex
-              const isCurrent = hasTime && i === currentIndex
-              const isNext = hasTime && i === nextIndex
-              const canUp = i > 0
-              const canDown = i < ordered.length - 1
-              const open = () => { setSheetMode('schedule'); setSheetTarget({ stopId: it.stopId, catId: it.catId, itemId: it.id }) }
-              return (
-                <div
-                  key={it.id}
-                  className="flex items-center gap-2"
-                  style={{
-                    opacity: isPast ? 0.5 : 1,
-                    background: isCurrent ? '#fff4e6' : undefined,
-                    borderRadius: isCurrent ? 12 : undefined,
-                    padding: isCurrent ? '6px 8px' : undefined,
-                    margin: isCurrent ? '0 -8px' : undefined,
-                  }}
-                >
-                  <div className="flex w-3.75 shrink-0 flex-col">
-                    <button type="button" disabled={!canUp} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canUp ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, -1)}>▴</button>
-                    <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
-                  </div>
-                  <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? '#d9481f' : '#a9906f' }} onClick={open}>
-                    {hasTime ? it.time : 'Orario'}
-                  </button>
-                  <button type="button" className="w-5 shrink-0 text-center text-[15px]" onClick={open}>{it.icon || it.catIcon || '📌'}</button>
-                  <button type="button" className="min-w-0 flex-1 truncate text-left text-[13px]" style={{ fontWeight: isCurrent || isNext ? 700 : 600 }} onClick={open}>{it.label}</button>
-                  {(isCurrent || isNext) && (
-                    <button type="button" className="shrink-0 rounded-full bg-[#fde3d0] px-1.75 py-0.75 text-[9.5px] font-bold text-[var(--color-coral)]" onClick={open}>
-                      {isCurrent ? 'ORA' : 'PROSSIMO'}
-                    </button>
+          <div className="mb-4 rounded-[26px] p-5 text-white shadow-[0_18px_36px_-18px_rgba(80,50,20,.4)]" style={{ background: moodGradients[day.moodId] || moodGradients.fiesta }}>
+            <div className="mb-1 text-xs font-bold text-white/85">{day.mood}</div>
+            <div className="flex items-baseline justify-between">
+              <div className="font-display text-[26px] font-bold uppercase">{day.city}</div>
+              <button type="button" className="inline-flex shrink-0 items-center gap-1.25 whitespace-nowrap rounded-full border border-white/35 bg-white/22 px-2.75 py-1.25 text-[11px] font-bold" onClick={cycleStatus}>
+                {meta.icon} {meta.label}
+              </button>
+            </div>
+            <div className="text-xs font-semibold text-white/85">{day.dateLabel}</div>
+          </div>
+
+          <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="mb-2.5 flex items-baseline justify-between">
+              <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Programma di oggi</div>
+              <div className="text-[10.5px] font-bold text-[#c2a97e]">ora {currentTimeLabel}</div>
+            </div>
+            {hasSchedule ? (
+              <div className="flex flex-col gap-1.5">
+                {ordered.map((it, i) => {
+                  const hasTime = !!it.time
+                  const isPast = hasTime && i < currentIndex
+                  const isCurrent = hasTime && i === currentIndex
+                  const isNext = hasTime && i === nextIndex
+                  const canUp = i > 0
+                  const canDown = i < ordered.length - 1
+                  const open = () => { setSheetMode('schedule'); setSheetTarget({ stopId: it.stopId, catId: it.catId, itemId: it.id }) }
+                  return (
+                    <div
+                      key={it.id}
+                      className="flex items-center gap-2"
+                      style={{
+                        opacity: isPast ? 0.5 : 1,
+                        background: isCurrent ? '#fff4e6' : undefined,
+                        borderRadius: isCurrent ? 12 : undefined,
+                        padding: isCurrent ? '6px 8px' : undefined,
+                        margin: isCurrent ? '0 -8px' : undefined,
+                      }}
+                    >
+                      <div className="flex w-3.75 shrink-0 flex-col">
+                        <button type="button" disabled={!canUp} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canUp ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, -1)}>▴</button>
+                        <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
+                      </div>
+                      <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? '#d9481f' : '#a9906f' }} onClick={open}>
+                        {hasTime ? it.time : 'Orario'}
+                      </button>
+                      <button type="button" className="w-5 shrink-0 text-center text-[15px]" onClick={open}>{it.icon || it.catIcon || '📌'}</button>
+                      <button type="button" className="min-w-0 flex-1 truncate text-left text-[13px]" style={{ fontWeight: isCurrent || isNext ? 700 : 600 }} onClick={open}>{it.label}</button>
+                      {(isCurrent || isNext) && (
+                        <button type="button" className="shrink-0 rounded-full bg-[#fde3d0] px-1.75 py-0.75 text-[9.5px] font-bold text-[var(--color-coral)]" onClick={open}>
+                          {isCurrent ? 'ORA' : 'PROSSIMO'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="py-3.5 text-center">
+                <div className="mb-2 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessuna attività con la stellina per oggi.</div>
+                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral)]">⭐ Aggiungi stelline su Journey</Link>
+              </div>
+            )}
+          </div>
+
+          {(day.stayName || !isRealTrip) && (
+            <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+              <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Dove dormi stanotte</div>
+              <Link to={`${tripBase}/checklist`} className="mb-3.5 flex items-center gap-2.5">
+                <span className="shrink-0 text-[22px]">🏨</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold">{day.stayName || 'Nessun alloggio segnato'}</div>
+                  <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{day.stayLabel}</div>
+                </div>
+              </Link>
+              {day.stayLink && (
+                <div className="flex gap-2">
+                  <a href={day.stayLink} target="_blank" rel="noreferrer" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📍 Mappa</a>
+                  {!isRealTrip && (
+                    <a href="tel:+34600000000" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📞 Chiama</a>
                   )}
                 </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="py-3.5 text-center">
-            <div className="mb-2 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessuna attività con la stellina per oggi.</div>
-            <Link to="/trip/spain/journey" className="text-xs font-bold text-[var(--color-coral)]">⭐ Aggiungi stelline su Journey</Link>
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          )}
 
-      <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Dove dormi stanotte</div>
-        <Link to="/trip/spain/checklist" className="mb-3.5 flex items-center gap-2.5">
-          <span className="shrink-0 text-[22px]">🏨</span>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold">{day.stayName}</div>
-            <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{day.stayLabel}</div>
+          <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Checklist di oggi</div>
+              <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-bold text-[var(--color-coral)]" onClick={addChecklistItem}>+</button>
+            </div>
+            <div className="flex flex-col gap-2.25">
+              {fullChecklist.map((c, i) => {
+                const done = checklistDoneMap[i] !== undefined ? checklistDoneMap[i] : c.done
+                const label = checklistLabelMap[i] !== undefined ? checklistLabelMap[i] : c.label
+                return (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      className="flex h-4.75 w-4.75 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white"
+                      style={done ? { background: '#7a9d54' } : { background: '#fff', border: '1.5px solid var(--color-sand)' }}
+                      onClick={() => toggleChecklist(i)}
+                    >
+                      {done ? '✓' : ''}
+                    </button>
+                    <EditableText
+                      ref={(el) => { checklistRefs.current[`${dayIndex}:${i}`] = el }}
+                      initialText={label}
+                      className="min-w-0 flex-1 text-[13px] font-semibold"
+                      style={done ? { color: 'var(--color-text-secondary)', textDecoration: 'line-through' } : undefined}
+                      onBlurText={(text) => updateChecklistLabel(i, text)}
+                    />
+                  </div>
+                )
+              })}
+              {fullChecklist.length === 0 && (
+                <div className="py-1 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessuna voce ancora — aggiungine una con +.</div>
+              )}
+            </div>
           </div>
-        </Link>
-        <div className="flex gap-2">
-          <a href={day.stayLink} target="_blank" rel="noreferrer" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📍 Mappa</a>
-          <a href="tel:+34600000000" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📞 Chiama</a>
-        </div>
-      </div>
 
-      <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="mb-2.5 flex items-center justify-between">
-          <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Checklist di oggi</div>
-          <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-bold text-[var(--color-coral)]" onClick={addChecklistItem}>+</button>
-        </div>
-        <div className="flex flex-col gap-2.25">
-          {fullChecklist.map((c, i) => {
-            const done = checklistDoneMap[i] !== undefined ? checklistDoneMap[i] : c.done
-            const label = checklistLabelMap[i] !== undefined ? checklistLabelMap[i] : c.label
-            return (
-              <div key={i} className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  className="flex h-4.75 w-4.75 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white"
-                  style={done ? { background: '#7a9d54' } : { background: '#fff', border: '1.5px solid var(--color-sand)' }}
-                  onClick={() => toggleChecklist(i)}
-                >
-                  {done ? '✓' : ''}
-                </button>
-                <EditableText
-                  ref={(el) => { checklistRefs.current[`${dayIndex}:${i}`] = el }}
-                  initialText={label}
-                  className="min-w-0 flex-1 text-[13px] font-semibold"
-                  style={done ? { color: 'var(--color-text-secondary)', textDecoration: 'line-through' } : undefined}
-                  onBlurText={(text) => updateChecklistLabel(i, text)}
-                />
+          <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Link e biglietti di oggi</div>
+            <div className="grid grid-cols-3 gap-2">
+              <button type="button" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center" onClick={() => { setSheetMode('list'); setListType('tickets') }}>
+                <div className="mb-1 text-xl">🎫</div>
+                <div className="text-[11px] font-bold">Biglietti e Ticket</div>
+              </button>
+              <button type="button" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center" onClick={() => { setSheetMode('list'); setListType('links') }}>
+                <div className="mb-1 text-xl">🔗</div>
+                <div className="text-[11px] font-bold">Link utili</div>
+              </button>
+              <Link to={`${tripBase}/checklist`} className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center text-[var(--color-text)]">
+                <div className="mb-1 text-xl">🎒</div>
+                <div className="text-[11px] font-bold">Checklist</div>
+              </Link>
+            </div>
+          </div>
+
+          <div className="mb-3 flex items-center rounded-[20px] border border-[var(--color-card-border)] bg-white px-2 py-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="flex-1 text-center">
+              <div className="mb-2.25 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Spese di oggi</div>
+              <div className="flex justify-center gap-1.25">
+                {day.expenses.map((e, i) => (
+                  <div key={i} className="flex h-5.5 w-5.5 items-center justify-center rounded-full text-[9.5px] font-bold text-white" style={{ background: e.color }}>{e.initial}</div>
+                ))}
               </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Link e biglietti di oggi</div>
-        <div className="grid grid-cols-3 gap-2">
-          <button type="button" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center" onClick={() => { setSheetMode('list'); setListType('tickets') }}>
-            <div className="mb-1 text-xl">🎫</div>
-            <div className="text-[11px] font-bold">Biglietti e Ticket</div>
-          </button>
-          <button type="button" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center" onClick={() => { setSheetMode('list'); setListType('links') }}>
-            <div className="mb-1 text-xl">🔗</div>
-            <div className="text-[11px] font-bold">Link utili</div>
-          </button>
-          <Link to="/trip/spain/checklist" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center text-[var(--color-text)]">
-            <div className="mb-1 text-xl">🎒</div>
-            <div className="text-[11px] font-bold">Checklist</div>
-          </Link>
-        </div>
-      </div>
-
-      <div className="mb-3 flex items-center rounded-[20px] border border-[var(--color-card-border)] bg-white px-2 py-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="flex-1 text-center">
-          <div className="mb-2.25 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Spese di oggi</div>
-          <div className="flex justify-center gap-1.25">
-            {day.expenses.map((e, i) => (
-              <div key={i} className="flex h-5.5 w-5.5 items-center justify-center rounded-full text-[9.5px] font-bold text-white" style={{ background: e.color }}>{e.initial}</div>
-            ))}
+            </div>
+            <div className="mx-2 w-0.5 self-stretch bg-[var(--color-sand)]" />
+            <div className="flex-1 text-center">
+              <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Totale</div>
+              <div className="font-display text-[22px] font-bold">{expenseTotal}€</div>
+            </div>
+            <div className="mx-2 w-0.5 self-stretch bg-[var(--color-sand)]" />
+            <div className="flex-1 text-center">
+              <div className="mb-2.25 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Aggiungi</div>
+              <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fdece0] text-lg font-bold text-[var(--color-coral)]" onClick={() => setSheetMode('addExpense')}>+</button>
+            </div>
           </div>
-        </div>
-        <div className="mx-2 w-0.5 self-stretch bg-[var(--color-sand)]" />
-        <div className="flex-1 text-center">
-          <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Totale</div>
-          <div className="font-display text-[22px] font-bold">{expenseTotal}€</div>
-        </div>
-        <div className="mx-2 w-0.5 self-stretch bg-[var(--color-sand)]" />
-        <div className="flex-1 text-center">
-          <div className="mb-2.25 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Aggiungi</div>
-          <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fdece0] text-lg font-bold text-[var(--color-coral)]" onClick={() => setSheetMode('addExpense')}>+</button>
-        </div>
-      </div>
 
-      <div className="rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-        <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Ricordi di oggi</div>
-        {isEndOfDay && (
-          <div className="mb-2.5 flex items-center gap-2.5 rounded-2xl bg-[#fff4e6] p-3">
-            <div className="text-xl">🌙</div>
-            <div className="flex-1 text-[13px] font-bold">Com'è andata oggi?</div>
+          <div className="rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Ricordi di oggi</div>
+            {isEndOfDay && (
+              <div className="mb-2.5 flex items-center gap-2.5 rounded-2xl bg-[#fff4e6] p-3">
+                <div className="text-xl">🌙</div>
+                <div className="flex-1 text-[13px] font-bold">Com'è andata oggi?</div>
+              </div>
+            )}
+            {day.memoryPhotos.length > 0 && (
+              <div className="mb-2.5 grid grid-cols-4 gap-1.25">
+                {day.memoryPhotos.map((seed, i) => (
+                  <div key={i} className="aspect-square rounded-lg bg-[#e8dcc3] bg-cover" style={{ backgroundImage: `url(https://picsum.photos/seed/${seed}/160/160)` }} />
+                ))}
+              </div>
+            )}
+            <Link to={`${tripBase}/memories`} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-coral)]">+ Aggiungi ricordi</Link>
           </div>
-        )}
-        <div className="mb-2.5 grid grid-cols-4 gap-1.25">
-          {day.memoryPhotos.map((seed, i) => (
-            <div key={i} className="aspect-square rounded-lg bg-[#e8dcc3] bg-cover" style={{ backgroundImage: `url(https://picsum.photos/seed/${seed}/160/160)` }} />
-          ))}
-        </div>
-        <Link to="/trip/spain/memories" className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-coral)]">+ Aggiungi ricordi</Link>
-      </div>
+        </>
+      )}
 
       {sheetMode === 'schedule' && sheetItem && (
         <ScheduleItemSheet

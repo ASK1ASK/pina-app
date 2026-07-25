@@ -184,6 +184,54 @@ export function buildDays(): Day[] {
   return days
 }
 
+// Stessa forma di buildDays(), ma per un viaggio vero: le tappe vengono dalle
+// tue tappe reali (Journey), non dal fixture demo di Barcellona. Nessun dato
+// finto per checklist/biglietti/spese/ricordi — quelle sezioni restano vuote
+// finché non avranno una tabella Supabase dedicata.
+export function buildRealDays(startDate: Date, endDate: Date, stops: RealStop[]): Day[] {
+  const days: Day[] = []
+  const refYear = startDate.getFullYear()
+  const refMonth = startDate.getMonth()
+  const startDay = startDate.getDate()
+  const endDay = endDate.getDate()
+  for (let d = startDay; d <= endDay; d++) {
+    const stop = stops.find((s) => d >= s.startDay && d <= s.endDay)
+    const stay = stop?.stays?.find((st) => st.day === d) || stop?.stays?.[0]
+    days.push({
+      dayOfMonth: d,
+      city: stop?.name || 'Giorno libero',
+      moodId: stop?.moodId || 'camper',
+      mood: stop?.moodLine || (stop ? '' : '🚐 Nessuna tappa in programma'),
+      dateLabel: formatDateLabel(new Date(refYear, refMonth, d)),
+      subtitle: null,
+      stayName: stay?.name || '',
+      stayLabel: stay?.name ? '' : 'Nessun alloggio segnato',
+      stayLink: stay?.link || '',
+      schedule: [],
+      checklist: [],
+      tickets: [],
+      usefulLinks: [],
+      expenses: [],
+      memoryPhotos: [],
+    })
+  }
+  return days
+}
+
+interface RealStopStay {
+  name: string
+  link: string
+  day?: number
+}
+interface RealStop {
+  name: string
+  startDay: number
+  endDay: number
+  moodId?: string
+  moodLine: string
+  stays: RealStopStay[]
+}
+
 export type DayStatus = 'planned' | 'ready' | 'inprogress' | 'done'
 export const statusOrder: DayStatus[] = ['planned', 'ready', 'inprogress', 'done']
 export const statusMeta: Record<DayStatus, { icon: string; label: string }> = {
