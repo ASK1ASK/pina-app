@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { useAuth } from '../lib/authContext'
+import { isUuid } from '../lib/uuid'
 import {
   loadChecklistData,
   loadEssentialsData,
@@ -11,11 +14,12 @@ import {
   people,
   personOrder,
   currentUser,
-  type ChecklistCategory,
   type EssentialsCategory,
-  type PersonalSection,
   type Stop,
 } from '../lib/tripData'
+import { fetchTripMembers, type RealMember } from './spese/supabaseSpese'
+import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote } from './journey/supabaseJourney'
+import { fetchChecklist, persistChecklist } from './checklist/supabaseChecklist'
 import { ChecklistRow } from './checklist/ChecklistRow'
 import { defaultCategories, defaultPersonalSections } from './checklist/data'
 import { EssentialsPanel } from './checklist/EssentialsPanel'
@@ -23,19 +27,87 @@ import { EssentialsPanel } from './checklist/EssentialsPanel'
 type Tab = 'condivisa' | 'valigia'
 type ViewMode = 'categoria' | 'persona'
 
+// Forma unificata: compatibile sia con il cast demo (PersonId) sia con i
+// membri veri (id uuid da trip_members), stesso approccio usato in Spese.
+interface UIChecklistItem {
+  id: string
+  label: string
+  done: boolean
+  assignee?: string
+}
+interface UIChecklistCategory {
+  id: string
+  emoji: string
+  name: string
+  items: UIChecklistItem[]
+}
+type UIPersonalSection = UIChecklistCategory
+
+// Stessi 4 raggruppamenti del demo, ma senza voci finte dentro: per un
+// viaggio vero danno una struttura pronta da riempire invece di un'area
+// grigia senza nemmeno un modo per aggiungere qualcosa.
+const EMPTY_ESSENTIALS_CATEGORIES: EssentialsCategory[] = [
+  { id: 'doc', emoji: '🪪', name: 'Documenti', gradient: 'linear-gradient(135deg,#ff8a5b,#d9481f)', entries: [] },
+  { id: 'stay', emoji: '🏕', name: 'Alloggi', gradient: 'linear-gradient(135deg,#ffb627,#d9481f)', entries: [] },
+  { id: 'transport', emoji: '🚐', name: 'Trasporti', gradient: 'linear-gradient(135deg,#8fbf6b,#4f7a3a)', entries: [] },
+  { id: 'bookings', emoji: '🎟', name: 'Prenotazioni', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)', entries: [] },
+]
+
 export function Checklist() {
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+  const { session } = useAuth()
+
   const [tab, setTab] = useState<Tab>('condivisa')
   const [viewMode, setViewMode] = useState<ViewMode>('categoria')
-  const [categories, setCategories] = useState<ChecklistCategory[]>(defaultCategories)
-  const [personalSections, setPersonalSections] = useState<PersonalSection[]>(defaultPersonalSections)
+  const [loading, setLoading] = useState(isRealTrip)
+  const [categories, setCategories] = useState<UIChecklistCategory[]>(isRealTrip ? [] : defaultCategories)
+  // "La mia valigia" ed Essentials non hanno ancora un salvataggio reale per i
+  // viaggi veri: per ora restano vuote invece di mostrare Girona/Barcellona
+  // finte, ma le modifiche fatte in sessione non sopravvivono a un reload.
+  const [personalSections, setPersonalSections] = useState<UIPersonalSection[]>(isRealTrip ? [] : defaultPersonalSections)
   const [stops, setStops] = useState<Stop[]>([])
-  const [essentialsCategories, setEssentialsCategories] = useState<EssentialsCategory[]>([])
+  const [essentialsCategories, setEssentialsCategories] = useState<EssentialsCategory[]>(isRealTrip ? EMPTY_ESSENTIALS_CATEGORIES : [])
   const [activeEssentialId, setActiveEssentialId] = useState<string | null>(null)
   const [focusItemId, setFocusItemId] = useState<string | null>(null)
+  const [realMembers, setRealMembers] = useState<RealMember[]>([])
+  const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
+  const [tripStartDate, setTripStartDate] = useState<Date | null>(null)
   const loaded = useRef(false)
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
+  const members = isRealTrip
+    ? realMembers.map((m) => ({ id: m.id, name: m.name, color: m.color }))
+    : personOrder.map((code) => ({ id: code, name: people[code].name, color: people[code].color }))
+  const membersById: Record<string, { name: string; color: string }> = Object.fromEntries(members.map((m) => [m.id, m]))
+  const memberIds = members.map((m) => m.id)
+  const activeUser = isRealTrip ? (realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIds[0] ?? '') : currentUser
+  // Per il demo l'id E' gia' l'iniziale (codici 'A'/'L'/...); per i membri
+  // veri (uuid) mostriamo l'iniziale del nome invece dell'id per intero.
+  function initialFor(id: string): string {
+    if (!isRealTrip) return id
+    return membersById[id]?.name.slice(0, 1).toUpperCase() || '?'
+  }
+
   useEffect(() => {
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([fetchTripMembers(routeTripId), fetchChecklist(routeTripId), fetchStops(routeTripId), fetchTripMeta(routeTripId)]).then(
+        ([fetchedMembers, fetchedChecklist, fetchedStops, meta]) => {
+          setRealMembers(fetchedMembers)
+          setCategories(fetchedChecklist)
+          setStops(fetchedStops)
+          if (meta) {
+            const days = Math.ceil((meta.startDate.getTime() - Date.now()) / 86400000)
+            setDaysUntilStart(days)
+            setTripStartDate(meta.startDate)
+          }
+          loaded.current = true
+          setLoading(false)
+        },
+      )
+      return
+    }
     const saved = loadChecklistData()
     if (saved) {
       setCategories(saved.categories)
@@ -44,10 +116,17 @@ export function Checklist() {
     setStops(loadStops())
     setEssentialsCategories(loadEssentialsData().categories)
     loaded.current = true
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
 
   useEffect(() => {
-    if (loaded.current) saveChecklistData({ categories, personalSections })
+    if (!loaded.current) return
+    if (isRealTrip && routeTripId) {
+      persistChecklist(routeTripId, categories).catch((err) => console.error('Errore salvataggio checklist', err))
+    } else {
+      saveChecklistData({ categories, personalSections } as never)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, personalSections])
 
   useEffect(() => {
@@ -66,7 +145,11 @@ export function Checklist() {
 
   function persistStops(next: Stop[]) {
     setStops(next)
-    saveStops(next)
+    if (isRealTrip && routeTripId && tripStartDate) {
+      persistStopsRemote(routeTripId, next, tripStartDate.getFullYear(), tripStartDate.getMonth()).catch((err) => console.error('Errore salvataggio tappe', err))
+    } else if (!isRealTrip) {
+      saveStops(next)
+    }
   }
 
   function persistEssentials(next: EssentialsCategory[]) {
@@ -93,8 +176,8 @@ export function Checklist() {
               ...c,
               items: c.items.map((it) => {
                 if (it.id !== itemId) return it
-                const idx = personOrder.indexOf(it.assignee || currentUser)
-                const next = personOrder[(idx + 1) % personOrder.length]
+                const idx = memberIds.indexOf(it.assignee || activeUser)
+                const next = memberIds[(idx + 1) % memberIds.length]
                 return { ...it, assignee: next }
               }),
             },
@@ -104,7 +187,7 @@ export function Checklist() {
   function addItemToCategory(catId: string) {
     const id = 'i' + Date.now()
     setFocusItemId(id)
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, label: 'Nuova voce', done: false, assignee: currentUser }] })))
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, label: 'Nuova voce', done: false, assignee: activeUser }] })))
   }
   function addCategory() {
     const id = 'c' + Date.now()
@@ -214,18 +297,18 @@ export function Checklist() {
   const totalItems = flat.length
   const doneItems = flat.filter((i) => i.done).length
   const percent = totalItems ? Math.round((doneItems / totalItems) * 100) : 0
-  const assignedToYou = flat.filter((i) => i.assignee === currentUser).length
+  const assignedToYou = flat.filter((i) => i.assignee === activeUser).length
 
-  const personGroups = personOrder
-    .map((code) => {
-      const person = people[code]
-      const items = flat.filter((i) => i.assignee === code)
+  const personGroups = memberIds
+    .map((id) => {
+      const person = membersById[id]
+      const items = flat.filter((i) => i.assignee === id)
       const done = items.filter((i) => i.done).length
-      return { code, name: person.name, color: person.color, countLabel: `${done}/${items.length}`, items }
+      return { code: id, name: person?.name || '?', color: person?.color || '#c2a97e', countLabel: `${done}/${items.length}`, items }
     })
     .filter((g) => g.items.length > 0)
 
-  const mySharedItems = flat.filter((i) => i.assignee === currentUser)
+  const mySharedItems = flat.filter((i) => i.assignee === activeUser)
   const mySharedDone = mySharedItems.filter((i) => i.done).length
 
   const personalTotal = mySharedItems.length + personalSections.reduce((a, s) => a + s.items.length, 0)
@@ -239,6 +322,22 @@ export function Checklist() {
     `flex-1 rounded-[11px] py-2.25 text-center text-[12.5px] font-bold ${active ? 'bg-white text-[var(--color-text)] shadow-[0_4px_10px_-6px_rgba(120,90,40,.4)]' : 'text-[var(--color-text-secondary)]'}`
   const viewBtnClass = (active: boolean) =>
     `flex-1 rounded-[10px] py-2 text-center text-xs font-bold ${active ? 'bg-white text-[var(--color-text)] shadow-[0_3px_8px_-5px_rgba(120,90,40,.4)]' : 'text-[var(--color-text-secondary)]'}`
+
+  const countdownLabel = !isRealTrip
+    ? '🧳 Si parte tra 12 giorni'
+    : daysUntilStart === null
+      ? '🧳 Checklist del viaggio'
+      : daysUntilStart > 0
+        ? `🧳 Si parte tra ${daysUntilStart} giorn${daysUntilStart === 1 ? 'o' : 'i'}`
+        : '🧳 Siete in viaggio'
+
+  if (loading) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
+        Caricamento...
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
@@ -257,7 +356,7 @@ export function Checklist() {
       {tab === 'condivisa' ? (
         <div>
           <div className="mb-3.5 rounded-[26px] p-5 text-white shadow-[0_18px_36px_-18px_rgba(217,72,31,.45)]" style={{ background: 'linear-gradient(135deg,#ff8a5b,#d9481f)' }}>
-            <div className="mb-1 text-xs font-bold text-white/85">🧳 Si parte tra 12 giorni</div>
+            <div className="mb-1 text-xs font-bold text-white/85">{countdownLabel}</div>
             <div className="mb-2.5 font-display text-xl font-bold leading-tight">Essentials del viaggio</div>
             <div className="text-xs font-bold">{percent}% completato · {assignedToYou} assegnate a te</div>
           </div>
@@ -303,6 +402,12 @@ export function Checklist() {
 
           {viewMode === 'categoria' ? (
             <div>
+              {categories.length === 0 && (
+                <div className="mb-3 rounded-[22px] border-[1.5px] border-dashed border-[var(--color-empty-border)] px-5 py-7 text-center">
+                  <div className="mb-1 font-display text-base font-semibold">Nessuna sezione ancora</div>
+                  <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Aggiungine una qui sotto per iniziare a organizzarvi</div>
+                </div>
+              )}
               {categories.map((cat) => {
                 const done = cat.items.filter((i) => i.done).length
                 return (
@@ -334,8 +439,8 @@ export function Checklist() {
                           onToggle={() => toggleItem(cat.id, it.id)}
                           onSaveLabel={(text) => updateItemLabel(cat.id, it.id, text)}
                           onDelete={() => deleteItem(cat.id, it.id)}
-                          avatarColor={people[it.assignee || currentUser].color}
-                          assigneeCode={it.assignee || currentUser}
+                          avatarColor={membersById[it.assignee || activeUser]?.color || '#c2a97e'}
+                          assigneeCode={initialFor(it.assignee || activeUser)}
                           onCycleAssignee={() => cycleAssignee(cat.id, it.id)}
                         />
                       ))}
@@ -352,7 +457,7 @@ export function Checklist() {
               {personGroups.map((grp) => (
                 <div key={grp.code} className="mb-3 overflow-hidden rounded-[20px] border border-[var(--color-card-border)] bg-white shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
                   <div className="flex items-center gap-2.5 bg-[var(--color-bg)] px-3.5 py-3.25">
-                    <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ background: grp.color }}>{grp.code}</div>
+                    <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full text-[13px] font-bold text-white" style={{ background: grp.color }}>{initialFor(grp.code)}</div>
                     <span className="flex-1 text-[14.5px] font-bold">{grp.name}</span>
                     <span className="text-[11.5px] font-bold text-[var(--color-eyebrow)]">{grp.countLabel}</span>
                   </div>
@@ -422,6 +527,12 @@ export function Checklist() {
           </div>
 
           <div className="mx-0.5 mb-3 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">La tua valigia</div>
+          {personalSections.length === 0 && (
+            <div className="mb-3 rounded-[22px] border-[1.5px] border-dashed border-[var(--color-empty-border)] px-5 py-7 text-center">
+              <div className="mb-1 font-display text-base font-semibold">Valigia ancora da fare</div>
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Aggiungi una sezione qui sotto (es. Documenti, Vestiti)</div>
+            </div>
+          )}
           {personalSections.map((sec) => {
             const done = sec.items.filter((i) => i.done).length
             return (
