@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
+import { useAuth } from '../lib/authContext'
 import {
   coverGradientById,
   loadStoredColors,
@@ -38,9 +39,11 @@ const statusMeta: Record<JourneyStatus, string> = {
   completed: '✅ Completed',
 }
 
-const userName = 'Andrea'
-
 export function Home() {
+  const { session } = useAuth()
+  const isLoggedIn = !!session?.user
+  const userName = session?.user?.email ? session.user.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) : null
+
   const [journeyColors, setJourneyColors] = useState<Record<string, CoverColorId>>({
     spain: 'fiesta',
   })
@@ -96,7 +99,7 @@ export function Home() {
         </Link>
       </div>
 
-      <div className="mb-0.5 font-display text-2xl font-semibold">Ciao, {userName}</div>
+      <div className="mb-0.5 font-display text-2xl font-semibold">{isLoggedIn ? `Ciao, ${userName}` : 'Benvenuto su Piña'}</div>
       <div className="mb-5.5 text-xs font-semibold text-[var(--color-text-secondary)]">Le tue avventure</div>
 
       {hasJourneys ? (
@@ -211,6 +214,15 @@ export function Home() {
             Hai un codice? Unisciti a un viaggio
           </Link>
         </div>
+      )}
+
+      {!isLoggedIn && (
+        <Link
+          to="/onboarding?step=login&intent=access"
+          className="mt-6 block rounded-full border border-[var(--color-card-border)] bg-white py-3.5 text-center text-[13px] font-bold text-[var(--color-text)]"
+        >
+          Hai già un account? Accedi
+        </Link>
       )}
 
       {pickerFor && !uploadMenuOpen && (

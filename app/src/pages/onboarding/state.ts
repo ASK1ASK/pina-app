@@ -61,7 +61,11 @@ export function initialOnboardingState(search: URLSearchParams): OnboardingState
   const recap = search.get('step') === 'recap'
   const stepParam = search.get('step')
   const forcedStep =
-    stepParam === 'welcome' || stepParam === 'createTrip' || stepParam === 'joinCode' ? stepParam : null
+    stepParam === 'welcome' || stepParam === 'createTrip' || stepParam === 'joinCode' || stepParam === 'login'
+      ? stepParam
+      : null
+  const intentParam = search.get('intent')
+  const loginIntent = intentParam === 'access' || intentParam === 'join' ? intentParam : 'create'
 
   let coverColorId = 'fiesta'
   if (recap) {
@@ -103,7 +107,7 @@ export function initialOnboardingState(search: URLSearchParams): OnboardingState
     authMethod: null,
     joinError: null,
     cameraOpen: false,
-    loginIntent: 'create',
+    loginIntent,
     coverColorId,
     deleteConfirmOpen: false,
     coverPickerOpen: false,
