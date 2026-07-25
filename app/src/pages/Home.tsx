@@ -51,6 +51,24 @@ export function Home() {
   const [customPhotos, setCustomPhotos] = useState<Record<string, string>>({})
   const [pickerFor, setPickerFor] = useState<string | null>(null)
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false)
+  const [demoDismissed, setDemoDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('pina-demo-dismissed') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  function dismissDemo() {
+    setDemoDismissed(true)
+    try {
+      localStorage.setItem('pina-demo-dismissed', '1')
+    } catch {
+      // localStorage non disponibile: la card demo ricomparirà al prossimo giro, non è grave.
+    }
+  }
+
+  const visibleJourneys = journeyDefs.filter((j) => j.status !== 'demo' || !demoDismissed)
 
   useEffect(() => {
     const stored = loadStoredColors()
@@ -64,7 +82,7 @@ export function Home() {
     })
   }, [])
 
-  const hasJourneys = journeyDefs.length > 0
+  const hasJourneys = visibleJourneys.length > 0
 
   function selectColor(id: CoverColorId) {
     if (!pickerFor) return
@@ -106,7 +124,7 @@ export function Home() {
       {hasJourneys ? (
         <>
           <div className="flex flex-col gap-3">
-            {journeyDefs.map((j) => {
+            {visibleJourneys.map((j) => {
               const customPhoto = customPhotos[j.id]
               const hasPhoto = !!j.photo || !!customPhoto
               const photo = customPhoto || j.photo
@@ -144,6 +162,16 @@ export function Home() {
                       onClick={() => setPickerFor(j.id)}
                     >
                       🎨
+                    </button>
+                  )}
+                  {j.status === 'demo' && (
+                    <button
+                      type="button"
+                      aria-label="Rimuovi il viaggio demo"
+                      className="absolute right-2.5 top-2.5 z-20 flex h-5.5 w-5.5 items-center justify-center rounded-full bg-black/28 text-[11px] text-white"
+                      onClick={() => dismissDemo()}
+                    >
+                      ×
                     </button>
                   )}
                 </div>

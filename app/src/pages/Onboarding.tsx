@@ -323,6 +323,11 @@ export function Onboarding() {
       patch((s) => ({ step: s.editReturnStep as OnboardingStep, editReturnStep: null }))
       return
     }
+    if (!session?.user) {
+      // Non loggato: il form resta compilato così com'è, si torna qui subito dopo il login.
+      patch({ step: 'login', loginIntent: 'create' })
+      return
+    }
     const id = await createTripInSupabase()
     if (id) goPreparing()
   }
@@ -523,7 +528,15 @@ export function Onboarding() {
     const selectedCls = 'flex items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--color-text-strong)] bg-white py-3 text-[13px] font-bold text-[var(--color-text)]'
     body = (
       <div className="relative min-h-svh px-7 pb-10 pt-25">
-        <button type="button" className={`${backBtnClass} absolute left-5.5 top-14.5`} onClick={() => goStep('welcome')}>‹</button>
+        <button
+          type="button"
+          className={`${backBtnClass} absolute left-5.5 top-14.5`}
+          onClick={() => {
+            if (state.loginIntent === 'create') goStep('createTrip')
+            else if (state.loginIntent === 'join') goStep('join')
+            else navigate('/')
+          }}
+        >‹</button>
         <div className="mb-2 text-center font-display text-xl font-semibold italic text-[var(--color-coral)]">🦩 Piña</div>
         <div className="mb-1 text-center font-display text-[19px] font-semibold text-[var(--color-text)]">{loginTitle}</div>
         <div className="mb-6 text-center text-[11px] font-semibold text-[var(--color-text-secondary)]">Per ora solo via email</div>
@@ -614,7 +627,14 @@ export function Onboarding() {
     body = (
       <div className="min-h-svh overflow-y-auto px-5.5 pb-8 pt-14.5">
         <div className="mb-5.5 flex items-center gap-2.5">
-          <button type="button" className={backBtnClass} onClick={() => patch((s) => ({ step: s.editReturnStep || 'login', editReturnStep: null }))}>‹</button>
+          <button
+            type="button"
+            className={backBtnClass}
+            onClick={() => {
+              if (state.editReturnStep) patch((s) => ({ step: s.editReturnStep as OnboardingStep, editReturnStep: null }))
+              else navigate('/')
+            }}
+          >‹</button>
           <div className="font-display text-[19px] font-semibold text-[var(--color-text)]">
             {state.editReturnStep ? 'Modifica il viaggio' : 'Crea il tuo viaggio'}
           </div>
@@ -875,7 +895,7 @@ export function Onboarding() {
     body = (
       <div className="min-h-svh overflow-y-auto px-5.5 pb-8 pt-14.5">
         <div className="mb-1.5 flex items-center gap-2.5">
-          <button type="button" className={backBtnClass} onClick={() => goStep('welcome')}>‹</button>
+          <button type="button" className={backBtnClass} onClick={() => navigate('/')}>‹</button>
           <div className="font-display text-[19px] font-semibold text-[var(--color-text)]">Unisciti a un viaggio</div>
         </div>
         <div className="mb-5.5 ml-11 text-xs font-semibold text-[var(--color-text-secondary)]">Tre modi per raggiungere la tua crew</div>
