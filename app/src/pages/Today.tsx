@@ -344,26 +344,33 @@ export function Today() {
             )}
           </div>
 
-          {(day.stayName || !isRealTrip) && (
-            <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-              <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Dove dormi stanotte</div>
-              <Link to={`${tripBase}/checklist`} className="mb-3.5 flex items-center gap-2.5">
-                <span className="shrink-0 text-[22px]">🏨</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold">{day.stayName || 'Nessun alloggio segnato'}</div>
-                  <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{day.stayLabel}</div>
-                </div>
-              </Link>
-              {day.stayLink && (
-                <div className="flex gap-2">
-                  <a href={day.stayLink} target="_blank" rel="noreferrer" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📍 Mappa</a>
-                  {!isRealTrip && (
-                    <a href="tel:+34600000000" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📞 Chiama</a>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+            <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Dove dormi stanotte</div>
+            {day.stayName ? (
+              <>
+                <Link to={`${tripBase}/checklist`} className="mb-3.5 flex items-center gap-2.5">
+                  <span className="shrink-0 text-[22px]">🏨</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold">{day.stayName}</div>
+                    <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{day.stayLabel}</div>
+                  </div>
+                </Link>
+                {day.stayLink && (
+                  <div className="flex gap-2">
+                    <a href={day.stayLink} target="_blank" rel="noreferrer" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📍 Mappa</a>
+                    {!isRealTrip && (
+                      <a href="tel:+34600000000" className="flex-1 rounded-[10px] bg-[var(--color-bg)] py-2 text-center text-[11px] font-bold text-[var(--color-text)]">📞 Chiama</a>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="py-1 text-center">
+                <div className="mb-2 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessun alloggio segnato per questa notte.</div>
+                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral)]">🏨 Aggiungilo sulla tappa in Journey</Link>
+              </div>
+            )}
+          </div>
 
           <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <div className="mb-2.5 flex items-center justify-between">
