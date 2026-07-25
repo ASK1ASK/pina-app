@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { useAuth } from '../lib/authContext'
+import { isUuid } from '../lib/uuid'
 import {
   loadEmergencyContacts,
   loadExpensesData,
@@ -11,6 +14,10 @@ import {
   type MemoriesData,
   type Stop,
 } from '../lib/tripData'
+import { fetchExpensesData, fetchTripMembers } from './spese/supabaseSpese'
+import { fetchTripMeta, type TripMeta } from './journey/supabaseJourney'
+import { fetchMemories } from './memories/supabaseMemories'
+import { fetchEmergencyContacts, fetchProfileName, persistEmergencyContacts, updateProfileName } from './profilo/supabaseProfilo'
 import { ProfileEntryRow } from './profilo/ProfileEntryRow'
 
 interface PaymentEntry {
@@ -30,44 +37,104 @@ const defaultPayments: PaymentEntry[] = [
 ]
 
 export function Profilo() {
-  const [name, setName] = useState('Andrea')
+  const { tripId: routeTripId } = useParams()
+  const isRealTrip = isUuid(routeTripId)
+  const { session } = useAuth()
+
+  const [loading, setLoading] = useState(isRealTrip)
+  const [name, setName] = useState(isRealTrip ? '' : 'Andrea')
+  const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
   const [notificationsOn, setNotificationsOn] = useState(true)
   const [nameSettingsOpen, setNameSettingsOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
   const [hasLeft, setHasLeft] = useState(false)
   const [emergencyOpen, setEmergencyOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
-  const [payments, setPayments] = useState<PaymentEntry[]>(defaultPayments)
+  // I pagamenti (carte/PIN) non hanno un posto adatto in un database condiviso
+  // col gruppo: per un viaggio vero restano vuoti e solo locali alla sessione.
+  const [payments, setPayments] = useState<PaymentEntry[]>(isRealTrip ? [] : defaultPayments)
   const [shareCopied, setShareCopied] = useState(false)
 
   const [stops, setStops] = useState<Stop[]>([])
   const [memories, setMemories] = useState<MemoriesData | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [myRealSpend, setMyRealSpend] = useState(0)
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([])
 
   useEffect(() => {
+    if (isRealTrip && routeTripId) {
+      setLoading(true)
+      Promise.all([
+        fetchTripMeta(routeTripId),
+        fetchTripMembers(routeTripId),
+        fetchMemories(routeTripId),
+        fetchExpensesData(routeTripId),
+        fetchEmergencyContacts(routeTripId),
+      ]).then(async ([meta, members, memData, expData, contacts]) => {
+        setTripMeta(meta)
+        setMemories({ days: memData.days, items: memData.items })
+        setEmergencyContacts(contacts)
+        const me = members.find((m) => m.userId === session?.user?.id)
+        if (session?.user) {
+          const profileName = await fetchProfileName(session.user.id)
+          setName(profileName !== 'Viaggiatore' ? profileName : me?.name || 'Viaggiatore')
+        }
+        const myId = me?.id
+        setMyRealSpend(myId ? expData.expenses.filter((e) => e.paidByMemberId === myId).reduce((a, e) => a + e.amount, 0) : 0)
+        setLoading(false)
+      })
+      return
+    }
     setStops(loadStops())
     setMemories(loadMemories())
     setExpenses(loadExpensesData().expenses)
     setEmergencyContacts(loadEmergencyContacts())
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeTripId])
 
   function persistEmergency(next: EmergencyContact[]) {
     setEmergencyContacts(next)
-    saveEmergencyContacts(next)
+    if (isRealTrip && routeTripId) {
+      persistEmergencyContacts(routeTripId, next).catch((err) => console.error('Errore salvataggio contatti', err))
+    } else {
+      saveEmergencyContacts(next)
+    }
   }
 
-  const tripDays = stops.length
-    ? Math.max(...stops.map((s) => s.endDay || s.startDay || 1)) - Math.min(...stops.map((s) => s.startDay || 1)) + 1
-    : 0
+  function saveName(text: string) {
+    const next = text || name
+    setName(next)
+    if (isRealTrip && session?.user) {
+      updateProfileName(session.user.id, next).catch((err) => console.error('Errore salvataggio nome', err))
+    }
+  }
+
+  const tripDays = isRealTrip
+    ? tripMeta
+      ? Math.round((tripMeta.endDate.getTime() - tripMeta.startDate.getTime()) / 86400000) + 1
+      : 0
+    : stops.length
+      ? Math.max(...stops.map((s) => s.endDay || s.startDay || 1)) - Math.min(...stops.map((s) => s.startDay || 1)) + 1
+      : 0
   const myMemoriesCount = memories ? memories.items.filter((it) => it.author === name).length : 0
-  const mySpend = expenses.filter((e) => e.paidBy === 'A').reduce((a, e) => a + e.amount, 0)
+  const mySpend = isRealTrip ? myRealSpend : expenses.filter((e) => e.paidBy === 'A').reduce((a, e) => a + e.amount, 0)
+  const tripName = isRealTrip ? tripMeta?.name || 'il tuo viaggio' : 'Spain Roadtrip'
+  const tripYearLabel = isRealTrip && tripMeta ? String(tripMeta.startDate.getFullYear()) : '2026'
+  const recapHref = `/trip/${routeTripId ?? 'spain'}/recap`
 
   function copyShareLink() {
-    const url = `${location.origin}/trip/spain/recap`
+    const url = `${location.origin}${recapHref}`
     navigator.clipboard?.writeText(url).catch(() => {})
     setShareCopied(true)
     setTimeout(() => setShareCopied(false), 1600)
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
+        Caricamento...
+      </div>
+    )
   }
 
   if (hasLeft) {
@@ -79,7 +146,7 @@ export function Profilo() {
         >
           fenicottero valigia
         </div>
-        <div className="mb-1.5 font-display text-lg font-semibold">Hai lasciato Spain Roadtrip</div>
+        <div className="mb-1.5 font-display text-lg font-semibold">Hai lasciato {tripName}</div>
         <div className="mb-5 text-[12.5px] font-semibold leading-snug text-[var(--color-text-secondary)]">
           Il gruppo non ti vedrà più tra i<br />partecipanti attivi al viaggio
         </div>
@@ -104,8 +171,8 @@ export function Profilo() {
         <div className="mb-4 flex items-center gap-3.5">
           <div className="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full text-2xl shadow-[0_6px_14px_-6px_rgba(217,72,31,.5)]" style={{ background: 'linear-gradient(135deg,#ffb627,#ff5f6d)' }}>🦩📸</div>
           <div className="min-w-0 flex-1">
-            <EditableText key={name} initialText={name} className="font-display text-xl font-bold" onBlurText={(text) => setName(text || name)} />
-            <div className="text-[11.5px] font-bold text-[#c2793a]">Explorer · Spain Roadtrip 2026</div>
+            <EditableText key={name} initialText={name || 'Il tuo nome'} className="font-display text-xl font-bold" onBlurText={saveName} />
+            <div className="text-[11.5px] font-bold text-[#c2793a]">Explorer · {tripName} {tripYearLabel}</div>
           </div>
         </div>
         <div className="mb-3.5 border-t-[1.5px] border-dashed border-[#e6b96f]" />
@@ -198,7 +265,7 @@ export function Profilo() {
           </div>
         </div>
         <div className="flex gap-2">
-          <a href="/trip/spain/recap" className="flex-1 rounded-full bg-[var(--color-bg)] py-2.5 text-center text-xs font-bold text-[var(--color-text)]">👀 Anteprima</a>
+          <a href={recapHref} className="flex-1 rounded-full bg-[var(--color-bg)] py-2.5 text-center text-xs font-bold text-[var(--color-text)]">👀 Anteprima</a>
           <button type="button" className="flex-1 rounded-full py-2.5 text-center text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={copyShareLink}>
             {shareCopied ? 'Copiato ✓' : 'Copia link'}
           </button>
@@ -216,7 +283,7 @@ export function Profilo() {
           {nameSettingsOpen && (
             <div className="px-3.5 pb-3.5 pl-10">
               <div className="mb-1.25 text-[10.5px] font-bold uppercase tracking-[.05em] text-[var(--color-eyebrow)]">Il tuo nome nel viaggio</div>
-              <EditableText key={'ns' + name} initialText={name} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2 font-display text-base font-semibold" onBlurText={(text) => setName(text || name)} />
+              <EditableText key={'ns' + name} initialText={name || 'Il tuo nome'} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2 font-display text-base font-semibold" onBlurText={saveName} />
               <div className="mt-1.5 text-[11px] font-semibold leading-snug text-[var(--color-text-secondary)]">Gli altri membri del gruppo vedranno questo nome nel viaggio.</div>
             </div>
           )}
@@ -241,7 +308,7 @@ export function Profilo() {
           </button>
           {leaveConfirmOpen && (
             <div className="px-3.5 pb-4 pl-10">
-              <div className="mb-2.5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">Sei sicuro? Non farai più parte dei partecipanti attivi a Spain Roadtrip.</div>
+              <div className="mb-2.5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">Sei sicuro? Non farai più parte dei partecipanti attivi a {tripName}.</div>
               <div className="flex gap-2">
                 <button type="button" className="flex-1 rounded-full bg-[#f0e5d1] py-2.25 text-center text-xs font-bold text-[var(--color-text)]" onClick={() => setLeaveConfirmOpen(false)}>Annulla</button>
                 <button type="button" className="flex-1 rounded-full bg-[var(--color-coral)] py-2.25 text-center text-xs font-bold text-white" onClick={() => { setHasLeft(true); setLeaveConfirmOpen(false) }}>Sì, esci</button>
