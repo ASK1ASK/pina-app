@@ -10,6 +10,7 @@ import { Spese } from './pages/Spese'
 import { Memories } from './pages/Memories'
 import { Profilo } from './pages/Profilo'
 import { Recap } from './pages/Recap'
+import { Guida } from './pages/Guida'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/join/:code" element={<Onboarding />} />
+          <Route path="/guida" element={<Guida />} />
           <Route path="/trip/:tripId" element={<TripLayout />}>
             <Route index element={<Navigate to="journey" replace />} />
             <Route path="journey" element={<Journey />} />

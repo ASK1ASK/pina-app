@@ -279,7 +279,10 @@ export function Home() {
             })}
           </div>
 
-          <div className="mt-3.5 flex items-center gap-3 rounded-[18px] bg-[#1e2a4a] px-4 py-3.5 text-white shadow-[0_10px_22px_-14px_rgba(30,42,74,.5)]">
+          <Link
+            to="/guida"
+            className="mt-3.5 flex items-center gap-3 rounded-[18px] bg-[#1e2a4a] px-4 py-3.5 text-white shadow-[0_10px_22px_-14px_rgba(30,42,74,.5)]"
+          >
             <span className="shrink-0 text-xl">🧭</span>
             <div className="min-w-0 flex-1">
               <div className="mb-0.5 font-display text-[14.5px] font-semibold leading-tight">
@@ -290,7 +293,7 @@ export function Home() {
               </div>
             </div>
             <span className="shrink-0 text-base text-white/50">›</span>
-          </div>
+          </Link>
 
           <Link
             to="/onboarding?step=createTrip"
