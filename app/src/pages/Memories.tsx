@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import { loadMemories, saveMemories, type MemoryDay, type MemoryItem } from '../lib/tripData'
 import { fetchTripMembers } from './spese/supabaseSpese'
@@ -14,6 +15,7 @@ import {
 } from './memories/supabaseMemories'
 
 const DEMO_PEOPLE = ['Andrea', 'Luca', 'Marco', 'Sara', 'Giulia']
+const MEMORIES_TABLES = ['memory_days', 'memories']
 
 interface ViewerState {
   ids: string[]
@@ -55,6 +57,17 @@ export function Memories() {
     setItems(data.items)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeTripId])
+
+  async function refetchReal() {
+    if (!routeTripId) return
+    const data = await fetchMemories(routeTripId)
+    setDays(data.days)
+    setItems(data.items)
+  }
+
+  // Aggiornamenti live: nuovi ricordi/giorni caricati da altri membri
+  // compaiono da soli mentre siamo sulla schermata.
+  useTripTableSync(isRealTrip ? routeTripId ?? null : null, MEMORIES_TABLES, refetchReal)
 
   function persistDemo(nextItems: MemoryItem[]) {
     setItems(nextItems)

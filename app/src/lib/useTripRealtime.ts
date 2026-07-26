@@ -71,3 +71,39 @@ export function useTripRealtime(tripId: string | null, options: TripRealtimeOpti
 
   return { online }
 }
+
+// Sync generico per tabelle trip-scoped (spese, checklist, essentials,
+// memories, ...): non fa diff riga-per-riga, chiama `onChange` (debounced)
+// quando una delle tabelle cambia così la schermata puo' rifare il fetch —
+// stesso spirito del pattern "cancella e riscrivi tutto" gia' usato per la
+// persistenza. `tables` va passato come array stabile (costante di modulo).
+export function useTripTableSync(tripId: string | null, tables: string[], onChange: () => void) {
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  useEffect(() => {
+    if (!tripId || tables.length === 0) return
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const scheduleRefetch = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => onChangeRef.current(), 400)
+    }
+
+    const channel = supabase.channel(`trip-sync:${tripId}:${tables.join(',')}`)
+    tables.forEach((table) => {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: `trip_id=eq.${tripId}` },
+        scheduleRefetch,
+      )
+    })
+    channel.subscribe()
+
+    return () => {
+      if (timer) clearTimeout(timer)
+      supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, tables])
+}

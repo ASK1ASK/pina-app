@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import {
   loadExpensesData,
@@ -25,6 +26,8 @@ import {
 import { PersonPicker, type PickablePerson } from './spese/PersonPicker'
 
 type SheetMode = null | 'expense' | 'settlement' | 'cassa' | 'ledger'
+
+const SPESE_TABLES = ['expenses', 'settlements', 'cassa_contributions']
 
 // Forma unificata: compatibile sia con i dati demo (PersonId, un carattere)
 // sia con i membri reali (id uuid da trip_members).
@@ -163,6 +166,10 @@ export function Spese() {
     setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
     setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
   }
+
+  // Aggiornamenti live: se un altro membro aggiunge/modifica una spesa o un
+  // saldo mentre siamo su questa schermata, li vediamo comparire da soli.
+  useTripTableSync(isRealTrip ? routeTripId ?? null : null, SPESE_TABLES, refetchReal)
 
   function persistDemo(patch: { expenses?: UIExpense[]; settlements?: UISettlement[]; cassaContributions?: UICassaContribution[] }) {
     const nextExpenses = patch.expenses ?? expenses

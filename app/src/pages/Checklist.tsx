@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import {
   loadChecklistData,
@@ -34,6 +35,10 @@ import { EssentialsPanel } from './checklist/EssentialsPanel'
 
 type Tab = 'condivisa' | 'valigia'
 type ViewMode = 'categoria' | 'persona'
+
+// La valigia personale non e' condivisa: solo checklist ed essentials
+// vanno tenute in sync live tra i membri.
+const CHECKLIST_TABLES = ['checklist_categories', 'essentials_categories']
 
 // Forma unificata: compatibile sia con il cast demo (PersonId) sia con i
 // membri veri (id uuid da trip_members), stesso approccio usato in Spese.
@@ -79,6 +84,7 @@ export function Checklist() {
   const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
   const [tripStartDate, setTripStartDate] = useState<Date | null>(null)
   const loaded = useRef(false)
+  const skipNextPersist = useRef(false)
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const members = isRealTrip
@@ -143,6 +149,10 @@ export function Checklist() {
 
   useEffect(() => {
     if (!loaded.current) return
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false
+      return
+    }
     if (isRealTrip && routeTripId) {
       persistChecklist(routeTripId, categories).catch((err) => console.error('Errore salvataggio checklist', err))
       if (activeUser) {
@@ -153,6 +163,19 @@ export function Checklist() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, personalSections])
+
+  async function refetchReal() {
+    if (!routeTripId) return
+    const [fetchedChecklist, fetchedEssentials] = await Promise.all([fetchChecklist(routeTripId), fetchEssentials(routeTripId)])
+    skipNextPersist.current = true
+    setCategories(fetchedChecklist)
+    setEssentialsCategories(fetchedEssentials)
+  }
+
+  // Aggiornamenti live: checklist condivisa ed essentials cambiati da un
+  // altro membro compaiono da soli, senza ri-salvare quello che abbiamo
+  // appena ricevuto (skipNextPersist evita il ping-pong con l'effetto sopra).
+  useTripTableSync(isRealTrip ? routeTripId ?? null : null, CHECKLIST_TABLES, refetchReal)
 
   useEffect(() => {
     if (!focusItemId) return
