@@ -14,10 +14,11 @@ import {
   type MemoriesData,
   type Stop,
 } from '../lib/tripData'
+import { identityColorDefs } from '../lib/palette'
 import { fetchExpensesData, fetchTripMembers } from './spese/supabaseSpese'
 import { fetchTripMeta, type TripMeta } from './journey/supabaseJourney'
 import { fetchMemories } from './memories/supabaseMemories'
-import { fetchEmergencyContacts, fetchProfileName, persistEmergencyContacts, updateProfileName } from './profilo/supabaseProfilo'
+import { fetchEmergencyContacts, persistEmergencyContacts, updateMemberIdentity } from './profilo/supabaseProfilo'
 import { ProfileEntryRow } from './profilo/ProfileEntryRow'
 
 interface PaymentEntry {
@@ -43,6 +44,8 @@ export function Profilo() {
 
   const [loading, setLoading] = useState(isRealTrip)
   const [name, setName] = useState(isRealTrip ? '' : 'Andrea')
+  const [myMemberId, setMyMemberId] = useState<string | null>(null)
+  const [myColor, setMyColor] = useState('#ff8a5b')
   const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
   const [notificationsOn, setNotificationsOn] = useState(true)
   const [nameSettingsOpen, setNameSettingsOpen] = useState(false)
@@ -75,10 +78,9 @@ export function Profilo() {
         setMemories({ days: memData.days, items: memData.items })
         setEmergencyContacts(contacts)
         const me = members.find((m) => m.userId === session?.user?.id)
-        if (session?.user) {
-          const profileName = await fetchProfileName(session.user.id)
-          setName(profileName !== 'Viaggiatore' ? profileName : me?.name || 'Viaggiatore')
-        }
+        setMyMemberId(me?.id ?? null)
+        setName(me?.name || 'Viaggiatore')
+        setMyColor(me?.color || '#ff8a5b')
         const myId = me?.id
         setMyRealSpend(myId ? expData.expenses.filter((e) => e.paidByMemberId === myId).reduce((a, e) => a + e.amount, 0) : 0)
         setLoading(false)
@@ -101,11 +103,21 @@ export function Profilo() {
     }
   }
 
+  // Il nome/colore qui sono per QUESTO viaggio (trip_members), non
+  // dell'account: la stessa persona può chiamarsi ed essere colorata
+  // diversamente in viaggi diversi.
   function saveName(text: string) {
     const next = text || name
     setName(next)
-    if (isRealTrip && session?.user) {
-      updateProfileName(session.user.id, next).catch((err) => console.error('Errore salvataggio nome', err))
+    if (isRealTrip && myMemberId) {
+      updateMemberIdentity(myMemberId, { displayName: next }).catch((err) => console.error('Errore salvataggio nome', err))
+    }
+  }
+
+  function saveColor(hex: string) {
+    setMyColor(hex)
+    if (isRealTrip && myMemberId) {
+      updateMemberIdentity(myMemberId, { color: hex }).catch((err) => console.error('Errore salvataggio colore', err))
     }
   }
 
@@ -169,7 +181,13 @@ export function Profilo() {
 
       <div className="mb-4.5 rounded-3xl border-2 border-dashed border-[#e6b96f] bg-[#fffaf0] p-5 shadow-[0_14px_30px_-18px_rgba(120,90,40,.4)]">
         <div className="mb-4 flex items-center gap-3.5">
-          <div className="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full text-2xl shadow-[0_6px_14px_-6px_rgba(217,72,31,.5)]" style={{ background: 'linear-gradient(135deg,#ffb627,#ff5f6d)' }}>🦩📸</div>
+          {isRealTrip ? (
+            <div className="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white shadow-[0_6px_14px_-6px_rgba(217,72,31,.5)]" style={{ background: myColor }}>
+              {(name || '?').slice(0, 1).toUpperCase()}
+            </div>
+          ) : (
+            <div className="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full text-2xl shadow-[0_6px_14px_-6px_rgba(217,72,31,.5)]" style={{ background: 'linear-gradient(135deg,#ffb627,#ff5f6d)' }}>🦩📸</div>
+          )}
           <div className="min-w-0 flex-1">
             <EditableText key={name} initialText={name || 'Il tuo nome'} className="font-display text-xl font-bold" onBlurText={saveName} />
             <div className="text-[11.5px] font-bold text-[#c2793a]">Explorer · {tripName} {tripYearLabel}</div>
@@ -284,7 +302,20 @@ export function Profilo() {
             <div className="px-3.5 pb-3.5 pl-10">
               <div className="mb-1.25 text-[10.5px] font-bold uppercase tracking-[.05em] text-[var(--color-eyebrow)]">Il tuo nome nel viaggio</div>
               <EditableText key={'ns' + name} initialText={name || 'Il tuo nome'} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2 font-display text-base font-semibold" onBlurText={saveName} />
-              <div className="mt-1.5 text-[11px] font-semibold leading-snug text-[var(--color-text-secondary)]">Gli altri membri del gruppo vedranno questo nome nel viaggio.</div>
+              <div className="mb-1.5 mt-3 text-[11px] font-semibold leading-snug text-[var(--color-text-secondary)]">Gli altri membri del gruppo vedranno questo nome (e questo colore) in questo viaggio — puoi usarne uno diverso in ogni viaggio.</div>
+              {isRealTrip && (
+                <div className="mt-2.5 flex gap-2.5">
+                  {identityColorDefs.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="h-8 w-8 rounded-full"
+                      style={{ background: c.hex, boxShadow: myColor === c.hex ? '0 0 0 2px var(--color-bg), 0 0 0 4px #3a2a1c' : undefined }}
+                      onClick={() => saveColor(c.hex)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

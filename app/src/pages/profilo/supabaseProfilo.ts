@@ -15,11 +15,12 @@ export async function persistEmergencyContacts(tripId: string, contacts: Emergen
   await supabase.from('emergency_contacts').insert(rows)
 }
 
-export async function fetchProfileName(userId: string): Promise<string> {
-  const { data } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle()
-  return data?.display_name?.trim() || 'Viaggiatore'
-}
-
-export async function updateProfileName(userId: string, name: string): Promise<void> {
-  await supabase.from('profiles').update({ display_name: name }).eq('id', userId)
+// Identità PER VIAGGIO (nome + colore mostrati alla crew in quel viaggio),
+// diversa dal nome dell'account (profiles.display_name, usato solo come
+// default quando entri in un viaggio nuovo).
+export async function updateMemberIdentity(memberId: string, patch: { displayName?: string; color?: string }): Promise<void> {
+  const payload: { display_name?: string; color?: string } = {}
+  if (patch.displayName !== undefined) payload.display_name = patch.displayName
+  if (patch.color !== undefined) payload.color = patch.color
+  await supabase.from('trip_members').update(payload).eq('id', memberId)
 }
