@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import QrScanner from 'qr-scanner'
+import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min.js?url'
 import { BottomSheet } from '../components/BottomSheet'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
 import { fetchTripMeta } from './journey/supabaseJourney'
+
+QrScanner.WORKER_PATH = QrScannerWorkerPath
 import {
   coverGradientById,
   coverPaletteDefs,
@@ -406,6 +410,42 @@ export function Onboarding() {
   const libraryFileRef = useRef<HTMLInputElement>(null)
   const fileFileRef = useRef<HTMLInputElement>(null)
   const prepIntervalRef = useRef<number | undefined>(undefined)
+
+  // Lettura QR reale dalla fotocamera (libreria qr-scanner, gratuita, gira
+  // tutta lato client — nessun servizio esterno a pagamento).
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+
+  function extractJoinCode(text: string): string | null {
+    const match = text.match(/\/join\/([a-z0-9]+)\/?$/i)
+    if (match) return match[1]
+    if (/^[a-z0-9]{4,10}$/i.test(text.trim())) return text.trim()
+    return null
+  }
+
+  useEffect(() => {
+    if (!state.cameraOpen || !videoRef.current) return
+    setCameraError(null)
+    const scanner = new QrScanner(
+      videoRef.current,
+      (result) => {
+        const code = extractJoinCode(result.data)
+        if (!code) return
+        scanner.stop()
+        loadJoinPreview(code).then((ok) => {
+          if (ok) patch({ cameraOpen: false })
+          else scanner.start().catch(() => {})
+        })
+      },
+      { highlightScanRegion: false, highlightCodeOutline: false },
+    )
+    scanner.start().catch(() => setCameraError('Impossibile accedere alla fotocamera. Controlla i permessi del browser.'))
+    return () => {
+      scanner.stop()
+      scanner.destroy()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.cameraOpen])
 
   // auto-advance splash -> welcome
   useEffect(() => {
@@ -1170,9 +1210,17 @@ export function Onboarding() {
         {state.cameraOpen && (
           <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-[#0c0805] p-7.5">
             <button type="button" className="absolute left-3.5 top-3.5 flex h-8.5 w-8.5 items-center justify-center rounded-full bg-white/15 text-[17px] text-white" onClick={() => patch({ cameraOpen: false })}>‹</button>
-            <div className="relative mb-5.5 h-55 w-55 rounded-3xl border-[3px] border-white/70" />
-            <div className="mb-6 text-[12.5px] font-semibold text-white/75">Inquadra il QR code del viaggio</div>
-            <button type="button" className="rounded-full bg-white px-6.5 py-3 text-[12.5px] font-bold text-[var(--color-text)]" onClick={() => { patch({ cameraOpen: false }); goStep('join') }}>Simula scansione</button>
+            <div className="relative mb-5.5 h-55 w-55 overflow-hidden rounded-3xl border-[3px] border-white/70 bg-black">
+              <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+            </div>
+            {cameraError ? (
+              <div className="mb-2.5 max-w-[240px] text-center text-[12.5px] font-semibold text-[#ff9b8a]">{cameraError}</div>
+            ) : (
+              <div className="mb-6 text-[12.5px] font-semibold text-white/75">Inquadra il QR code del viaggio</div>
+            )}
+            {state.joinError && (
+              <div className="max-w-[240px] text-center text-[12px] font-semibold text-[#ff9b8a]">{state.joinError}</div>
+            )}
           </div>
         )}
       </div>
