@@ -4,6 +4,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
+import { fetchTripMeta } from './journey/supabaseJourney'
 import {
   coverGradientById,
   coverPaletteDefs,
@@ -234,6 +235,82 @@ export function Onboarding() {
     if (realTripId) loadCrewMembers(realTripId)
   }
 
+  // Modifica di un viaggio VERO già esistente, raggiunta da Journey con
+  // ?trip=<id> (non dal flusso di creazione): precompila il form con i dati
+  // reali e reindirizza salvataggio/eliminazione/back verso quel viaggio
+  // invece che dentro l'onboarding.
+  const [isRealTripEdit, setIsRealTripEdit] = useState(false)
+  const [deletingTrip, setDeletingTrip] = useState(false)
+
+  useEffect(() => {
+    const editId = search.get('trip')
+    if (!editId) return
+    setIsRealTripEdit(true)
+    setRealTripId(editId)
+    patch({ step: 'createTrip' })
+    fetchTripMeta(editId).then((meta) => {
+      if (!meta) return
+      const monthIdx = monthDefs.findIndex((m) => m.year === meta.startDate.getFullYear() && m.month === meta.startDate.getMonth())
+      patch({
+        tripName: meta.name,
+        monthIndex: monthIdx >= 0 ? monthIdx : 1,
+        startDay: meta.startDate.getDate(),
+        endDay: meta.endDate.getDate(),
+        coverColorId: meta.coverColorId,
+        coverPhoto: meta.coverPhotoUrl,
+        moodIds: meta.moodIds,
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function updateTripInSupabase(): Promise<boolean> {
+    if (!realTripId) return false
+    if (!state.tripName || !state.startDay) {
+      setCreateTripError('Inserisci almeno il nome e la data del viaggio.')
+      return false
+    }
+    setCreatingTrip(true)
+    setCreateTripError(null)
+    const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
+    const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
+    const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
+    const { error } = await supabase
+      .from('trips')
+      .update({
+        name: state.tripName,
+        start_date: startDateStr,
+        end_date: endDateStr,
+        cover_color_id: state.coverColorId,
+        cover_photo_url: state.coverPhoto,
+        mood_ids: state.moodIds,
+      })
+      .eq('id', realTripId)
+    setCreatingTrip(false)
+    if (error) {
+      setCreateTripError(error.message)
+      return false
+    }
+    return true
+  }
+
+  async function addEditParticipant() {
+    const el = newParticipantRef.current
+    const name = el ? el.textContent?.trim() ?? '' : ''
+    if (!name || !realTripId) return
+    await supabase.from('trip_members').insert({ trip_id: realTripId, display_name: name, role: 'member', status: 'invited' })
+    if (el) el.textContent = ''
+    loadCrewMembers(realTripId)
+  }
+
+  async function deleteRealTrip() {
+    if (!realTripId) return
+    setDeletingTrip(true)
+    await supabase.from('trips').delete().eq('id', realTripId)
+    setDeletingTrip(false)
+    navigate('/')
+  }
+
   // Nome salvato una volta per tutte nel profilo, subito dopo il login: da qui
   // in avanti niente più "come ti chiami" dentro la creazione del viaggio.
   const [savingName, setSavingName] = useState(false)
@@ -306,6 +383,7 @@ export function Onboarding() {
       p_cover_color_id: state.coverColorId,
       p_organizer_display_name: organizerName,
       p_participant_names: state.participants,
+      p_mood_ids: state.moodIds,
     })
 
     if (tripError || !trip) {
@@ -418,6 +496,11 @@ export function Onboarding() {
   }
 
   async function saveCreateTrip() {
+    if (isRealTripEdit) {
+      const ok = await updateTripInSupabase()
+      if (ok && realTripId) navigate(`/trip/${realTripId}/journey`)
+      return
+    }
     if (state.editReturnStep) {
       patch((s) => ({ step: s.editReturnStep as OnboardingStep, editReturnStep: null }))
       return
@@ -573,7 +656,18 @@ export function Onboarding() {
             <div className="mb-5 text-xs font-semibold text-[var(--color-text-secondary)]">L'azione non si può annullare</div>
             <div className="flex gap-2.5">
               <button type="button" className={`flex-1 ${secondaryBtnClass}`} onClick={() => patch({ deleteConfirmOpen: false })}>Annulla</button>
-              <button type="button" className="flex-1 rounded-full bg-[#c2445a] py-3 text-center text-xs font-bold text-white" onClick={() => { patch({ deleteConfirmOpen: false }); navigate('/') }}>Elimina</button>
+              <button
+                type="button"
+                className="flex-1 rounded-full bg-[#c2445a] py-3 text-center text-xs font-bold text-white disabled:opacity-60"
+                disabled={deletingTrip}
+                onClick={async () => {
+                  patch({ deleteConfirmOpen: false })
+                  if (isRealTripEdit) await deleteRealTrip()
+                  else navigate('/')
+                }}
+              >
+                {deletingTrip ? 'Eliminazione...' : 'Elimina'}
+              </button>
             </div>
           </div>
         </div>
@@ -758,12 +852,13 @@ export function Onboarding() {
             type="button"
             className={backBtnClass}
             onClick={() => {
+              if (isRealTripEdit && realTripId) { navigate(`/trip/${realTripId}/journey`); return }
               if (state.editReturnStep) patch((s) => ({ step: s.editReturnStep as OnboardingStep, editReturnStep: null }))
               else navigate('/')
             }}
           >‹</button>
           <div className="font-display text-[19px] font-semibold text-[var(--color-text)]">
-            {state.editReturnStep ? 'Modifica il viaggio' : 'Crea il tuo viaggio'}
+            {state.editReturnStep || isRealTripEdit ? 'Modifica il viaggio' : 'Crea il tuo viaggio'}
           </div>
         </div>
 
@@ -835,26 +930,36 @@ export function Onboarding() {
         )}
 
         <div className="mb-1 font-display text-lg font-semibold text-[var(--color-text)]">Chi viene con te?</div>
-        <div className="mb-3 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">Aggiungi i nomi della tua crew</div>
+        <div className="mb-3 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">
+          {isRealTripEdit ? 'Aggiungi o rimuovi persone dalla crew' : 'Aggiungi i nomi della tua crew'}
+        </div>
         <div className="mb-2 flex flex-wrap gap-2">
-          {state.participants.map((name, i) => (
-            <div key={i} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--color-card-border)] bg-white py-1.75 pl-3 pr-1.75 text-[12.5px] font-bold text-[var(--color-text)]">
-              {name}
-              <button type="button" className="flex h-4 w-4 items-center justify-center rounded-full bg-[#f0e5d1] text-[11px] text-[var(--color-text-secondary)]" onClick={() => patch((s) => ({ participants: s.participants.filter((_, idx) => idx !== i) }))}>×</button>
-            </div>
-          ))}
+          {isRealTripEdit
+            ? crewMembers.filter((m) => !m.isOrganizer).map((m) => (
+              <div key={m.id} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--color-card-border)] bg-white py-1.75 pl-3 pr-1.75 text-[12.5px] font-bold text-[var(--color-text)]">
+                {m.name}
+                {!m.joined && <span className="text-[10.5px] font-semibold text-[var(--color-text-secondary)]">· in attesa</span>}
+                <button type="button" className="flex h-4 w-4 items-center justify-center rounded-full bg-[#f0e5d1] text-[11px] text-[var(--color-text-secondary)]" onClick={() => removeCrewMember(m.id)}>×</button>
+              </div>
+            ))
+            : state.participants.map((name, i) => (
+              <div key={i} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--color-card-border)] bg-white py-1.75 pl-3 pr-1.75 text-[12.5px] font-bold text-[var(--color-text)]">
+                {name}
+                <button type="button" className="flex h-4 w-4 items-center justify-center rounded-full bg-[#f0e5d1] text-[11px] text-[var(--color-text-secondary)]" onClick={() => patch((s) => ({ participants: s.participants.filter((_, idx) => idx !== i) }))}>×</button>
+              </div>
+            ))}
         </div>
         <div className="mb-7 flex items-center gap-2">
           <EditableText
             ref={newParticipantRef}
             initialText=""
             className="flex-1 rounded-full border-[1.5px] border-dashed border-[var(--color-add-border)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--color-text)]"
-            onEnter={addParticipant}
+            onEnter={isRealTripEdit ? addEditParticipant : addParticipant}
           />
-          <button type="button" className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-[var(--color-text-strong)] text-base text-white" onClick={addParticipant}>+</button>
+          <button type="button" className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-[var(--color-text-strong)] text-base text-white" onClick={isRealTripEdit ? addEditParticipant : addParticipant}>+</button>
         </div>
 
-        {state.editReturnStep && (
+        {(state.editReturnStep || isRealTripEdit) && (
           <>
             <button type="button" className="mb-3.5 flex w-full items-center gap-3 rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => patch({ coverPickerOpen: true })}>
               <div className="h-8.5 w-8.5 shrink-0 rounded-full" style={{ background: state.coverPhoto ? undefined : coverGradientById[state.coverColorId] || coverGradientById.fiesta, backgroundImage: state.coverPhoto ? `url(${state.coverPhoto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
@@ -869,7 +974,7 @@ export function Onboarding() {
           <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{createTripError}</div>
         )}
         <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={creatingTrip} onClick={saveCreateTrip}>
-          {creatingTrip ? 'Creazione...' : state.editReturnStep ? 'Salva modifiche' : 'Crea il viaggio'}
+          {creatingTrip ? 'Salvataggio...' : (state.editReturnStep || isRealTripEdit) ? 'Salva modifiche' : 'Crea il viaggio'}
         </button>
 
         {coverSheets}

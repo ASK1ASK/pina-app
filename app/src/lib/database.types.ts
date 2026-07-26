@@ -22,6 +22,7 @@ export interface Database {
           end_date: string | null
           cover_color_id: string
           cover_photo_url: string | null
+          mood_ids: string[]
           created_by: string
           created_at: string
         }
@@ -32,6 +33,7 @@ export interface Database {
           end_date?: string | null
           cover_color_id?: string
           cover_photo_url?: string | null
+          mood_ids?: string[]
           created_by: string
         }
         Update: Partial<Database['public']['Tables']['trips']['Insert']>
@@ -297,6 +299,7 @@ export interface Database {
           p_cover_color_id: string
           p_organizer_display_name: string
           p_participant_names?: string[]
+          p_mood_ids?: string[]
         }
         Returns: Database['public']['Tables']['trips']['Row']
       }

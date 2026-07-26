@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { useAuth } from '../lib/authContext'
+import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
 import { useTripRealtime } from '../lib/useTripRealtime'
 import {
@@ -68,6 +69,7 @@ export function Journey() {
 
   const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
   const [loading, setLoading] = useState(isRealTrip)
+  const [isOrganizer, setIsOrganizer] = useState(false)
 
   useEffect(() => {
     if (isRealTrip && routeTripId) {
@@ -81,6 +83,15 @@ export function Journey() {
         }
         setLoading(false)
       })
+      if (user?.id) {
+        supabase
+          .from('trip_members')
+          .select('role')
+          .eq('trip_id', routeTripId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => setIsOrganizer(data?.role === 'organizer'))
+      }
       return
     }
     setStops(loadStops())
@@ -334,6 +345,9 @@ export function Journey() {
             <div className="absolute inset-0" style={{ background: heroBackground }} />
             <div className="absolute inset-x-0 bottom-0 top-[38%]" style={{ background: 'linear-gradient(180deg,transparent,rgba(20,12,8,.82) 55%)' }} />
             <button type="button" className="absolute right-3.5 top-3.5 z-10 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/28 text-sm" onClick={() => setCoverPickerOpen(true)}>🎨</button>
+            {isOrganizer && (
+              <Link to={`/onboarding?step=createTrip&trip=${routeTripId}`} className="absolute right-13.5 top-3.5 z-10 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/28 text-sm">⚙️</Link>
+            )}
             <div className="relative z-[1] flex flex-col justify-end px-5 pb-5.5 pt-4.5">
               <div className="mb-1 font-display text-[26px] font-bold leading-tight">{tripName}</div>
               <div className="mb-4 text-[13px] font-semibold text-white/88">{tripDatesLabel}</div>

@@ -8,6 +8,7 @@ export interface TripMeta {
   endDate: Date
   coverColorId: string
   coverPhotoUrl: string | null
+  moodIds: string[]
   membersCount: number
 }
 
@@ -37,6 +38,7 @@ export async function fetchTripMeta(tripId: string): Promise<TripMeta | null> {
     endDate: trip.end_date ? new Date(trip.end_date) : new Date(),
     coverColorId: trip.cover_color_id,
     coverPhotoUrl: trip.cover_photo_url,
+    moodIds: trip.mood_ids || [],
     membersCount: count ?? 1,
   }
 }
