@@ -21,22 +21,6 @@ import { fetchMemories } from './memories/supabaseMemories'
 import { fetchEmergencyContacts, persistEmergencyContacts, updateMemberIdentity } from './profilo/supabaseProfilo'
 import { ProfileEntryRow } from './profilo/ProfileEntryRow'
 
-interface PaymentEntry {
-  id: string
-  title: string
-  subtitle: string
-  href: string
-  masked?: boolean
-  revealed?: boolean
-}
-
-const defaultPayments: PaymentEntry[] = [
-  { id: 'pay1', title: 'Carte utilizzate', subtitle: 'Revolut', href: '' },
-  { id: 'pay2', title: 'Contanti disponibili', subtitle: '68€ con te', href: '' },
-  { id: 'pay3', title: 'Cambio valuta', subtitle: 'EUR · nessun cambio necessario', href: '' },
-  { id: 'pay4', title: 'PIN carta personale', subtitle: '4471', href: '', masked: true, revealed: false },
-]
-
 export function Profilo() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
@@ -52,10 +36,6 @@ export function Profilo() {
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
   const [hasLeft, setHasLeft] = useState(false)
   const [emergencyOpen, setEmergencyOpen] = useState(false)
-  const [paymentsOpen, setPaymentsOpen] = useState(false)
-  // I pagamenti (carte/PIN) non hanno un posto adatto in un database condiviso
-  // col gruppo: per un viaggio vero restano vuoti e solo locali alla sessione.
-  const [payments, setPayments] = useState<PaymentEntry[]>(isRealTrip ? [] : defaultPayments)
   const [shareCopied, setShareCopied] = useState(false)
 
   const [stops, setStops] = useState<Stop[]>([])
@@ -229,41 +209,6 @@ export function Profilo() {
               type="button"
               className="rounded-xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-2.25 text-center text-xs font-bold text-[var(--color-add-text)]"
               onClick={() => persistEmergency([...emergencyContacts, { id: 'em' + Date.now(), title: 'Nuovo contatto', subtitle: 'Aggiungi numero', href: '' }])}
-            >
-              + Aggiungi voce
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4.5 overflow-hidden rounded-[22px] shadow-[0_10px_22px_-16px_rgba(120,90,40,.25)]">
-        <button type="button" className="flex w-full items-center gap-2.5 p-4 text-left text-white" style={{ background: 'linear-gradient(135deg,#e8b74e,#b8792e)' }} onClick={() => setPaymentsOpen((v) => !v)}>
-          <span className="text-xl">💳</span>
-          <div className="flex-1">
-            <div className="font-display text-base font-semibold">Pagamenti</div>
-            <div className="text-[11px] font-semibold text-white/85">{payments.length} voci · solo tuoi</div>
-          </div>
-          <span className="text-[13px]">{paymentsOpen ? '⌃' : '⌄'}</span>
-        </button>
-        {paymentsOpen && (
-          <div className="flex flex-col gap-2.5 bg-white px-4 py-3.5">
-            {payments.map((en) => (
-              <ProfileEntryRow
-                key={en.id}
-                title={en.title}
-                subtitle={en.subtitle}
-                masked={en.masked}
-                revealed={en.revealed}
-                onSaveTitle={(text) => setPayments((ps) => ps.map((p) => (p.id !== en.id ? p : { ...p, title: text || p.title })))}
-                onSaveSubtitle={(text) => setPayments((ps) => ps.map((p) => (p.id !== en.id ? p : { ...p, subtitle: text || p.subtitle })))}
-                onToggleReveal={() => setPayments((ps) => ps.map((p) => (p.id !== en.id ? p : { ...p, revealed: !p.revealed })))}
-                onDelete={() => setPayments((ps) => ps.filter((p) => p.id !== en.id))}
-              />
-            ))}
-            <button
-              type="button"
-              className="rounded-xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-2.25 text-center text-xs font-bold text-[var(--color-add-text)]"
-              onClick={() => setPayments((ps) => [...ps, { id: 'pay' + Date.now(), title: 'Nuova voce', subtitle: 'Aggiungi dettagli', href: '' }])}
             >
               + Aggiungi voce
             </button>
