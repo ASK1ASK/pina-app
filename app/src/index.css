@@ -54,6 +54,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Spazio della home indicator / gesture bar su telefoni con notch: usato per
+   evitare che la barra di navigazione fissa e i pannelli in basso ci finiscano sotto. */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);
 }

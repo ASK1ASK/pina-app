@@ -14,8 +14,8 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md justify-around border-t border-[var(--color-card-border)] bg-[#fffaf0] px-1.5 pb-3.5 pt-2.5"
-      style={{ boxShadow: '0 -8px 20px -16px rgba(120,90,40,.3)' }}
+      className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md justify-around border-t border-[var(--color-card-border)] bg-[#fffaf0] px-1.5 pt-2.5"
+      style={{ boxShadow: '0 -8px 20px -16px rgba(120,90,40,.3)', paddingBottom: 'calc(0.875rem + var(--safe-bottom))' }}
     >
       {TABS.map((tab) => (
         <NavLink

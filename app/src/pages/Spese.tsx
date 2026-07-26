@@ -458,8 +458,8 @@ export function Spese() {
 
       <button
         type="button"
-        className="fixed bottom-24 right-5 z-20 flex h-13 w-13 items-center justify-center rounded-full text-2xl text-white shadow-[0_12px_24px_-8px_rgba(255,90,60,.55)]"
-        style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }}
+        className="fixed right-5 z-20 flex h-13 w-13 items-center justify-center rounded-full text-2xl text-white shadow-[0_12px_24px_-8px_rgba(255,90,60,.55)]"
+        style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)', bottom: 'calc(6rem + var(--safe-bottom))' }}
         onClick={openAddExpense}
       >
         ＋

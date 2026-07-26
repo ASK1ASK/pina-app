@@ -278,7 +278,7 @@ export function Memories() {
         </div>
       )}
 
-      <div className="fixed bottom-24.5 right-5 z-20 flex flex-col gap-3">
+      <div className="fixed right-5 z-20 flex flex-col gap-3" style={{ bottom: 'calc(6.125rem + var(--safe-bottom))' }}>
         <button type="button" className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(255,90,60,.55)]" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={() => cameraInputRef.current?.click()}>📷</button>
         <button type="button" className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(40,150,180,.55)]" style={{ background: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' }} onClick={() => galleryInputRef.current?.click()}>🖼</button>
       </div>
