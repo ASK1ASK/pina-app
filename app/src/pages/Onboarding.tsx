@@ -68,6 +68,13 @@ export function Onboarding() {
   const [joinFinalizing, setJoinFinalizing] = useState(false)
   const [joinFinalizeError, setJoinFinalizeError] = useState<string | null>(null)
 
+  // Posti crew ancora liberi (nomi messi dall'organizzatore, nessun utente
+  // reale collegato): chi si unisce sceglie "chi essere" tra questi invece di
+  // creare sempre un membro nuovo — mantiene collegati eventuali assegnamenti
+  // già fatti a quel nome (es. voci di checklist).
+  const [unclaimedSlots, setUnclaimedSlots] = useState<{ memberId: string; displayName: string }[]>([])
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null | 'new'>(null)
+
   async function loadJoinPreview(code: string) {
     const clean = code.trim().toUpperCase()
     if (!clean) return false
@@ -101,6 +108,17 @@ export function Onboarding() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeJoinCode])
+
+  // Alla schermata identità, se siamo arrivati da un invito vero: mostra i
+  // posti crew ancora liberi tra cui scegliere "chi essere".
+  useEffect(() => {
+    if (state.step === 'whoAreYou' && joinCode) {
+      supabase.rpc('get_unclaimed_crew_slots', { p_code: joinCode }).then(({ data }) => {
+        setUnclaimedSlots((data || []).map((s) => ({ memberId: s.member_id, displayName: s.display_name })))
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step, joinCode])
 
   // Una volta autenticati, prosegui automaticamente. Per chi crea un viaggio,
   // il nome si chiede una volta sola: se il profilo ce l'ha già (da una sessione
@@ -393,10 +411,16 @@ export function Onboarding() {
     }
     setJoinFinalizing(true)
     setJoinFinalizeError(null)
-    const { data: trip, error } = await supabase.rpc('join_trip_by_code', {
-      p_code: joinCode,
-      p_display_name: state.identityName,
-    })
+    const colorHex = (identityColorDefs.find((c) => c.id === state.identityColorId) ?? identityColorDefs[0]).hex
+    const { data: trip, error } =
+      selectedSlotId && selectedSlotId !== 'new'
+        ? await supabase.rpc('join_trip_claim_slot', {
+            p_code: joinCode,
+            p_member_id: selectedSlotId,
+            p_display_name: state.identityName,
+            p_color: colorHex,
+          })
+        : await supabase.rpc('join_trip_by_code', { p_code: joinCode, p_display_name: state.identityName })
     setJoinFinalizing(false)
     if (error || !trip) {
       setJoinFinalizeError(error?.message || "Errore durante l'ingresso nel viaggio.")
@@ -1040,39 +1064,67 @@ export function Onboarding() {
         <div className="mb-1 font-display text-xl font-semibold text-[var(--color-text)]">Scegli la tua identità di viaggio</div>
         <div className="mb-6 text-xs font-semibold text-[var(--color-text-secondary)]">Così la crew saprà sempre che sei tu</div>
 
-        <div className="mb-5.5 flex flex-col items-center">
-          <div className="mb-3 flex h-19 w-19 items-center justify-center rounded-full text-3xl shadow-[0_10px_20px_-8px_rgba(0,0,0,.25)]" style={{ background: activeColor.hex }}>{state.identityEmoji}</div>
-          <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Come ti chiami</div>
-          <EditableText
-            key="identity-name"
-            initialText={state.identityName}
-            className="text-center font-display text-lg font-bold text-[var(--color-text)]"
-            onBlurText={(text) => patch({ identityName: text || state.identityName })}
-          />
-        </div>
+        {unclaimedSlots.length > 0 && selectedSlotId === null ? (
+          <>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi sei nella crew?</div>
+            <div className="mb-2.5 text-xs font-semibold text-[var(--color-text-secondary)]">L'organizzatore ti aveva già messo in lista</div>
+            <div className="flex flex-col gap-2">
+              {unclaimedSlots.map((s) => (
+                <button
+                  key={s.memberId}
+                  type="button"
+                  className="rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3 text-left text-[13.5px] font-bold text-[var(--color-text)]"
+                  onClick={() => { setSelectedSlotId(s.memberId); patch({ identityName: s.displayName }) }}
+                >
+                  {s.displayName}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="rounded-2xl border-[1.5px] border-dashed border-[var(--color-add-border)] px-4 py-3 text-center text-[13px] font-bold text-[var(--color-add-text)]"
+                onClick={() => setSelectedSlotId('new')}
+              >
+                Sono un altro
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-5.5 flex flex-col items-center">
+              <div className="mb-3 flex h-19 w-19 items-center justify-center rounded-full text-3xl shadow-[0_10px_20px_-8px_rgba(0,0,0,.25)]" style={{ background: activeColor.hex }}>{state.identityEmoji}</div>
+              <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Come ti chiami</div>
+              <EditableText
+                key="identity-name"
+                initialText={state.identityName}
+                className="text-center font-display text-lg font-bold text-[var(--color-text)]"
+                onBlurText={(text) => patch({ identityName: text || state.identityName })}
+              />
+            </div>
 
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Colore</div>
-        <div className="mb-5.5 flex gap-2.5">
-          {identityColorDefs.map((c) => (
-            <button key={c.id} type="button" className="h-9.5 w-9.5 rounded-full" style={{ background: c.hex, boxShadow: state.identityColorId === c.id ? `0 0 0 3px var(--color-bg), 0 0 0 5px ${c.hex}` : undefined }} onClick={() => patch({ identityColorId: c.id })} />
-          ))}
-        </div>
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Colore</div>
+            <div className="mb-5.5 flex gap-2.5">
+              {identityColorDefs.map((c) => (
+                <button key={c.id} type="button" className="h-9.5 w-9.5 rounded-full" style={{ background: c.hex, boxShadow: state.identityColorId === c.id ? `0 0 0 3px var(--color-bg), 0 0 0 5px ${c.hex}` : undefined }} onClick={() => patch({ identityColorId: c.id })} />
+              ))}
+            </div>
 
-        <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Qual è la tua vibe?</div>
-        <div className="mb-7 flex flex-wrap gap-2">
-          {vibeDefs.map((v) => (
-            <button key={v.id} type="button" className="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[12.5px] font-bold" style={state.vibe === v.id ? { background: '#3a2a1c', color: '#fff' } : { background: '#fff', border: '1px solid var(--color-card-border)', color: '#3a2a1c' }} onClick={() => patch({ vibe: v.id, identityEmoji: v.emoji })}>
-              {v.emoji} {v.label}
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Qual è la tua vibe?</div>
+            <div className="mb-7 flex flex-wrap gap-2">
+              {vibeDefs.map((v) => (
+                <button key={v.id} type="button" className="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-[12.5px] font-bold" style={state.vibe === v.id ? { background: '#3a2a1c', color: '#fff' } : { background: '#fff', border: '1px solid var(--color-card-border)', color: '#3a2a1c' }} onClick={() => patch({ vibe: v.id, identityEmoji: v.emoji })}>
+                  {v.emoji} {v.label}
+                </button>
+              ))}
+            </div>
+
+            {joinFinalizeError && (
+              <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{joinFinalizeError}</div>
+            )}
+            <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={joinFinalizing} onClick={finalizeJoin}>
+              {joinFinalizing ? 'Ingresso...' : 'Entra nel viaggio'}
             </button>
-          ))}
-        </div>
-
-        {joinFinalizeError && (
-          <div className="mb-2.5 text-center text-[12px] font-semibold text-[#c2445a]">{joinFinalizeError}</div>
+          </>
         )}
-        <button type="button" className={`${primaryBtnClass} disabled:opacity-60`} style={primaryBtnStyle} disabled={joinFinalizing} onClick={finalizeJoin}>
-          {joinFinalizing ? 'Ingresso...' : 'Entra nel viaggio'}
-        </button>
       </div>
     )
   } else if (state.step === 'enteredGuest') {

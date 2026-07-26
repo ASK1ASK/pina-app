@@ -320,6 +320,14 @@ export interface Database {
         Args: { p_trip_id: string }
         Returns: string
       }
+      get_unclaimed_crew_slots: {
+        Args: { p_code: string }
+        Returns: { member_id: string; display_name: string }[]
+      }
+      join_trip_claim_slot: {
+        Args: { p_code: string; p_member_id: string; p_display_name: string; p_color: string }
+        Returns: Database['public']['Tables']['trips']['Row']
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
