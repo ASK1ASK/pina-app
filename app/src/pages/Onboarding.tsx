@@ -208,6 +208,32 @@ export function Onboarding() {
   const [createTripError, setCreateTripError] = useState<string | null>(null)
   const [creatingTrip, setCreatingTrip] = useState(false)
 
+  // Stato vero della crew (organizzatore + partecipanti), aggiornato in
+  // automatico via realtime: non più "tocca per simulare l'arrivo".
+  const [crewMembers, setCrewMembers] = useState<{ id: string; name: string; joined: boolean; isOrganizer: boolean }[]>([])
+
+  async function loadCrewMembers(tripId: string) {
+    const { data } = await supabase.from('trip_members').select('id, display_name, user_id, role').eq('trip_id', tripId).order('created_at')
+    setCrewMembers((data || []).map((m) => ({ id: m.id, name: m.display_name, joined: !!m.user_id, isOrganizer: m.role === 'organizer' })))
+  }
+
+  useEffect(() => {
+    if (!realTripId) return
+    loadCrewMembers(realTripId)
+    const channel = supabase
+      .channel(`crew:${realTripId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_members', filter: `trip_id=eq.${realTripId}` }, () => loadCrewMembers(realTripId))
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [realTripId])
+
+  async function removeCrewMember(memberId: string) {
+    await supabase.from('trip_members').delete().eq('id', memberId)
+    if (realTripId) loadCrewMembers(realTripId)
+  }
+
   // Nome salvato una volta per tutte nel profilo, subito dopo il login: da qui
   // in avanti niente più "come ti chiami" dentro la creazione del viaggio.
   const [savingName, setSavingName] = useState(false)
@@ -328,9 +354,13 @@ export function Onboarding() {
   const coverGradient =
     coverGradientById[state.coverColorId] || moodGradients[primaryMood] || moodGradients.fiesta
 
-  const crewTotal = (state.crew ? state.crew.length : state.participants.length) + 1
-  const joinedCount = state.crew ? state.crew.filter((c) => c.status === 'joined').length + 1 : 1
-  const allJoined = !!state.crew && state.crew.length > 0 && state.crew.every((c) => c.status === 'joined')
+  const crewTotal = realTripId ? crewMembers.length : (state.crew ? state.crew.length : state.participants.length) + 1
+  const joinedCount = realTripId
+    ? crewMembers.filter((m) => m.joined).length
+    : state.crew ? state.crew.filter((c) => c.status === 'joined').length + 1 : 1
+  const allJoined = realTripId
+    ? crewMembers.length > 0 && crewMembers.every((m) => m.joined)
+    : !!state.crew && state.crew.length > 0 && state.crew.every((c) => c.status === 'joined')
 
   function selectDay(day: number) {
     patch((s) => {
@@ -435,7 +465,7 @@ export function Onboarding() {
   }
 
   function goCrewForming() {
-    if (!state.crew) buildCrew()
+    if (!realTripId && !state.crew) buildCrew()
     patch({ step: 'crewForming' })
   }
 
@@ -939,22 +969,45 @@ export function Onboarding() {
     body = (
       <div className="min-h-svh overflow-y-auto px-5.5 pb-8 pt-14.5">
         <div className="mb-1 font-display text-xl font-semibold text-[var(--color-text)]">La crew si sta formando</div>
-        <div className="mb-5.5 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">{joinedCount} di {crewTotal} già a bordo · tocca per simulare l'arrivo</div>
+        <div className="mb-5.5 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">
+          {joinedCount} di {crewTotal} già a bordo{!realTripId && ' · tocca per simulare l\'arrivo'}
+        </div>
 
         <div className="mb-5.5 flex flex-col gap-2">
-          <div className="flex items-center gap-2.5 rounded-2xl border-[1.5px] border-[#ffb627] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-            <span className="text-lg">✅</span>
-            <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{state.identityName}</span>
-            <span className="text-[11px] font-bold text-[var(--color-coral)]">Tu · organizzatore</span>
-          </div>
-          {(state.crew ?? []).map((c, i) => (
-            <div key={i} className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => patch((s) => ({ crew: (s.crew ?? []).map((m, idx) => idx !== i ? m : { ...m, status: m.status === 'joined' ? 'pending' : 'joined' }) }))}>
-              <span className="text-lg">{c.status === 'joined' ? '✅' : '⏳'}</span>
-              <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{c.name}</span>
-              <span className="text-[11px] font-bold" style={{ color: c.status === 'joined' ? '#4f8f4f' : '#c2a97e' }}>{c.status === 'joined' ? 'A bordo' : 'In attesa'}</span>
-              <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[#c2a97e]" onClick={(e) => { e.stopPropagation(); patch((s) => ({ crew: (s.crew ?? []).filter((_, idx) => idx !== i) })) }}>×</button>
-            </div>
-          ))}
+          {realTripId ? (
+            crewMembers.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]"
+                style={{ background: '#fff', borderWidth: m.isOrganizer ? 1.5 : 1, borderColor: m.isOrganizer ? '#ffb627' : 'var(--color-card-border)' }}
+              >
+                <span className="text-lg">{m.joined ? '✅' : '⏳'}</span>
+                <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{m.name}</span>
+                <span className="text-[11px] font-bold" style={{ color: m.isOrganizer ? 'var(--color-coral)' : m.joined ? '#4f8f4f' : '#c2a97e' }}>
+                  {m.isOrganizer ? 'Tu · organizzatore' : m.joined ? 'A bordo' : 'In attesa'}
+                </span>
+                {!m.isOrganizer && !m.joined && (
+                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[#c2a97e]" onClick={() => removeCrewMember(m.id)}>×</button>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 rounded-2xl border-[1.5px] border-[#ffb627] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+                <span className="text-lg">✅</span>
+                <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{state.identityName}</span>
+                <span className="text-[11px] font-bold text-[var(--color-coral)]">Tu · organizzatore</span>
+              </div>
+              {(state.crew ?? []).map((c, i) => (
+                <div key={i} className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => patch((s) => ({ crew: (s.crew ?? []).map((m, idx) => idx !== i ? m : { ...m, status: m.status === 'joined' ? 'pending' : 'joined' }) }))}>
+                  <span className="text-lg">{c.status === 'joined' ? '✅' : '⏳'}</span>
+                  <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{c.name}</span>
+                  <span className="text-[11px] font-bold" style={{ color: c.status === 'joined' ? '#4f8f4f' : '#c2a97e' }}>{c.status === 'joined' ? 'A bordo' : 'In attesa'}</span>
+                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[#c2a97e]" onClick={(e) => { e.stopPropagation(); patch((s) => ({ crew: (s.crew ?? []).filter((_, idx) => idx !== i) })) }}>×</button>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         <button type="button" className="mb-2.5 w-full rounded-full py-3.5 text-center text-[13.5px] font-bold text-white" style={primaryBtnStyle} onClick={() => goStep('ritual')}>Vai al tuo viaggio →</button>
