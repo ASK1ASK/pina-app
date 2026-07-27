@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
 import {
   loadEmergencyContacts,
@@ -37,6 +38,7 @@ export function Profilo() {
   const [hasLeft, setHasLeft] = useState(false)
   const [emergencyOpen, setEmergencyOpen] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+  const [isOrganizer, setIsOrganizer] = useState(false)
 
   const [stops, setStops] = useState<Stop[]>([])
   const [memories, setMemories] = useState<MemoriesData | null>(null)
@@ -65,6 +67,15 @@ export function Profilo() {
         setMyRealSpend(myId ? expData.expenses.filter((e) => e.paidByMemberId === myId).reduce((a, e) => a + e.amount, 0) : 0)
         setLoading(false)
       })
+      if (session?.user?.id) {
+        supabase
+          .from('trip_members')
+          .select('role')
+          .eq('trip_id', routeTripId)
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+          .then(({ data }) => setIsOrganizer(data?.role === 'organizer'))
+      }
       return
     }
     setStops(loadStops())
@@ -276,6 +287,13 @@ export function Profilo() {
             <div className="h-5 w-5 rounded-full bg-white shadow-[0_2px_4px_rgba(0,0,0,.2)] transition-transform" style={{ transform: `translateX(${notificationsOn ? 16 : 0}px)` }} />
           </button>
         </div>
+        {isRealTrip && isOrganizer && (
+          <a href={`/onboarding?step=createTrip&trip=${routeTripId}`} className="flex w-full items-center gap-2.5 border-b border-[var(--color-cream-light)] px-3.5 py-3.25 text-left">
+            <span className="text-base">⚙️</span>
+            <span className="flex-1 text-[13px] font-semibold">Impostazioni viaggio</span>
+            <span className="text-xs text-[#c2a97e]">›</span>
+          </a>
+        )}
         <div>
           <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setLeaveConfirmOpen((v) => !v)}>
             <span className="text-base">🚪</span>
