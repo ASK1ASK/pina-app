@@ -44,12 +44,16 @@ function formatDateLabel(dateStr: string): string {
   return target.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })
 }
 
+// Tutta la crew del viaggio, non solo chi si e' gia' unito dall'app: un amico
+// che non installa Piña deve comunque poter comparire nelle spese, nella cassa
+// e tra gli assegnatari della checklist. Quando poi si unisce reclamando il suo
+// posto, join_trip_claim_slot aggiorna QUESTA stessa riga, quindi spese e saldi
+// accumulati prima restano attaccati a lui senza perdersi.
 export async function fetchTripMembers(tripId: string): Promise<RealMember[]> {
   const { data } = await supabase
     .from('trip_members')
     .select('id, user_id, display_name, color')
     .eq('trip_id', tripId)
-    .eq('status', 'joined')
     .order('created_at', { ascending: true })
   return (data || []).map((m) => ({ id: m.id, userId: m.user_id, name: m.display_name, color: m.color }))
 }

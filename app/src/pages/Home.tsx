@@ -126,7 +126,9 @@ export function Home() {
         }
         const [{ data: trips }, { data: allMembers }] = await Promise.all([
           supabase.from('trips').select('*').in('id', tripIds),
-          supabase.from('trip_members').select('trip_id').in('trip_id', tripIds).eq('status', 'joined'),
+          // Tutta la crew, non solo chi si e' unito dall'app: il conteggio deve
+          // corrispondere alle persone che si vedono in Spese/Checklist.
+          supabase.from('trip_members').select('trip_id').in('trip_id', tripIds),
         ])
         if (cancelled) return
 
