@@ -79,7 +79,11 @@ function fmtAmount(n: number) {
 
 // Stesso calcolo di tripData.computeBalances, ma parametrizzato sui membri
 // veri del viaggio invece del cast demo fisso.
-function computeBalancesFor(expenses: UIExpense[], settlements: UISettlement[], memberIds: string[]): Record<string, number> {
+// Un contributo alla cassa comune vale come un pagamento anticipato: va
+// accreditato a chi lo versa esattamente come una spesa pagata di tasca
+// propria, altrimenti chi mette soldi nel fondo risulta comunque "in debito"
+// per la sua quota delle spese pagate dalla cassa (bug C1 della due diligence).
+function computeBalancesFor(expenses: UIExpense[], settlements: UISettlement[], cassaContributions: UICassaContribution[], memberIds: string[]): Record<string, number> {
   const bal: Record<string, number> = {}
   memberIds.forEach((id) => { bal[id] = 0 })
   expenses.forEach((e) => {
@@ -87,6 +91,9 @@ function computeBalancesFor(expenses: UIExpense[], settlements: UISettlement[], 
     const share = e.amount / among.length
     if (e.paidBy !== 'cassa' && bal[e.paidBy] !== undefined) bal[e.paidBy] += e.amount
     among.forEach((id) => { if (bal[id] !== undefined) bal[id] -= share })
+  })
+  cassaContributions.forEach((c) => {
+    if (bal[c.person] !== undefined) bal[c.person] += c.amount
   })
   settlements.forEach((s) => {
     if (bal[s.from] !== undefined) bal[s.from] += s.amount
@@ -298,8 +305,18 @@ export function Spese() {
 
   // ---- derived ----
   const totalSpent = expenses.reduce((a, e) => a + e.amount, 0)
-  const balances = computeBalancesFor(expenses, settlements, memberIds)
+  const balances = computeBalancesFor(expenses, settlements, cassaContributions, memberIds)
   const cassaTotal = cassaContributions.reduce((a, c) => a + c.amount, 0) - expenses.filter((e) => e.paidBy === 'cassa').reduce((a, e) => a + e.amount, 0)
+
+  // Quanto c'e' davvero in cassa per la spesa che stiamo compilando: se stiamo
+  // modificando una spesa gia' pagata dalla cassa, il suo importo e' gia'
+  // scalato da cassaTotal e va riaccreditato, altrimenti sembrerebbe che i
+  // soldi non ci siano piu'.
+  const paidByCassa = form.paidBy === 'cassa'
+  const editedCassaExpense = editingId ? expenses.find((e) => e.id === editingId && e.paidBy === 'cassa') : undefined
+  const cassaAvailable = cassaTotal + (editedCassaExpense?.amount ?? 0)
+  const formAmount = parseFloat(String(form.amount).replace(',', '.')) || 0
+  const cassaShortfall = paidByCassa ? Math.max(0, formAmount - cassaAvailable) : 0
 
   const balanceChips = memberIds.map((id) => {
     const p = membersById[id]
@@ -481,6 +498,25 @@ export function Spese() {
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi ha pagato</div>
             <PersonPicker members={members} isSelected={(c) => form.paidBy === c} onClick={(c) => setForm((f) => ({ ...f, paidBy: c }))} />
+            <button
+              type="button"
+              className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl border px-3.5 py-2.75 text-left"
+              style={
+                paidByCassa
+                  ? { background: '#e9f7f0', borderColor: '#3f8f5f', boxShadow: '0 0 0 1.5px #3f8f5f' }
+                  : { background: '#fff', borderColor: 'var(--color-card-border)' }
+              }
+              onClick={() => setForm((f) => ({ ...f, paidBy: 'cassa' }))}
+            >
+              <span className="text-lg">🏦</span>
+              <span className="flex-1 text-[12.5px] font-bold">Paga con la cassa comune</span>
+              <span className="shrink-0 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{fmtAmount(cassaAvailable)}€ in cassa</span>
+            </button>
+            {paidByCassa && cassaShortfall > 0 && (
+              <div className="mt-2 rounded-xl bg-[#fdf3d9] px-3 py-2.25 text-[11.5px] font-semibold leading-snug text-[#b8792e]">
+                ⚠️ In cassa ci sono {fmtAmount(cassaAvailable)}€, ne servono {fmtAmount(cassaShortfall)}€ in più. Puoi registrarla comunque, ma qualcuno dovrà aggiungere un contributo.
+              </div>
+            )}
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Diviso tra</div>
             <PersonPicker members={members} isSelected={(c) => form.splitAmong.includes(c)} onClick={toggleSplit} />
