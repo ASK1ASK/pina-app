@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 
 export interface RealMember {
   id: string
@@ -50,11 +50,13 @@ function formatDateLabel(dateStr: string): string {
 // posto, join_trip_claim_slot aggiorna QUESTA stessa riga, quindi spese e saldi
 // accumulati prima restano attaccati a lui senza perdersi.
 export async function fetchTripMembers(tripId: string): Promise<RealMember[]> {
-  const { data } = await supabase
-    .from('trip_members')
-    .select('id, user_id, display_name, color')
-    .eq('trip_id', tripId)
-    .order('created_at', { ascending: true })
+  const data = unwrap(
+    await supabase
+      .from('trip_members')
+      .select('id, user_id, display_name, color')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true }),
+  )
   return (data || []).map((m) => ({ id: m.id, userId: m.user_id, name: m.display_name, color: m.color }))
 }
 
@@ -63,21 +65,26 @@ export async function fetchExpensesData(tripId: string): Promise<{
   settlements: RealSettlement[]
   cassaContributions: RealCassaContribution[]
 }> {
-  const { data: expenseRows } = await supabase
-    .from('expenses')
-    .select('*')
-    .eq('trip_id', tripId)
-    .order('expense_date', { ascending: false })
-    .order('created_at', { ascending: false })
+  const expenseRows = unwrap(
+    await supabase
+      .from('expenses')
+      .select('*')
+      .eq('trip_id', tripId)
+      .order('expense_date', { ascending: false })
+      .order('created_at', { ascending: false }),
+  )
   const expenseIds = (expenseRows || []).map((e) => e.id)
 
-  const [{ data: splitRows }, { data: settlementRows }, { data: cassaRows }] = await Promise.all([
+  const [splitRes, settlementRes, cassaRes] = await Promise.all([
     expenseIds.length
       ? supabase.from('expense_splits').select('*').in('expense_id', expenseIds)
-      : Promise.resolve({ data: [] as { expense_id: string; member_id: string }[] }),
+      : Promise.resolve({ data: [] as { expense_id: string; member_id: string }[], error: null }),
     supabase.from('settlements').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }),
     supabase.from('cassa_contributions').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }),
   ])
+  const splitRows = unwrap(splitRes)
+  const settlementRows = unwrap(settlementRes)
+  const cassaRows = unwrap(cassaRes)
 
   const splitsByExpense: Record<string, string[]> = {}
   ;(splitRows || []).forEach((s) => {
@@ -137,7 +144,9 @@ export async function createExpense(tripId: string, input: ExpenseInput): Promis
     .single()
   if (error || !expense) throw error ?? new Error('Errore durante la creazione della spesa.')
   if (input.splitAmong.length) {
-    await supabase.from('expense_splits').insert(input.splitAmong.map((memberId) => ({ expense_id: expense.id, member_id: memberId })))
+    unwrapVoid(
+      await supabase.from('expense_splits').insert(input.splitAmong.map((memberId) => ({ expense_id: expense.id, member_id: memberId }))),
+    )
   }
   return {
     id: expense.id,
@@ -152,30 +161,36 @@ export async function createExpense(tripId: string, input: ExpenseInput): Promis
 }
 
 export async function updateExpense(expenseId: string, input: ExpenseInput): Promise<void> {
-  await supabase
-    .from('expenses')
-    .update({
-      title: input.title,
-      icon: input.icon,
-      amount: input.amount,
-      paid_by_member_id: input.paidByMemberId,
-      note: input.note,
-    })
-    .eq('id', expenseId)
-  await supabase.from('expense_splits').delete().eq('expense_id', expenseId)
+  unwrapVoid(
+    await supabase
+      .from('expenses')
+      .update({
+        title: input.title,
+        icon: input.icon,
+        amount: input.amount,
+        paid_by_member_id: input.paidByMemberId,
+        note: input.note,
+      })
+      .eq('id', expenseId),
+  )
+  unwrapVoid(await supabase.from('expense_splits').delete().eq('expense_id', expenseId))
   if (input.splitAmong.length) {
-    await supabase.from('expense_splits').insert(input.splitAmong.map((memberId) => ({ expense_id: expenseId, member_id: memberId })))
+    unwrapVoid(
+      await supabase.from('expense_splits').insert(input.splitAmong.map((memberId) => ({ expense_id: expenseId, member_id: memberId }))),
+    )
   }
 }
 
 export async function deleteExpense(expenseId: string): Promise<void> {
-  await supabase.from('expenses').delete().eq('id', expenseId)
+  unwrapVoid(await supabase.from('expenses').delete().eq('id', expenseId))
 }
 
 export async function createSettlement(tripId: string, input: { fromMemberId: string; toMemberId: string; amount: number }): Promise<void> {
-  await supabase.from('settlements').insert({ trip_id: tripId, from_member_id: input.fromMemberId, to_member_id: input.toMemberId, amount: input.amount })
+  unwrapVoid(
+    await supabase.from('settlements').insert({ trip_id: tripId, from_member_id: input.fromMemberId, to_member_id: input.toMemberId, amount: input.amount }),
+  )
 }
 
 export async function createCassaContribution(tripId: string, input: { memberId: string; amount: number }): Promise<void> {
-  await supabase.from('cassa_contributions').insert({ trip_id: tripId, member_id: input.memberId, amount: input.amount })
+  unwrapVoid(await supabase.from('cassa_contributions').insert({ trip_id: tripId, member_id: input.memberId, amount: input.amount }))
 }

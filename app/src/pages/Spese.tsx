@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import {
@@ -120,8 +121,10 @@ export function Spese() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
   const { session } = useAuth()
+  const { showError } = useToast()
 
   const [loading, setLoading] = useState(isRealTrip)
+  const [loadError, setLoadError] = useState(false)
   const [realMembers, setRealMembers] = useState<RealMember[]>([])
   const [stops, setStops] = useState<Stop[]>([])
   const [expenses, setExpenses] = useState<UIExpense[]>([])
@@ -149,13 +152,21 @@ export function Spese() {
   useEffect(() => {
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchTripMembers(routeTripId), fetchExpensesData(routeTripId)]).then(([fetchedMembers, data]) => {
-        setRealMembers(fetchedMembers)
-        setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
-        setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
-        setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
-        setLoading(false)
-      })
+      setLoadError(false)
+      Promise.all([fetchTripMembers(routeTripId), fetchExpensesData(routeTripId)])
+        .then(([fetchedMembers, data]) => {
+          setRealMembers(fetchedMembers)
+          setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
+          setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
+          setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
+        })
+        // Senza questo, un errore in caricamento lasciava la schermata bloccata
+        // su "Caricamento..." per sempre, senza spiegazione.
+        .catch((err) => {
+          setLoadError(true)
+          showError('Non siamo riusciti a caricare le spese.', err)
+        })
+        .finally(() => setLoading(false))
       return
     }
     setStops(loadStops())
@@ -168,10 +179,14 @@ export function Spese() {
 
   async function refetchReal() {
     if (!routeTripId) return
-    const data = await fetchExpensesData(routeTripId)
-    setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
-    setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
-    setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
+    try {
+      const data = await fetchExpensesData(routeTripId)
+      setExpenses(data.expenses.map((e) => ({ id: e.id, title: e.title, icon: e.icon, amount: e.amount, paidBy: e.paidByMemberId ?? 'cassa', splitAmong: e.splitAmong, dateLabel: e.dateLabel, note: e.note })))
+      setSettlements(data.settlements.map((s) => ({ id: s.id, from: s.fromMemberId, to: s.toMemberId, amount: s.amount, dateLabel: s.dateLabel })))
+      setCassaContributions(data.cassaContributions.map((c) => ({ id: c.id, person: c.memberId, amount: c.amount, dateLabel: c.dateLabel })))
+    } catch (err) {
+      showError('Non siamo riusciti ad aggiornare le spese.', err)
+    }
   }
 
   // Aggiornamenti live: se un altro membro aggiunge/modifica una spesa o un
@@ -227,8 +242,15 @@ export function Spese() {
 
     if (isRealTrip && routeTripId) {
       const input = { title: form.title, icon: form.icon, amount, paidByMemberId: form.paidBy === 'cassa' ? null : form.paidBy || null, splitAmong: split, note: form.note }
-      if (editingId) await updateExpenseRemote(editingId, input)
-      else await createExpense(routeTripId, input)
+      try {
+        if (editingId) await updateExpenseRemote(editingId, input)
+        else await createExpense(routeTripId, input)
+      } catch (err) {
+        // Il pannello resta aperto: cosi' quanto scritto non va perso e si puo'
+        // riprovare senza reinserire tutto.
+        showError('Non siamo riusciti a salvare la spesa. Controlla la connessione e riprova.', err)
+        return
+      }
       await refetchReal()
     } else if (editingId) {
       persistDemo({ expenses: expenses.map((e) => (e.id !== editingId ? e : { ...e, title: form.title, amount, icon: form.icon, paidBy: form.paidBy, splitAmong: split, note: form.note })) })
@@ -242,7 +264,12 @@ export function Spese() {
   async function deleteExpense() {
     if (!editingId) return
     if (isRealTrip) {
-      await deleteExpenseRemote(editingId)
+      try {
+        await deleteExpenseRemote(editingId)
+      } catch (err) {
+        showError('Non siamo riusciti a eliminare la spesa.', err)
+        return
+      }
       await refetchReal()
     } else {
       persistDemo({ expenses: expenses.filter((e) => e.id !== editingId) })
@@ -259,7 +286,12 @@ export function Spese() {
     const amount = parseFloat(String(settleForm.amount).replace(',', '.')) || 0
     if (!settleForm.from || !settleForm.to || settleForm.from === settleForm.to || amount <= 0) return
     if (isRealTrip && routeTripId) {
-      await createSettlement(routeTripId, { fromMemberId: settleForm.from, toMemberId: settleForm.to, amount })
+      try {
+        await createSettlement(routeTripId, { fromMemberId: settleForm.from, toMemberId: settleForm.to, amount })
+      } catch (err) {
+        showError('Non siamo riusciti a registrare il rimborso.', err)
+        return
+      }
       await refetchReal()
     } else {
       const rec: UISettlement = { id: 's' + Date.now(), from: settleForm.from, to: settleForm.to, amount, dateLabel: `Oggi · ${todayStopName()}` }
@@ -276,7 +308,12 @@ export function Spese() {
     const amount = parseFloat(String(cassaForm.amount).replace(',', '.')) || 0
     if (amount <= 0 || !cassaForm.person) return
     if (isRealTrip && routeTripId) {
-      await createCassaContribution(routeTripId, { memberId: cassaForm.person, amount })
+      try {
+        await createCassaContribution(routeTripId, { memberId: cassaForm.person, amount })
+      } catch (err) {
+        showError('Non siamo riusciti a registrare il contributo in cassa.', err)
+        return
+      }
       await refetchReal()
     } else {
       const rec: UICassaContribution = { id: 'c' + Date.now(), person: cassaForm.person, amount, dateLabel: `Oggi · ${todayStopName()}` }
@@ -372,6 +409,26 @@ export function Spese() {
     return (
       <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
         Caricamento...
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto flex min-h-svh max-w-md flex-col items-center justify-center gap-3 bg-[var(--color-cream)] px-8 text-center">
+        <div className="text-3xl">📡</div>
+        <div className="font-display text-lg font-semibold text-[var(--color-text)]">Spese non caricate</div>
+        <div className="text-[12.5px] font-semibold leading-snug text-[var(--color-text-secondary)]">
+          Non siamo riusciti a leggere i dati del viaggio. Controlla la connessione e riprova.
+        </div>
+        <button
+          type="button"
+          className="mt-1 rounded-full px-5 py-2.75 text-[13px] font-bold text-white"
+          style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }}
+          onClick={() => window.location.reload()}
+        >
+          Riprova
+        </button>
       </div>
     )
   }

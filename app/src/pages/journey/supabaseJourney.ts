@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 import type { Stop } from '../../lib/tripData'
 import { dayToDate, toIsoDate } from '../../lib/tripDates'
 
@@ -34,8 +34,12 @@ function formatStopDates(startDateStr: string, endDateStr: string): string {
 }
 
 export async function fetchTripMeta(tripId: string): Promise<TripMeta | null> {
-  const { data: trip, error } = await supabase.from('trips').select('*').eq('id', tripId).single()
-  if (error || !trip) return null
+  // maybeSingle: "nessun viaggio con questo id" torna null senza errore, cosi'
+  // un vero guasto (rete, permessi) resta distinguibile e viene segnalato,
+  // invece di essere spacciato per "viaggio inesistente".
+  const { data: trip, error } = await supabase.from('trips').select('*').eq('id', tripId).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!trip) return null
   const { count } = await supabase.from('trip_members').select('*', { count: 'exact', head: true }).eq('trip_id', tripId)
   return {
     id: trip.id,
@@ -50,18 +54,20 @@ export async function fetchTripMeta(tripId: string): Promise<TripMeta | null> {
 }
 
 export async function updateTripCover(tripId: string, patch: { coverColorId?: string; coverPhotoUrl?: string | null }) {
-  await supabase
-    .from('trips')
-    .update({ cover_color_id: patch.coverColorId, cover_photo_url: patch.coverPhotoUrl })
-    .eq('id', tripId)
+  unwrapVoid(
+    await supabase
+      .from('trips')
+      .update({ cover_color_id: patch.coverColorId, cover_photo_url: patch.coverPhotoUrl })
+      .eq('id', tripId),
+  )
 }
 
 export async function fetchStops(tripId: string): Promise<Stop[]> {
-  const { data: dbStops } = await supabase.from('stops').select('*').eq('trip_id', tripId).order('position')
+  const dbStops = unwrap(await supabase.from('stops').select('*').eq('trip_id', tripId).order('position'))
   if (!dbStops || dbStops.length === 0) return []
 
   const stopIds = dbStops.map((s) => s.id)
-  const { data: dbCategories } = await supabase.from('stop_categories').select('*').in('stop_id', stopIds).order('position')
+  const dbCategories = unwrap(await supabase.from('stop_categories').select('*').in('stop_id', stopIds).order('position'))
   const categories = dbCategories || []
   const catIds = categories.map((c) => c.id)
 
@@ -76,7 +82,7 @@ export async function fetchStops(tripId: string): Promise<Stop[]> {
     : { data: [] }
   const checklist = dbChecklist || []
 
-  const { data: dbStays } = await supabase.from('stop_stays').select('*').in('stop_id', stopIds)
+  const dbStays = unwrap(await supabase.from('stop_stays').select('*').in('stop_id', stopIds))
   const stays = dbStays || []
 
   return dbStops.map((s): Stop => ({
@@ -129,7 +135,7 @@ export async function fetchStops(tripId: string): Promise<Stop[]> {
 // per semplicità e correttezza, ogni salvataggio cancella e riscrive tutte le
 // tappe del viaggio invece di calcolare un diff granulare.
 export async function persistStops(tripId: string, stops: Stop[], tripStart: Date): Promise<void> {
-  await supabase.from('stops').delete().eq('trip_id', tripId)
+  unwrapVoid(await supabase.from('stops').delete().eq('trip_id', tripId))
   if (stops.length === 0) return
 
   // dayToDate risolve a quale mese appartiene il numero del giorno: senza,
@@ -159,7 +165,7 @@ export async function persistStops(tripId: string, stops: Stop[], tripStart: Dat
       night_date: stay.day ? dayIso(stay.day) : null,
     })),
   )
-  if (stayRows.length) await supabase.from('stop_stays').insert(stayRows)
+  if (stayRows.length) unwrapVoid(await supabase.from('stop_stays').insert(stayRows))
 
   const categoryPlan = stops.flatMap((s, i) =>
     (s.categories || []).map((cat, ci) => ({ stopDbId: insertedStops[i].id, icon: cat.icon, label: cat.label, position: ci, items: cat.items })),
@@ -213,5 +219,5 @@ export async function persistStops(tripId: string, stops: Stop[], tripStart: Dat
   const checklistRows = itemPlan.flatMap((item, ii) =>
     item.checklist.map((c, ci) => ({ item_id: insertedItems[ii].id, label: c.label, done: !!c.done, position: ci })),
   )
-  if (checklistRows.length) await supabase.from('stop_item_checklist').insert(checklistRows)
+  if (checklistRows.length) unwrapVoid(await supabase.from('stop_item_checklist').insert(checklistRows))
 }

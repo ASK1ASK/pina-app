@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { moodGradients } from '../lib/palette'
+import { useToast } from '../lib/toast'
+import { startOfDay } from '../lib/tripDates'
 import { isUuid } from '../lib/uuid'
 import { loadLinks, loadStops, saveStops, starredItemsForDay, updateItem, type LinkEntry, type Stop, type StopItem } from '../lib/tripData'
 import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote, type TripMeta } from './journey/supabaseJourney'
@@ -42,6 +44,7 @@ const EMPTY_DAY: Day = {
 export function Today() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
+  const { showError } = useToast()
   const tripBase = `/trip/${routeTripId ?? 'spain'}`
 
   const [days, setDays] = useState<Day[]>(isRealTrip ? [] : buildDays())
@@ -71,19 +74,25 @@ export function Today() {
 
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)]).then(([meta, fetchedStops]) => {
-        setTripMeta(meta)
-        setStops(fetchedStops)
-        if (meta) {
-          const realDays = buildRealDays(meta.startDate, meta.endDate, fetchedStops)
-          setDays(realDays)
-          const today = new Date()
-          const sameMonth = today.getFullYear() === meta.startDate.getFullYear() && today.getMonth() === meta.startDate.getMonth()
-          const todayIdx = sameMonth ? realDays.findIndex((d) => d.dayOfMonth === today.getDate()) : -1
-          setDayIndex(todayIdx >= 0 ? todayIdx : 0)
-        }
-        setLoading(false)
-      })
+      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)])
+        .then(([meta, fetchedStops]) => {
+          setTripMeta(meta)
+          setStops(fetchedStops)
+          if (meta) {
+            const realDays = buildRealDays(meta.startDate, meta.endDate, fetchedStops)
+            setDays(realDays)
+            // Quanti giorni sono passati dalla partenza: prima si confrontava
+            // solo il numero del giorno e solo se eravamo nel mese di inizio,
+            // quindi un viaggio a cavallo di due mesi ripartiva sempre dal
+            // primo giorno anche se si era gia' al quinto.
+            const elapsed = Math.round(
+              (startOfDay(new Date()).getTime() - startOfDay(meta.startDate).getTime()) / 86400000,
+            )
+            setDayIndex(elapsed >= 0 && elapsed < realDays.length ? elapsed : 0)
+          }
+        })
+        .catch((err) => showError('Non siamo riusciti a caricare il programma di oggi.', err))
+        .finally(() => setLoading(false))
       return () => clearInterval(t)
     }
 
@@ -114,7 +123,7 @@ export function Today() {
     setStops(next)
     if (isRealTrip && tripMeta) {
       persistStopsRemote(tripMeta.id, next, tripMeta.startDate).catch((err) =>
-        console.error('Errore salvataggio tappe', err),
+        showError('Non siamo riusciti a salvare le modifiche di oggi.', err),
       )
     } else if (!isRealTrip) {
       saveStops(next)

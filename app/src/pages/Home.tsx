@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../lib/toast'
 import {
   coverGradientById,
   loadStoredColors,
@@ -66,6 +67,7 @@ const statusOrder: Record<JourneyStatus, number> = { live: 0, planned: 1, comple
 
 export function Home() {
   const { session, loading: authLoading } = useAuth()
+  const { showError } = useToast()
   const isLoggedIn = !!session?.user
   const userName = session?.user?.email ? session.user.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) : null
 
@@ -174,7 +176,7 @@ export function Home() {
     if (pickerFor === DEMO_JOURNEY.id) {
       saveStoredColorFor(DEMO_JOURNEY.name, id)
     } else {
-      updateTripCover(pickerFor, { coverColorId: id }).catch((err) => console.error('Errore salvataggio copertina', err))
+      updateTripCover(pickerFor, { coverColorId: id }).catch((err) => showError('Non siamo riusciti a salvare la copertina.', err))
     }
     setPickerFor(null)
   }
@@ -189,7 +191,7 @@ export function Home() {
       setUploadMenuOpen(false)
       setPickerFor(null)
       if (target !== DEMO_JOURNEY.id) {
-        updateTripCover(target, { coverPhotoUrl: dataUrl }).catch((err) => console.error('Errore salvataggio copertina', err))
+        updateTripCover(target, { coverPhotoUrl: dataUrl }).catch((err) => showError('Non siamo riusciti a salvare la copertina.', err))
       }
     }
     reader.readAsDataURL(file)

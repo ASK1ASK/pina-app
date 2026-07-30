@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 import type { MemoryDay, MemoryItem } from '../../lib/tripData'
 
 function formatDateLabel(dateStr: string): string {
@@ -6,7 +6,7 @@ function formatDateLabel(dateStr: string): string {
 }
 
 export async function fetchMemories(tripId: string): Promise<{ days: MemoryDay[]; items: MemoryItem[] }> {
-  const { data: dayRows } = await supabase.from('memory_days').select('*').eq('trip_id', tripId).order('position')
+  const dayRows = unwrap(await supabase.from('memory_days').select('*').eq('trip_id', tripId).order('position'))
   const dayIds = (dayRows || []).map((d) => d.id)
 
   const [{ data: itemRows }, { data: memberRows }] = await Promise.all([
@@ -96,9 +96,9 @@ export async function createMemory(input: {
 }
 
 export async function toggleMemoryFavorite(id: string, isFavorite: boolean): Promise<void> {
-  await supabase.from('memories').update({ is_favorite: isFavorite }).eq('id', id)
+  unwrapVoid(await supabase.from('memories').update({ is_favorite: isFavorite }).eq('id', id))
 }
 
 export async function updateMemoryCaption(id: string, caption: string): Promise<void> {
-  await supabase.from('memories').update({ caption }).eq('id', id)
+  unwrapVoid(await supabase.from('memories').update({ caption }).eq('id', id))
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import {
@@ -70,6 +71,7 @@ export function Checklist() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
   const { session } = useAuth()
+  const { showError } = useToast()
 
   const [tab, setTab] = useState<Tab>('condivisa')
   const [viewMode, setViewMode] = useState<ViewMode>('categoria')
@@ -117,8 +119,10 @@ export function Checklist() {
             setEssentialsCategories(fetchedEssentials)
           } else {
             // Il seed richiede di essere gia' membro del viaggio (RLS): se il
-            // viaggio non esiste o non siamo ancora membri, non blocchiamo
-            // il resto della pagina per questo.
+            // viaggio non esiste o non siamo ancora membri, non blocchiamo il
+            // resto della pagina per questo. Qui non mostriamo un avviso
+            // all'utente di proposito: e' un fallimento previsto al
+            // caricamento, segnalarlo sarebbe solo rumore.
             try {
               setEssentialsCategories(await seedEssentials(routeTripId))
             } catch (err) {
@@ -131,9 +135,10 @@ export function Checklist() {
           if (myMemberId) setPersonalSections(await fetchPersonalSections(routeTripId, myMemberId))
 
           loaded.current = true
-          setLoading(false)
         },
       )
+        .catch((err) => showError('Non siamo riusciti a caricare la checklist.', err))
+        .finally(() => setLoading(false))
       return
     }
     const saved = loadChecklistData()
@@ -154,9 +159,9 @@ export function Checklist() {
       return
     }
     if (isRealTrip && routeTripId) {
-      persistChecklist(routeTripId, categories).catch((err) => console.error('Errore salvataggio checklist', err))
+      persistChecklist(routeTripId, categories).catch((err) => showError('Non siamo riusciti a salvare la checklist.', err))
       if (activeUser) {
-        persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) => console.error('Errore salvataggio valigia', err))
+        persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) => showError('Non siamo riusciti a salvare la tua valigia.', err))
       }
     } else {
       saveChecklistData({ categories, personalSections } as never)
@@ -194,7 +199,7 @@ export function Checklist() {
   function persistStops(next: Stop[]) {
     setStops(next)
     if (isRealTrip && routeTripId && tripStartDate) {
-      persistStopsRemote(routeTripId, next, tripStartDate).catch((err) => console.error('Errore salvataggio tappe', err))
+      persistStopsRemote(routeTripId, next, tripStartDate).catch((err) => showError('Non siamo riusciti a salvare le tappe.', err))
     } else if (!isRealTrip) {
       saveStops(next)
     }
@@ -203,7 +208,7 @@ export function Checklist() {
   function persistEssentials(next: EssentialsCategory[]) {
     setEssentialsCategories(next)
     if (isRealTrip && routeTripId) {
-      persistEssentialsRemote(routeTripId, next).catch((err) => console.error('Errore salvataggio essentials', err))
+      persistEssentialsRemote(routeTripId, next).catch((err) => showError('Non siamo riusciti a salvare i riferimenti.', err))
     } else {
       saveEssentialsData({ categories: next })
     }

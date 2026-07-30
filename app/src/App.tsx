@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { TripLayout } from './components/TripLayout'
 import { AuthProvider } from './lib/authContext'
+import { ToastProvider } from './lib/toast'
 import { Home } from './pages/Home'
 import { Onboarding } from './pages/Onboarding'
 import { Journey } from './pages/Journey'
@@ -15,24 +16,26 @@ import { Guida } from './pages/Guida'
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/join/:code" element={<Onboarding />} />
-          <Route path="/guida" element={<Guida />} />
-          <Route path="/trip/:tripId" element={<TripLayout />}>
-            <Route index element={<Navigate to="journey" replace />} />
-            <Route path="journey" element={<Journey />} />
-            <Route path="today" element={<Today />} />
-            <Route path="checklist" element={<Checklist />} />
-            <Route path="spese" element={<Spese />} />
-            <Route path="memories" element={<Memories />} />
-            <Route path="profilo" element={<Profilo />} />
-            <Route path="recap" element={<Recap />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/join/:code" element={<Onboarding />} />
+            <Route path="/guida" element={<Guida />} />
+            <Route path="/trip/:tripId" element={<TripLayout />}>
+              <Route index element={<Navigate to="journey" replace />} />
+              <Route path="journey" element={<Journey />} />
+              <Route path="today" element={<Today />} />
+              <Route path="checklist" element={<Checklist />} />
+              <Route path="spese" element={<Spese />} />
+              <Route path="memories" element={<Memories />} />
+              <Route path="profilo" element={<Profilo />} />
+              <Route path="recap" element={<Recap />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

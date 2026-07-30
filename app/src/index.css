@@ -60,6 +60,21 @@ body {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Comparsa dei messaggi di errore/conferma (vedi lib/toast.tsx). */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.22s ease-out;
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);
 }

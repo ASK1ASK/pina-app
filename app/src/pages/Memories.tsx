@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import { loadMemories, saveMemories, type MemoryDay, type MemoryItem } from '../lib/tripData'
@@ -26,6 +27,7 @@ export function Memories() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
   const { session } = useAuth()
+  const { showError } = useToast()
 
   const [loading, setLoading] = useState(isRealTrip)
   const [days, setDays] = useState<MemoryDay[]>([])
@@ -41,15 +43,17 @@ export function Memories() {
   useEffect(() => {
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchMemories(routeTripId), fetchTripMembers(routeTripId)]).then(([data, members]) => {
-        setDays(data.days)
-        setItems(data.items)
-        setPeople(members.map((m) => m.name))
-        const me = members.find((m) => m.userId === session?.user?.id)
-        setCurrentMemberId(me?.id ?? null)
-        setCurrentMemberName(me?.name ?? 'Tu')
-        setLoading(false)
-      })
+      Promise.all([fetchMemories(routeTripId), fetchTripMembers(routeTripId)])
+        .then(([data, members]) => {
+          setDays(data.days)
+          setItems(data.items)
+          setPeople(members.map((m) => m.name))
+          const me = members.find((m) => m.userId === session?.user?.id)
+          setCurrentMemberId(me?.id ?? null)
+          setCurrentMemberName(me?.name ?? 'Tu')
+        })
+        .catch((err) => showError('Non siamo riusciti a caricare i ricordi.', err))
+        .finally(() => setLoading(false))
       return
     }
     const data = loadMemories()
@@ -86,7 +90,7 @@ export function Memories() {
     const next = !items.find((it) => it.id === id)?.isFavorite
     if (isRealTrip) {
       setItems((its) => its.map((it) => (it.id !== id ? it : { ...it, isFavorite: next })))
-      toggleMemoryFavorite(id, next).catch((err) => console.error('Errore aggiornamento preferito', err))
+      toggleMemoryFavorite(id, next).catch((err) => showError('Non siamo riusciti ad aggiornare il preferito.', err))
     } else {
       persistDemo(items.map((it) => (it.id !== id ? it : { ...it, isFavorite: !it.isFavorite })))
     }
@@ -95,7 +99,7 @@ export function Memories() {
     if (!caption) return
     if (isRealTrip) {
       setItems((its) => its.map((it) => (it.id !== id ? it : { ...it, caption })))
-      updateMemoryCaption(id, caption).catch((err) => console.error('Errore aggiornamento didascalia', err))
+      updateMemoryCaption(id, caption).catch((err) => showError('Non siamo riusciti a salvare la didascalia.', err))
     } else {
       persistDemo(items.map((it) => (it.id !== id ? it : { ...it, caption: caption || it.caption })))
     }
@@ -115,7 +119,7 @@ export function Memories() {
           setItems((its) => [item, ...its])
           setDays((ds) => (ds.some((d) => d.id === dayId) ? ds : [...ds, { id: dayId, label: 'Oggi', dateLabel: 'Oggi', cover: '', isToday: true }]))
         } catch (err) {
-          console.error('Errore salvataggio ricordo', err)
+          showError('Non siamo riusciti a caricare il ricordo. Riprova.', err)
         }
         return
       }

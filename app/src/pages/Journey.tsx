@@ -4,6 +4,7 @@ import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerShee
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
+import { useToast } from '../lib/toast'
 import { tripDayNumbers } from '../lib/tripDates'
 import { useTripRealtime } from '../lib/useTripRealtime'
 import {
@@ -46,6 +47,7 @@ export function Journey() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
   const { user } = useAuth()
+  const { showError } = useToast()
 
   const [stops, setStops] = useState<Stop[]>([])
   const [editMode, setEditMode] = useState(false)
@@ -75,15 +77,17 @@ export function Journey() {
   useEffect(() => {
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)]).then(([meta, fetchedStops]) => {
-        setTripMeta(meta)
-        setStops(fetchedStops)
-        if (meta) {
-          setCoverColorId((meta.coverColorId as CoverColorId) || 'fiesta')
-          setCoverPhoto(meta.coverPhotoUrl)
-        }
-        setLoading(false)
-      })
+      Promise.all([fetchTripMeta(routeTripId), fetchStops(routeTripId)])
+        .then(([meta, fetchedStops]) => {
+          setTripMeta(meta)
+          setStops(fetchedStops)
+          if (meta) {
+            setCoverColorId((meta.coverColorId as CoverColorId) || 'fiesta')
+            setCoverPhoto(meta.coverPhotoUrl)
+          }
+        })
+        .catch((err) => showError('Non siamo riusciti a caricare il viaggio.', err))
+        .finally(() => setLoading(false))
       if (user?.id) {
         supabase
           .from('trip_members')
@@ -137,7 +141,9 @@ export function Journey() {
   function persist(next: Stop[]) {
     setStops(next)
     if (isRealTrip && tripMeta) {
-      persistStops(tripMeta.id, next, tripMeta.startDate).catch((err) => console.error('Errore salvataggio tappe', err))
+      persistStops(tripMeta.id, next, tripMeta.startDate).catch((err) =>
+        showError('Non siamo riusciti a salvare le tappe. Controlla la connessione e riprova.', err),
+      )
     } else {
       saveStops(next)
     }

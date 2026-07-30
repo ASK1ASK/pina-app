@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 
 export interface RealChecklistItem {
   id: string
@@ -14,11 +14,11 @@ export interface RealChecklistCategory {
 }
 
 export async function fetchChecklist(tripId: string): Promise<RealChecklistCategory[]> {
-  const { data: cats } = await supabase.from('checklist_categories').select('*').eq('trip_id', tripId).order('position')
+  const cats = unwrap(await supabase.from('checklist_categories').select('*').eq('trip_id', tripId).order('position'))
   const catIds = (cats || []).map((c) => c.id)
-  const { data: items } = catIds.length
-    ? await supabase.from('checklist_items').select('*').in('category_id', catIds).order('position')
-    : { data: [] as { id: string; category_id: string; label: string; done: boolean; assignee_member_id: string | null }[] }
+  const items = catIds.length
+    ? unwrap(await supabase.from('checklist_items').select('*').in('category_id', catIds).order('position'))
+    : ([] as { id: string; category_id: string; label: string; done: boolean; assignee_member_id: string | null }[])
 
   return (cats || []).map((c) => ({
     id: c.id,
@@ -33,7 +33,7 @@ export async function fetchChecklist(tripId: string): Promise<RealChecklistCateg
 // Stesso pattern "cancella e riscrivi tutto" già usato per persistStops in
 // journey/supabaseJourney.ts: più semplice e corretto che calcolare un diff.
 export async function persistChecklist(tripId: string, categories: RealChecklistCategory[]): Promise<void> {
-  await supabase.from('checklist_categories').delete().eq('trip_id', tripId)
+  unwrapVoid(await supabase.from('checklist_categories').delete().eq('trip_id', tripId))
   if (!categories.length) return
 
   const catRows = categories.map((c, i) => ({ trip_id: tripId, emoji: c.emoji, name: c.name, position: i }))
@@ -49,7 +49,7 @@ export async function persistChecklist(tripId: string, categories: RealChecklist
       position: ii,
     })),
   )
-  if (itemRows.length) await supabase.from('checklist_items').insert(itemRows)
+  if (itemRows.length) unwrapVoid(await supabase.from('checklist_items').insert(itemRows))
 }
 
 export interface RealEssentialsEntry {
@@ -76,11 +76,11 @@ const ESSENTIALS_SHELLS = [
 ]
 
 export async function fetchEssentials(tripId: string): Promise<RealEssentialsCategory[]> {
-  const { data: cats } = await supabase.from('essentials_categories').select('*').eq('trip_id', tripId).order('position')
+  const cats = unwrap(await supabase.from('essentials_categories').select('*').eq('trip_id', tripId).order('position'))
   const catIds = (cats || []).map((c) => c.id)
-  const { data: entries } = catIds.length
-    ? await supabase.from('essentials_entries').select('*').in('category_id', catIds).order('position')
-    : { data: [] as { id: string; category_id: string; title: string; subtitle: string; tag: string; href: string; attachment_url: string | null }[] }
+  const entries = catIds.length
+    ? unwrap(await supabase.from('essentials_entries').select('*').in('category_id', catIds).order('position'))
+    : ([] as { id: string; category_id: string; title: string; subtitle: string; tag: string; href: string; attachment_url: string | null }[])
 
   return (cats || []).map((c) => ({
     id: c.id,
@@ -107,7 +107,7 @@ export async function seedEssentials(tripId: string): Promise<RealEssentialsCate
 }
 
 export async function persistEssentials(tripId: string, categories: RealEssentialsCategory[]): Promise<void> {
-  await supabase.from('essentials_categories').delete().eq('trip_id', tripId)
+  unwrapVoid(await supabase.from('essentials_categories').delete().eq('trip_id', tripId))
   if (!categories.length) return
 
   const catRows = categories.map((c, i) => ({ trip_id: tripId, emoji: c.emoji, name: c.name, gradient: c.gradient, position: i }))
@@ -125,20 +125,22 @@ export async function persistEssentials(tripId: string, categories: RealEssentia
       position: ei,
     })),
   )
-  if (entryRows.length) await supabase.from('essentials_entries').insert(entryRows)
+  if (entryRows.length) unwrapVoid(await supabase.from('essentials_entries').insert(entryRows))
 }
 
 export async function fetchPersonalSections(tripId: string, memberId: string): Promise<RealChecklistCategory[]> {
-  const { data: sections } = await supabase
-    .from('personal_checklist_sections')
-    .select('*')
-    .eq('trip_id', tripId)
-    .eq('member_id', memberId)
-    .order('position')
+  const sections = unwrap(
+    await supabase
+      .from('personal_checklist_sections')
+      .select('*')
+      .eq('trip_id', tripId)
+      .eq('member_id', memberId)
+      .order('position'),
+  )
   const sectionIds = (sections || []).map((s) => s.id)
-  const { data: items } = sectionIds.length
-    ? await supabase.from('personal_checklist_items').select('*').in('section_id', sectionIds).order('position')
-    : { data: [] as { id: string; section_id: string; label: string; done: boolean }[] }
+  const items = sectionIds.length
+    ? unwrap(await supabase.from('personal_checklist_items').select('*').in('section_id', sectionIds).order('position'))
+    : ([] as { id: string; section_id: string; label: string; done: boolean }[])
 
   return (sections || []).map((s) => ({
     id: s.id,
@@ -149,7 +151,7 @@ export async function fetchPersonalSections(tripId: string, memberId: string): P
 }
 
 export async function persistPersonalSections(tripId: string, memberId: string, sections: RealChecklistCategory[]): Promise<void> {
-  await supabase.from('personal_checklist_sections').delete().eq('trip_id', tripId).eq('member_id', memberId)
+  unwrapVoid(await supabase.from('personal_checklist_sections').delete().eq('trip_id', tripId).eq('member_id', memberId))
   if (!sections.length) return
 
   const secRows = sections.map((s, i) => ({ trip_id: tripId, member_id: memberId, emoji: s.emoji, name: s.name, position: i }))
@@ -159,5 +161,5 @@ export async function persistPersonalSections(tripId: string, memberId: string, 
   const itemRows = sections.flatMap((s, si) =>
     s.items.map((it, ii) => ({ section_id: insertedSecs[si].id, label: it.label, done: it.done, position: ii })),
   )
-  if (itemRows.length) await supabase.from('personal_checklist_items').insert(itemRows)
+  if (itemRows.length) unwrapVoid(await supabase.from('personal_checklist_items').insert(itemRows))
 }

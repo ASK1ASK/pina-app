@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../lib/toast'
 import { isUuid } from '../lib/uuid'
 import {
   loadEmergencyContacts,
@@ -26,6 +27,7 @@ export function Profilo() {
   const { tripId: routeTripId } = useParams()
   const isRealTrip = isUuid(routeTripId)
   const { session } = useAuth()
+  const { showError } = useToast()
 
   const [loading, setLoading] = useState(isRealTrip)
   const [name, setName] = useState(isRealTrip ? '' : 'Andrea')
@@ -55,18 +57,20 @@ export function Profilo() {
         fetchMemories(routeTripId),
         fetchExpensesData(routeTripId),
         fetchEmergencyContacts(routeTripId),
-      ]).then(async ([meta, members, memData, expData, contacts]) => {
-        setTripMeta(meta)
-        setMemories({ days: memData.days, items: memData.items })
-        setEmergencyContacts(contacts)
-        const me = members.find((m) => m.userId === session?.user?.id)
-        setMyMemberId(me?.id ?? null)
-        setName(me?.name || 'Viaggiatore')
-        setMyColor(me?.color || '#ff8a5b')
-        const myId = me?.id
-        setMyRealSpend(myId ? expData.expenses.filter((e) => e.paidByMemberId === myId).reduce((a, e) => a + e.amount, 0) : 0)
-        setLoading(false)
-      })
+      ])
+        .then(([meta, members, memData, expData, contacts]) => {
+          setTripMeta(meta)
+          setMemories({ days: memData.days, items: memData.items })
+          setEmergencyContacts(contacts)
+          const me = members.find((m) => m.userId === session?.user?.id)
+          setMyMemberId(me?.id ?? null)
+          setName(me?.name || 'Viaggiatore')
+          setMyColor(me?.color || '#ff8a5b')
+          const myId = me?.id
+          setMyRealSpend(myId ? expData.expenses.filter((e) => e.paidByMemberId === myId).reduce((a, e) => a + e.amount, 0) : 0)
+        })
+        .catch((err) => showError('Non siamo riusciti a caricare il profilo.', err))
+        .finally(() => setLoading(false))
       if (session?.user?.id) {
         supabase
           .from('trip_members')
@@ -88,7 +92,7 @@ export function Profilo() {
   function persistEmergency(next: EmergencyContact[]) {
     setEmergencyContacts(next)
     if (isRealTrip && routeTripId) {
-      persistEmergencyContacts(routeTripId, next).catch((err) => console.error('Errore salvataggio contatti', err))
+      persistEmergencyContacts(routeTripId, next).catch((err) => showError('Non siamo riusciti a salvare i contatti.', err))
     } else {
       saveEmergencyContacts(next)
     }
@@ -101,14 +105,14 @@ export function Profilo() {
     const next = text || name
     setName(next)
     if (isRealTrip && myMemberId) {
-      updateMemberIdentity(myMemberId, { displayName: next }).catch((err) => console.error('Errore salvataggio nome', err))
+      updateMemberIdentity(myMemberId, { displayName: next }).catch((err) => showError('Non siamo riusciti a salvare il nome.', err))
     }
   }
 
   function saveColor(hex: string) {
     setMyColor(hex)
     if (isRealTrip && myMemberId) {
-      updateMemberIdentity(myMemberId, { color: hex }).catch((err) => console.error('Errore salvataggio colore', err))
+      updateMemberIdentity(myMemberId, { color: hex }).catch((err) => showError('Non siamo riusciti a salvare il colore.', err))
     }
   }
 
