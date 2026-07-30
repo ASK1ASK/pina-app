@@ -113,7 +113,7 @@ export function Today() {
   function persist(next: Stop[]) {
     setStops(next)
     if (isRealTrip && tripMeta) {
-      persistStopsRemote(tripMeta.id, next, tripMeta.startDate.getFullYear(), tripMeta.startDate.getMonth()).catch((err) =>
+      persistStopsRemote(tripMeta.id, next, tripMeta.startDate).catch((err) =>
         console.error('Errore salvataggio tappe', err),
       )
     } else if (!isRealTrip) {

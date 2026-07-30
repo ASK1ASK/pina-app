@@ -1,4 +1,5 @@
 import { moodDefs, moodGradients } from '../../lib/palette'
+import { dayToDate, startOfDay } from '../../lib/tripDates'
 import type { Stop, StopKind } from '../../lib/tripData'
 
 export const stopMoodDefs = moodDefs.map((m) => ({
@@ -29,17 +30,16 @@ export function computeTripPhase(start: Date, end: Date): TripPhase {
   return { phase: 'active', currentDay: Math.round((today.getTime() - s.getTime()) / MS_DAY) + 1, totalDays }
 }
 
-export function computeStopKind(stop: Stop, isPre: boolean, tripYear: number, tripMonth: number): StopKind {
+export function computeStopKind(stop: Stop, isPre: boolean, tripStart: Date): StopKind {
   if (isPre) return 'future'
   if (stop.kind) return stop.kind
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const start = new Date(tripYear, tripMonth, stop.startDay || 1)
-  start.setHours(0, 0, 0, 0)
-  const end = new Date(tripYear, tripMonth, stop.endDay || stop.startDay || 1)
-  end.setHours(0, 0, 0, 0)
-  if (today > end) return 'done'
-  if (today >= start && today <= end) return 'today'
+  const today = startOfDay(new Date())
+  // dayToDate tiene conto dell'eventuale cambio di mese: altrimenti una tappa
+  // di settembre verrebbe collocata ad agosto e non risulterebbe mai "oggi".
+  const start = dayToDate(tripStart, stop.startDay || 1)
+  const end = dayToDate(tripStart, stop.endDay || stop.startDay || 1)
+  if (today.getTime() > end.getTime()) return 'done'
+  if (today.getTime() >= start.getTime() && today.getTime() <= end.getTime()) return 'today'
   return 'future'
 }
 

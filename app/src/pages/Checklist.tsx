@@ -194,7 +194,7 @@ export function Checklist() {
   function persistStops(next: Stop[]) {
     setStops(next)
     if (isRealTrip && routeTripId && tripStartDate) {
-      persistStopsRemote(routeTripId, next, tripStartDate.getFullYear(), tripStartDate.getMonth()).catch((err) => console.error('Errore salvataggio tappe', err))
+      persistStopsRemote(routeTripId, next, tripStartDate).catch((err) => console.error('Errore salvataggio tappe', err))
     } else if (!isRealTrip) {
       saveStops(next)
     }

@@ -1,3 +1,5 @@
+import { dayToDate, startOfDay } from '../../lib/tripDates'
+
 // Mirrora l'elenco tappe di Journey: la timeline dei giorni parte dalla prima tappa
 // e avanza giorno per giorno seguendo le tappe del viaggio.
 export interface StopMeta {
@@ -190,19 +192,26 @@ export function buildDays(): Day[] {
 // finché non avranno una tabella Supabase dedicata.
 export function buildRealDays(startDate: Date, endDate: Date, stops: RealStop[]): Day[] {
   const days: Day[] = []
-  const refYear = startDate.getFullYear()
-  const refMonth = startDate.getMonth()
-  const startDay = startDate.getDate()
-  const endDay = endDate.getDate()
-  for (let d = startDay; d <= endDay; d++) {
-    const stop = stops.find((s) => d >= s.startDay && d <= s.endDay)
+  // Si avanza sulle date vere invece che sul numero del giorno: un ciclo
+  // "da 28 a 3" non partirebbe mai e la timeline resterebbe vuota per ogni
+  // viaggio a cavallo di due mesi.
+  const cursor = startOfDay(startDate)
+  const last = startOfDay(endDate)
+  while (cursor.getTime() <= last.getTime() && days.length < 366) {
+    const d = cursor.getDate()
+    const today = cursor.getTime()
+    const stop = stops.find((s) => {
+      const from = dayToDate(startDate, s.startDay).getTime()
+      const to = dayToDate(startDate, s.endDay || s.startDay).getTime()
+      return today >= from && today <= to
+    })
     const stay = stop?.stays?.find((st) => st.day === d) || stop?.stays?.[0]
     days.push({
       dayOfMonth: d,
       city: stop?.name || 'Giorno libero',
       moodId: stop?.moodId || 'camper',
       mood: stop?.moodLine || (stop ? '' : '🚐 Nessuna tappa in programma'),
-      dateLabel: formatDateLabel(new Date(refYear, refMonth, d)),
+      dateLabel: formatDateLabel(new Date(cursor)),
       subtitle: null,
       stayName: stay?.name || '',
       stayLabel: stay?.name ? '' : 'Nessun alloggio segnato',
@@ -214,6 +223,7 @@ export function buildRealDays(startDate: Date, endDate: Date, stops: RealStop[])
       expenses: [],
       memoryPhotos: [],
     })
+    cursor.setDate(cursor.getDate() + 1)
   }
   return days
 }

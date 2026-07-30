@@ -32,8 +32,12 @@ export interface OnboardingState {
   editReturnStep: OnboardingStep | null
   tripName: string
   monthIndex: number
-  startDay: number | null
-  endDay: number | null
+  // Date complete (YYYY-MM-DD) e non semplici numeri del giorno: cosi' la
+  // selezione sopravvive al cambio di mese nel calendario e un viaggio puo'
+  // scavalcare mese e anno (es. 28 dicembre -> 4 gennaio). Il formato ISO si
+  // confronta correttamente anche come stringa.
+  startISO: string | null
+  endISO: string | null
   moodIds: string[]
   customMoods: CustomMood[]
   participants: string[]
@@ -84,8 +88,8 @@ export function initialOnboardingState(search: URLSearchParams): OnboardingState
     editReturnStep: null,
     tripName: recap ? 'Spain Roadtrip' : '',
     monthIndex: 1,
-    startDay: recap ? 14 : null,
-    endDay: recap ? 26 : null,
+    startISO: recap ? '2026-08-14' : null,
+    endISO: recap ? '2026-08-26' : null,
     moodIds: [],
     customMoods: [],
     participants: recap ? ['Marco', 'Sara', 'Giulia'] : [],

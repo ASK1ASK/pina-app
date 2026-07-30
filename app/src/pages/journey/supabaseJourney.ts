@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { Stop } from '../../lib/tripData'
+import { dayToDate, toIsoDate } from '../../lib/tripDates'
 
 export interface TripMeta {
   id: string
@@ -23,8 +24,13 @@ function formatStopDates(startDateStr: string, endDateStr: string): string {
   const end = new Date(endDateStr)
   const startDay = start.getDate()
   const endDay = end.getDate()
-  const monthLabel = end.toLocaleDateString('it-IT', { month: 'long' })
-  return startDay === endDay ? `${startDay} ${monthLabel}` : `${startDay} → ${endDay} ${monthLabel}`
+  const startMonth = start.toLocaleDateString('it-IT', { month: 'long' })
+  const endMonth = end.toLocaleDateString('it-IT', { month: 'long' })
+  if (startDay === endDay && startMonth === endMonth) return `${startDay} ${endMonth}`
+  // Una tappa a cavallo di due mesi va scritta per esteso, altrimenti
+  // "30 → 2 settembre" farebbe sembrare il 30 di settembre.
+  if (startMonth !== endMonth) return `${startDay} ${startMonth} → ${endDay} ${endMonth}`
+  return `${startDay} → ${endDay} ${endMonth}`
 }
 
 export async function fetchTripMeta(tripId: string): Promise<TripMeta | null> {
@@ -122,15 +128,19 @@ export async function fetchStops(tripId: string): Promise<Stop[]> {
 // Rispecchia il modello del prototipo (saveStops sovrascrive l'intero blob):
 // per semplicità e correttezza, ogni salvataggio cancella e riscrive tutte le
 // tappe del viaggio invece di calcolare un diff granulare.
-export async function persistStops(tripId: string, stops: Stop[], refYear: number, refMonth: number): Promise<void> {
+export async function persistStops(tripId: string, stops: Stop[], tripStart: Date): Promise<void> {
   await supabase.from('stops').delete().eq('trip_id', tripId)
   if (stops.length === 0) return
+
+  // dayToDate risolve a quale mese appartiene il numero del giorno: senza,
+  // una tappa del 2 settembre finirebbe salvata come 2 agosto.
+  const dayIso = (day: number) => toIsoDate(dayToDate(tripStart, day))
 
   const stopRows = stops.map((s, i) => ({
     trip_id: tripId,
     name: s.name,
-    start_date: isoDate(refYear, refMonth, s.startDay),
-    end_date: isoDate(refYear, refMonth, s.endDay || s.startDay),
+    start_date: dayIso(s.startDay),
+    end_date: dayIso(s.endDay || s.startDay),
     mood_id: s.moodId ?? '',
     mood_line: s.moodLine,
     photo_url: s.photo ?? null,
@@ -146,7 +156,7 @@ export async function persistStops(tripId: string, stops: Stop[], refYear: numbe
       stop_id: insertedStops[i].id,
       name: stay.name,
       link: stay.link,
-      night_date: stay.day ? isoDate(refYear, refMonth, stay.day) : null,
+      night_date: stay.day ? dayIso(stay.day) : null,
     })),
   )
   if (stayRows.length) await supabase.from('stop_stays').insert(stayRows)
@@ -168,7 +178,7 @@ export async function persistStops(tripId: string, stops: Stop[], refYear: numbe
       label: item.label,
       link: item.link || '',
       starred: !!item.starred,
-      item_date: item.day ? isoDate(refYear, refMonth, item.day) : null,
+      item_date: item.day ? dayIso(item.day) : null,
       icon: item.icon ?? null,
       item_time: item.time ?? null,
       useful_link: item.usefulLink || '',

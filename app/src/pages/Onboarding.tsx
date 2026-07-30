@@ -18,6 +18,7 @@ import {
   slugify,
   vibeDefs,
 } from '../lib/palette'
+import { toIsoDate } from '../lib/tripDates'
 import {
   allMoodDefs,
   buildMonthDefs,
@@ -258,8 +259,8 @@ export function Onboarding() {
       patch({
         tripName: meta.name,
         monthIndex: monthIdx >= 0 ? monthIdx : 1,
-        startDay: meta.startDate.getDate(),
-        endDay: meta.endDate.getDate(),
+        startISO: toIsoDate(meta.startDate),
+        endISO: toIsoDate(meta.endDate),
         coverColorId: meta.coverColorId,
         coverPhoto: meta.coverPhotoUrl,
         moodIds: meta.moodIds,
@@ -270,15 +271,14 @@ export function Onboarding() {
 
   async function updateTripInSupabase(): Promise<boolean> {
     if (!realTripId) return false
-    if (!state.tripName || !state.startDay) {
+    if (!state.tripName || !state.startISO) {
       setCreateTripError('Inserisci almeno il nome e la data del viaggio.')
       return false
     }
     setCreatingTrip(true)
     setCreateTripError(null)
-    const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
-    const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
-    const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
+    const startDateStr = state.startISO
+    const endDateStr = state.endISO || state.startISO
     const { error } = await supabase
       .from('trips')
       .update({
@@ -363,16 +363,15 @@ export function Onboarding() {
       setCreateTripError('Devi accedere per creare un viaggio.')
       return null
     }
-    if (!state.tripName || !state.startDay) {
+    if (!state.tripName || !state.startISO) {
       setCreateTripError('Inserisci almeno il nome e la data del viaggio.')
       return null
     }
     setCreatingTrip(true)
     setCreateTripError(null)
 
-    const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
-    const startDateStr = isoDate(activeMonth.year, activeMonth.month, state.startDay)
-    const endDateStr = isoDate(activeMonth.year, activeMonth.month, state.endDay || state.startDay)
+    const startDateStr = state.startISO
+    const endDateStr = state.endISO || state.startISO
     const organizerName = state.identityName.trim() || (session.user.email ? session.user.email.split('@')[0] : 'Organizzatore')
 
     // Viaggio + membership organizzatore (+ partecipanti) creati insieme, in
@@ -461,12 +460,19 @@ export function Onboarding() {
   const tripId = () => realTripId || slugify(state.tripName) || 'demo'
 
   const activeMonth = monthDefs[state.monthIndex] ?? monthDefs[1]
-  const tripDates =
-    state.startDay && state.endDay
-      ? `${state.startDay} → ${state.endDay} ${activeMonth.short}`
-      : state.startDay
-        ? `${state.startDay} ${activeMonth.short} → ?`
-        : 'Scegli le date'
+  // Le date scelte possono stare in mesi diversi da quello mostrato ora nel
+  // calendario, quindi il mese va letto dalla data stessa e non da activeMonth.
+  const dayNum = (iso: string) => Number(iso.slice(8, 10))
+  // "T00:00:00" forza l'interpretazione in ora locale: senza, una data ISO
+  // secca viene letta come UTC e in Italia puo' slittare al giorno prima.
+  const monthShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('it-IT', { month: 'long' })
+  const tripDates = !state.startISO
+    ? 'Scegli le date'
+    : !state.endISO
+      ? `${dayNum(state.startISO)} ${monthShort(state.startISO)} → ?`
+      : monthShort(state.startISO) === monthShort(state.endISO)
+        ? `${dayNum(state.startISO)} → ${dayNum(state.endISO)} ${monthShort(state.endISO)}`
+        : `${dayNum(state.startISO)} ${monthShort(state.startISO)} → ${dayNum(state.endISO)} ${monthShort(state.endISO)}`
 
   const primaryMood = state.moodIds[0] || 'fiesta'
   const coverGradient =
@@ -481,12 +487,16 @@ export function Onboarding() {
     : !!state.crew && state.crew.length > 0 && state.crew.every((c) => c.status === 'joined')
 
   function selectDay(day: number) {
+    // Il giorno toccato appartiene al mese attualmente visibile: da qui nasce
+    // una data completa, che resta valida anche se poi si cambia mese.
+    const iso = isoDate(activeMonth.year, activeMonth.month, day)
     patch((s) => {
-      if (s.startDay && s.endDay) return { startDay: day, endDay: null }
-      if (s.startDay && !s.endDay) {
-        return day >= s.startDay ? { endDay: day } : { startDay: day, endDay: null }
+      if (s.startISO && s.endISO) return { startISO: iso, endISO: null }
+      if (s.startISO && !s.endISO) {
+        // Confronto fra date ISO: corretto anche a cavallo di mesi e anni.
+        return iso >= s.startISO ? { endISO: iso } : { startISO: iso, endISO: null }
       }
-      return { startDay: day, endDay: null }
+      return { startISO: iso, endISO: null }
     })
   }
 
@@ -870,8 +880,11 @@ export function Onboarding() {
     const blanks = Array.from({ length: activeMonth.leadingBlanks }, (_, i) => <div key={`b${i}`} />)
     const days = Array.from({ length: activeMonth.days }, (_, i) => {
       const day = i + 1
-      const inRange = state.startDay && state.endDay && day >= state.startDay && day <= state.endDay
-      const isEdge = day === state.startDay || day === state.endDay
+      const iso = isoDate(activeMonth.year, activeMonth.month, day)
+      // Il confronto e' sulla data intera: cosi' un intervallo che scavalca il
+      // mese resta evidenziato correttamente in entrambi i mesi.
+      const inRange = state.startISO && state.endISO && iso >= state.startISO && iso <= state.endISO
+      const isEdge = iso === state.startISO || iso === state.endISO
       return (
         <button
           key={day}
@@ -915,9 +928,9 @@ export function Onboarding() {
         <div className="mb-3 font-display text-lg font-semibold text-[var(--color-text)]">Quando partiamo?</div>
         <div className="mb-6.5 rounded-2xl border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
           <div className="mb-2.5 flex items-center justify-between gap-2">
-            <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[13px] text-[var(--color-text)]" onClick={() => patch((s) => ({ monthIndex: Math.max(0, s.monthIndex - 1), startDay: null, endDay: null }))}>‹</button>
+            <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[13px] text-[var(--color-text)]" onClick={() => patch((s) => ({ monthIndex: Math.max(0, s.monthIndex - 1) }))}>‹</button>
             <span className="whitespace-nowrap text-xs font-bold text-[var(--color-text)]">{activeMonth.label}</span>
-            <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[13px] text-[var(--color-text)]" onClick={() => patch((s) => ({ monthIndex: Math.min(monthDefs.length - 1, s.monthIndex + 1), startDay: null, endDay: null }))}>›</button>
+            <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[13px] text-[var(--color-text)]" onClick={() => patch((s) => ({ monthIndex: Math.min(monthDefs.length - 1, s.monthIndex + 1) }))}>›</button>
           </div>
           <div className="mb-2 whitespace-nowrap text-center text-[11px] font-bold text-[var(--color-coral)]">{tripDates}</div>
           <div className="mb-1 grid grid-cols-7 gap-1">

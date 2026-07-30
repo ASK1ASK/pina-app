@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
+import { tripDayNumbers } from '../lib/tripDates'
 import { useTripRealtime } from '../lib/useTripRealtime'
 import {
   coverGradientById,
@@ -128,14 +129,15 @@ export function Journey() {
   const tripStartDate = isRealTrip && tripMeta ? tripMeta.startDate : TRIP_START
   const tripEndDate = isRealTrip && tripMeta ? tripMeta.endDate : TRIP_END
   const friendsCount = isRealTrip && tripMeta ? tripMeta.membersCount : FRIENDS_COUNT
-  const refYear = isRealTrip && tripMeta ? tripMeta.startDate.getFullYear() : TRIP_YEAR
-  const refMonth = isRealTrip && tripMeta ? tripMeta.startDate.getMonth() : TRIP_MONTH
   const monthLabel = tripStartDate.toLocaleDateString('it-IT', { month: 'long' })
+  // Giorni del viaggio in ordine cronologico: regge anche il cambio di mese,
+  // dove una semplice sequenza numerica da inizio a fine non funzionerebbe.
+  const tripDayChips = useMemo(() => tripDayNumbers(tripStartDate, tripEndDate), [tripStartDate, tripEndDate])
 
   function persist(next: Stop[]) {
     setStops(next)
     if (isRealTrip && tripMeta) {
-      persistStops(tripMeta.id, next, refYear, refMonth).catch((err) => console.error('Errore salvataggio tappe', err))
+      persistStops(tripMeta.id, next, tripMeta.startDate).catch((err) => console.error('Errore salvataggio tappe', err))
     } else {
       saveStops(next)
     }
@@ -152,7 +154,7 @@ export function Journey() {
   const trip = computeTripPhase(tripStartDate, tripEndDate)
   const isPre = trip.phase === 'pre'
   const isTripDone = trip.phase === 'done'
-  const todayStop = stops.find((s) => computeStopKind(s, isPre, refYear, refMonth) === 'today')
+  const todayStop = stops.find((s) => computeStopKind(s, isPre, tripStartDate) === 'today')
 
   const statusPillLabel = isPre
     ? `🗓 Si parte tra ${trip.daysUntil} giorn${trip.daysUntil === 1 ? 'o' : 'i'}`
@@ -382,7 +384,7 @@ export function Journey() {
           <div className="relative flex flex-col gap-4">
             <div className="absolute bottom-2 left-5.5 top-2 z-0 w-0.5 bg-[#ecdfc4]" />
             {stops.map((stop, idx) => {
-              const kind = computeStopKind(stop, isPre, TRIP_YEAR, TRIP_MONTH)
+              const kind = computeStopKind(stop, isPre, tripStartDate)
               const isFirst = idx === 0
               const isLast = idx === stops.length - 1
               const dotColor = kind === 'today' ? '#ff6b5b' : '#ecdfc4'
@@ -520,13 +522,18 @@ export function Journey() {
         <AddStopSheet
           editing={!!editingStopId}
           draft={draft}
-          tripStartDay={tripStartDate.getDate()}
-          tripEndDay={tripEndDate.getDate()}
+          tripStart={tripStartDate}
+          dayChips={tripDayChips}
           onChangeName={(text) => setDraft((d) => ({ ...d, name: text }))}
           onSelectDay={(day) =>
             setDraft((d) => {
               if (d.startDay && d.endDay) return { ...d, startDay: day, endDay: null }
-              if (d.startDay && !d.endDay) return day >= d.startDay ? { ...d, endDay: day } : { ...d, startDay: day, endDay: null }
+              // Confronto per posizione nel viaggio: a cavallo di due mesi il 3
+              // (settembre) segue il 28 (agosto) pur essendo numericamente minore.
+              if (d.startDay && !d.endDay) {
+                const isAfter = tripDayChips.indexOf(day) >= tripDayChips.indexOf(d.startDay)
+                return isAfter ? { ...d, endDay: day } : { ...d, startDay: day, endDay: null }
+              }
               return { ...d, startDay: day, endDay: null }
             })
           }

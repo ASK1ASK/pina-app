@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { BottomSheet } from '../../components/BottomSheet'
 import { EditableText } from '../../components/EditableText'
+import { dayToDate } from '../../lib/tripDates'
 import { stopMoodDefs } from './helpers'
 
 export interface AddStopDraft {
@@ -15,8 +16,8 @@ export interface AddStopDraft {
 export function AddStopSheet({
   editing,
   draft,
-  tripStartDay,
-  tripEndDay,
+  tripStart,
+  dayChips,
   onChangeName,
   onSelectDay,
   onSelectMood,
@@ -26,8 +27,9 @@ export function AddStopSheet({
 }: {
   editing: boolean
   draft: AddStopDraft
-  tripStartDay: number
-  tripEndDay: number
+  tripStart: Date
+  /** Numeri dei giorni del viaggio in ordine cronologico (puo' scavalcare il mese). */
+  dayChips: number[]
   onChangeName: (text: string) => void
   onSelectDay: (day: number) => void
   onSelectMood: (id: string) => void
@@ -37,13 +39,20 @@ export function AddStopSheet({
 }) {
   const nameRef = useRef<HTMLDivElement>(null)
 
-  const datesLabel = draft.startDay
-    ? draft.endDay && draft.endDay !== draft.startDay
-      ? `${draft.startDay} → ${draft.endDay} agosto`
-      : `${draft.startDay} agosto`
-    : 'Scegli le date (dentro il viaggio)'
+  // Il mese va ricavato dalla data reale del giorno: era scritto "agosto" fisso,
+  // quindi un viaggio in un altro mese mostrava comunque agosto.
+  const monthOf = (day: number) => dayToDate(tripStart, day).toLocaleDateString('it-IT', { month: 'long' })
+  const datesLabel = !draft.startDay
+    ? 'Scegli le date (dentro il viaggio)'
+    : draft.endDay && draft.endDay !== draft.startDay
+      ? monthOf(draft.startDay) === monthOf(draft.endDay)
+        ? `${draft.startDay} → ${draft.endDay} ${monthOf(draft.endDay)}`
+        : `${draft.startDay} ${monthOf(draft.startDay)} → ${draft.endDay} ${monthOf(draft.endDay)}`
+      : `${draft.startDay} ${monthOf(draft.startDay)}`
 
-  const dayChips = Array.from({ length: tripEndDay - tripStartDay + 1 }, (_, i) => tripStartDay + i)
+  // Confronto per posizione nel viaggio, non per valore: a cavallo di due mesi
+  // il 3 (settembre) viene dopo il 28 (agosto), non prima.
+  const positionOf = (day: number) => dayChips.indexOf(day)
 
   const activeMood = stopMoodDefs.find((m) => m.id === draft.moodId) || stopMoodDefs[0]
   const coverPreview = draft.photo ? `url(${draft.photo}) center/cover no-repeat` : activeMood.gradient
@@ -72,7 +81,11 @@ export function AddStopSheet({
       <div className="mb-2.5 text-[11.5px] font-semibold text-[#8a7256]">{datesLabel}</div>
       <div className="mb-1 flex gap-1.5 overflow-x-auto pb-1">
         {dayChips.map((day) => {
-          const inRange = draft.startDay && draft.endDay && day >= draft.startDay && day <= draft.endDay
+          const inRange =
+            draft.startDay != null &&
+            draft.endDay != null &&
+            positionOf(day) >= positionOf(draft.startDay) &&
+            positionOf(day) <= positionOf(draft.endDay)
           const isEdge = day === draft.startDay || day === draft.endDay
           return (
             <button
