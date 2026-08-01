@@ -1,3 +1,4 @@
+import { signedUrls } from '../../lib/mediaUpload'
 import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 import type { MemoryDay, MemoryItem } from '../../lib/tripData'
 
@@ -19,20 +20,25 @@ export async function fetchMemories(tripId: string): Promise<{ days: MemoryDay[]
   const nameByMemberId: Record<string, string> = Object.fromEntries((memberRows || []).map((m) => [m.id, m.display_name]))
   const todayStr = new Date().toISOString().slice(0, 10)
 
+  const righe = (itemRows || []).filter((it): it is typeof it & { day_id: string } => it.day_id !== null)
+
+  // I file stanno in un bucket privato: servono indirizzi temporanei per
+  // mostrarli. I ricordi caricati prima di questo cambiamento hanno ancora il
+  // contenuto salvato direttamente nel database e passano invariati.
+  const link = await signedUrls([...righe.map((it) => it.url), ...(dayRows || []).map((d) => d.cover_url || '')])
+
   const days: MemoryDay[] = (dayRows || []).map((d) => ({
     id: d.id,
     label: d.label,
     dateLabel: formatDateLabel(d.memory_date),
-    cover: d.cover_url || '',
+    cover: link[d.cover_url || ''] || d.cover_url || '',
     isToday: d.memory_date === todayStr,
   }))
 
-  const items: MemoryItem[] = (itemRows || [])
-    .filter((it): it is typeof it & { day_id: string } => it.day_id !== null)
-    .map((it) => ({
+  const items: MemoryItem[] = righe.map((it) => ({
     id: it.id,
     dayId: it.day_id,
-    url: it.url,
+    url: link[it.url] || it.url,
     isVideo: it.is_video,
     isFavorite: it.is_favorite,
     caption: it.caption,
@@ -84,10 +90,13 @@ export async function createMemory(input: {
     .select()
     .single()
   if (error || !data) throw error ?? new Error('Errore durante il salvataggio del ricordo.')
+  // Nel database finisce il percorso nello storage; a schermo serve un
+  // indirizzo temporaneo per poterlo mostrare subito.
+  const link = await signedUrls([data.url])
   return {
     id: data.id,
     dayId: input.dayId,
-    url: data.url,
+    url: link[data.url] || data.url,
     isVideo: data.is_video,
     isFavorite: data.is_favorite,
     caption: data.caption,

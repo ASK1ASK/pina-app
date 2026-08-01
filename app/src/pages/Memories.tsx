@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { uploadTripMedia } from '../lib/mediaUpload'
 import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
@@ -30,6 +31,7 @@ export function Memories() {
   const { showError } = useToast()
 
   const [loading, setLoading] = useState(isRealTrip)
+  const [uploading, setUploading] = useState(false)
   const [days, setDays] = useState<MemoryDay[]>([])
   const [items, setItems] = useState<MemoryItem[]>([])
   const [filter, setFilter] = useState<string | null>(null)
@@ -105,31 +107,40 @@ export function Memories() {
     }
   }
 
-  function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
+  async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const url = reader.result as string
-      const isVideo = file.type.startsWith('video')
-      if (isRealTrip && routeTripId) {
-        try {
-          const dayId = await getOrCreateTodayMemoryDay(routeTripId, 'Oggi')
-          const item = await createMemory({ tripId: routeTripId, dayId, url, isVideo, authorMemberId: currentMemberId, authorName: currentMemberName })
-          setItems((its) => [item, ...its])
-          setDays((ds) => (ds.some((d) => d.id === dayId) ? ds : [...ds, { id: dayId, label: 'Oggi', dateLabel: 'Oggi', cover: '', isToday: true }]))
-        } catch (err) {
-          showError('Non siamo riusciti a caricare il ricordo. Riprova.', err)
-        }
-        return
+    const isVideo = file.type.startsWith('video')
+
+    // Viaggio vero: il file va nello storage e nel database finisce solo il
+    // percorso. Prima veniva convertito in testo e salvato dentro il database,
+    // che si sarebbe riempito dopo poche decine di foto.
+    if (isRealTrip && routeTripId) {
+      setUploading(true)
+      try {
+        const percorso = await uploadTripMedia(routeTripId, file)
+        const dayId = await getOrCreateTodayMemoryDay(routeTripId, 'Oggi')
+        const item = await createMemory({ tripId: routeTripId, dayId, url: percorso, isVideo, authorMemberId: currentMemberId, authorName: currentMemberName })
+        setItems((its) => [item, ...its])
+        setDays((ds) => (ds.some((d) => d.id === dayId) ? ds : [...ds, { id: dayId, label: 'Oggi', dateLabel: 'Oggi', cover: '', isToday: true }]))
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Non siamo riusciti a caricare il ricordo. Riprova.', err)
+      } finally {
+        setUploading(false)
       }
+      return
+    }
+
+    // Viaggio demo: resta su localStorage, dove non esiste uno storage.
+    const reader = new FileReader()
+    reader.onload = () => {
       const id = 'i' + Date.now()
       const todayDay = days.find((d) => d.isToday) || days[0]
       if (!todayDay) return
-      persistDemo([{ id, dayId: todayDay.id, url, isVideo, isFavorite: false, caption: 'Nuovo ricordo', author: 'Tu' }, ...items])
+      persistDemo([{ id, dayId: todayDay.id, url: reader.result as string, isVideo, isFavorite: false, caption: 'Nuovo ricordo', author: 'Tu' }, ...items])
     }
     reader.readAsDataURL(file)
-    e.target.value = ''
   }
 
   function exportAll() {
@@ -282,9 +293,14 @@ export function Memories() {
         </div>
       )}
 
-      <div className="fixed right-5 z-20 flex flex-col gap-3" style={{ bottom: 'calc(6.125rem + var(--safe-bottom))' }}>
-        <button type="button" className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(255,90,60,.55)]" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={() => cameraInputRef.current?.click()}>📷</button>
-        <button type="button" className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(40,150,180,.55)]" style={{ background: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' }} onClick={() => galleryInputRef.current?.click()}>🖼</button>
+      <div className="fixed right-5 z-20 flex flex-col items-end gap-3" style={{ bottom: 'calc(6.125rem + var(--safe-bottom))' }}>
+        {uploading && (
+          <div className="rounded-full bg-[var(--color-text-strong)] px-3.5 py-2 text-[11.5px] font-bold text-white shadow-[0_10px_20px_-10px_rgba(0,0,0,.5)]">
+            Caricamento in corso...
+          </div>
+        )}
+        <button type="button" disabled={uploading} className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(255,90,60,.55)] disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={() => cameraInputRef.current?.click()}>📷</button>
+        <button type="button" disabled={uploading} className="flex h-13 w-13 items-center justify-center rounded-full text-xl text-white shadow-[0_12px_24px_-8px_rgba(40,150,180,.55)] disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#2fbfae,#2a8fd8)' }} onClick={() => galleryInputRef.current?.click()}>🖼</button>
       </div>
       <input ref={cameraInputRef} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={onFileSelected} />
       <input ref={galleryInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={onFileSelected} />
