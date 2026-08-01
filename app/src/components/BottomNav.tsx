@@ -12,9 +12,13 @@ const TABS = [
 export function BottomNav() {
   const { tripId } = useParams()
 
+  // z-30: senza una priorita' esplicita la barra resta a livello "auto" e il
+  // contenuto posizionato (le tappe di Journey usano z-[1]) le viene disegnato
+  // sopra, coprendola e rendendola non cliccabile mentre si scorre. Sta sotto
+  // i pannelli (z-40), che devono invece poterla coprire.
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 mx-auto flex max-w-md justify-around border-t border-[var(--color-card-border)] bg-[#fffaf0] px-1.5 pt-2.5"
+      className="fixed bottom-0 left-0 right-0 z-30 mx-auto flex max-w-md justify-around border-t border-[var(--color-card-border)] bg-[#fffaf0] px-1.5 pt-2.5"
       style={{ boxShadow: '0 -8px 20px -16px rgba(120,90,40,.3)', paddingBottom: 'calc(0.875rem + var(--safe-bottom))' }}
     >
       {TABS.map((tab) => (
