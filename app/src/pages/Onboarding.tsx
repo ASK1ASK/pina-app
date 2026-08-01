@@ -174,6 +174,36 @@ export function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
+  // Gli errori di autenticazione arrivano a volte senza un testo utile (o
+  // addirittura vuoti, mostrati come "[]"): qui diventano messaggi che dicono
+  // davvero cosa e' successo e cosa fare.
+  function messaggioAuth(error: { message?: string; status?: number; code?: string }, contesto: 'invio' | 'verifica'): string {
+    const testo = (error.message || '').toLowerCase()
+    const codice = (error.code || '').toLowerCase()
+
+    if (error.status === 429 || codice.includes('rate_limit') || testo.includes('rate limit') || testo.includes('too many')) {
+      return 'Troppe richieste di accesso in poco tempo. Il servizio email accetta poche richieste all’ora: aspetta qualche minuto e riprova.'
+    }
+    if (testo.includes('invalid') && contesto === 'verifica') {
+      return 'Codice non valido o scaduto. Richiedine uno nuovo.'
+    }
+    if (testo.includes('expired')) {
+      return 'Il codice è scaduto. Richiedine uno nuovo.'
+    }
+    if (testo.includes('email') && (testo.includes('invalid') || testo.includes('not valid'))) {
+      return 'Indirizzo email non valido.'
+    }
+    // Errore senza testo comprensibile: meglio dire che non lo sappiamo,
+    // piuttosto che stampare un contenuto vuoto.
+    const grezzo = (error.message || '').trim()
+    if (!grezzo || grezzo === '[]' || grezzo === '{}') {
+      return contesto === 'invio'
+        ? 'Non siamo riusciti a inviare il codice. Riprova fra qualche minuto; se continua, il servizio email del viaggio potrebbe aver esaurito le richieste disponibili.'
+        : 'Non siamo riusciti a verificare il codice. Riprova.'
+    }
+    return grezzo
+  }
+
   async function sendAuthCode() {
     if (!authEmail || !authEmail.includes('@')) {
       setAuthError('Inserisci un indirizzo email valido.')
@@ -184,7 +214,8 @@ export function Onboarding() {
     setAuthError(null)
     const { error } = await supabase.auth.signInWithOtp({ email: authEmail })
     if (error) {
-      setAuthError(error.message)
+      console.error('Invio codice fallito', error)
+      setAuthError(messaggioAuth(error, 'invio'))
       setAuthStatus('error')
     } else {
       setCodeSent(true)
@@ -202,7 +233,8 @@ export function Onboarding() {
     setAuthError(null)
     const { error } = await supabase.auth.verifyOtp({ email: authEmail, token: authCode.trim(), type: 'email' })
     if (error) {
-      setAuthError(error.message)
+      console.error('Verifica codice fallita', error)
+      setAuthError(messaggioAuth(error, 'verifica'))
       setAuthStatus('error')
     }
     // in caso di successo, onAuthStateChange aggiorna la sessione e l'effect sopra avanza da solo
