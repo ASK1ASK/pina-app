@@ -44,6 +44,11 @@ type ViewMode = 'categoria' | 'persona'
 // La valigia personale non e' condivisa: solo checklist ed essentials
 // vanno tenute in sync live tra i membri.
 const CHECKLIST_TABLES = ['checklist_categories', 'essentials_categories']
+// Le voci non hanno una colonna trip_id (dipendono dalla sezione), quindi
+// vanno ascoltate a parte. Servono da quando le modifiche sono mirate: prima
+// spuntare una voce riscriveva anche le sezioni e l'aggiornamento arrivava
+// agli altri di rimbalzo, ora tocca solo questa tabella.
+const CHECKLIST_NESTED_TABLES = ['checklist_items']
 
 // Forma unificata: compatibile sia con il cast demo (PersonId) sia con i
 // membri veri (id uuid da trip_members), stesso approccio usato in Spese.
@@ -190,10 +195,10 @@ export function Checklist() {
     setEssentialsCategories(fetchedEssentials)
   }
 
-  // Aggiornamenti live: checklist condivisa ed essentials cambiati da un
-  // altro membro compaiono da soli, senza ri-salvare quello che abbiamo
-  // appena ricevuto (skipNextPersist evita il ping-pong con l'effetto sopra).
-  useTripTableSync(isRealTrip ? routeTripId ?? null : null, CHECKLIST_TABLES, refetchReal)
+  // Aggiornamenti live: quello che un altro membro spunta, rinomina o aggiunge
+  // compare da solo. Con i salvataggi mirati non serve piu' alcun accorgimento
+  // contro il rimbalzo, perche' ricevere un aggiornamento non ne provoca uno.
+  useTripTableSync(isRealTrip ? routeTripId ?? null : null, CHECKLIST_TABLES, refetchReal, CHECKLIST_NESTED_TABLES)
 
   useEffect(() => {
     if (!focusItemId) return

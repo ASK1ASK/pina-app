@@ -74,15 +74,32 @@ export function useTripRealtime(tripId: string | null, options: TripRealtimeOpti
 
 // Sync generico per tabelle trip-scoped (spese, checklist, essentials,
 // memories, ...): non fa diff riga-per-riga, chiama `onChange` (debounced)
-// quando una delle tabelle cambia così la schermata puo' rifare il fetch —
-// stesso spirito del pattern "cancella e riscrivi tutto" gia' usato per la
-// persistenza. `tables` va passato come array stabile (costante di modulo).
-export function useTripTableSync(tripId: string | null, tables: string[], onChange: () => void) {
+// quando una delle tabelle cambia così la schermata puo' rifare il fetch.
+// `tables` e `nestedTables` vanno passati come array stabili (costanti di
+// modulo), perche' sono nelle dipendenze dell'effetto.
+//
+// `nestedTables` sono le tabelle figlie che NON hanno una colonna trip_id (per
+// esempio checklist_items, legata al viaggio solo tramite category_id): non
+// potendo filtrare per viaggio si ascolta la tabella intera. Non e' un
+// problema di riservatezza, perche' le regole di sicurezza a livello di riga
+// consegnano solo le righe che l'utente puo' gia' vedere; al massimo si fa
+// qualche ricarica in piu' se si e' dentro a piu' viaggi contemporaneamente.
+// Costante di modulo e non `= []` in firma: un array creato ad ogni chiamata
+// cambierebbe identita' a ogni render e farebbe smontare e ricreare il canale
+// realtime in continuazione per chi non passa tabelle figlie.
+const NESSUNA_TABELLA_FIGLIA: string[] = []
+
+export function useTripTableSync(
+  tripId: string | null,
+  tables: string[],
+  onChange: () => void,
+  nestedTables: string[] = NESSUNA_TABELLA_FIGLIA,
+) {
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
   useEffect(() => {
-    if (!tripId || tables.length === 0) return
+    if (!tripId || (tables.length === 0 && nestedTables.length === 0)) return
 
     let timer: ReturnType<typeof setTimeout> | null = null
     const scheduleRefetch = () => {
@@ -90,13 +107,16 @@ export function useTripTableSync(tripId: string | null, tables: string[], onChan
       timer = setTimeout(() => onChangeRef.current(), 400)
     }
 
-    const channel = supabase.channel(`trip-sync:${tripId}:${tables.join(',')}`)
+    const channel = supabase.channel(`trip-sync:${tripId}:${[...tables, ...nestedTables].join(',')}`)
     tables.forEach((table) => {
       channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table, filter: `trip_id=eq.${tripId}` },
         scheduleRefetch,
       )
+    })
+    nestedTables.forEach((table) => {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefetch)
     })
     channel.subscribe()
 
@@ -105,5 +125,5 @@ export function useTripTableSync(tripId: string | null, tables: string[], onChan
       supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId, tables])
+  }, [tripId, tables, nestedTables])
 }
