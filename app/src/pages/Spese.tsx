@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { computeBalances, computeCassaTotal } from '../lib/balances'
 import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
@@ -76,31 +77,6 @@ interface CassaForm {
 
 function fmtAmount(n: number) {
   return n.toFixed(n % 1 ? 2 : 0)
-}
-
-// Stesso calcolo di tripData.computeBalances, ma parametrizzato sui membri
-// veri del viaggio invece del cast demo fisso.
-// Un contributo alla cassa comune vale come un pagamento anticipato: va
-// accreditato a chi lo versa esattamente come una spesa pagata di tasca
-// propria, altrimenti chi mette soldi nel fondo risulta comunque "in debito"
-// per la sua quota delle spese pagate dalla cassa (bug C1 della due diligence).
-function computeBalancesFor(expenses: UIExpense[], settlements: UISettlement[], cassaContributions: UICassaContribution[], memberIds: string[]): Record<string, number> {
-  const bal: Record<string, number> = {}
-  memberIds.forEach((id) => { bal[id] = 0 })
-  expenses.forEach((e) => {
-    const among = e.splitAmong.length ? e.splitAmong : memberIds
-    const share = e.amount / among.length
-    if (e.paidBy !== 'cassa' && bal[e.paidBy] !== undefined) bal[e.paidBy] += e.amount
-    among.forEach((id) => { if (bal[id] !== undefined) bal[id] -= share })
-  })
-  cassaContributions.forEach((c) => {
-    if (bal[c.person] !== undefined) bal[c.person] += c.amount
-  })
-  settlements.forEach((s) => {
-    if (bal[s.from] !== undefined) bal[s.from] += s.amount
-    if (bal[s.to] !== undefined) bal[s.to] -= s.amount
-  })
-  return bal
 }
 
 function AmountEditable({ value, onSave, placeholder = '0' }: { value: string; onSave: (text: string) => void; placeholder?: string }) {
@@ -342,8 +318,8 @@ export function Spese() {
 
   // ---- derived ----
   const totalSpent = expenses.reduce((a, e) => a + e.amount, 0)
-  const balances = computeBalancesFor(expenses, settlements, cassaContributions, memberIds)
-  const cassaTotal = cassaContributions.reduce((a, c) => a + c.amount, 0) - expenses.filter((e) => e.paidBy === 'cassa').reduce((a, e) => a + e.amount, 0)
+  const balances = computeBalances(expenses, settlements, cassaContributions, memberIds)
+  const cassaTotal = computeCassaTotal(expenses, cassaContributions)
 
   // Quanto c'e' davvero in cassa per la spesa che stiamo compilando: se stiamo
   // modificando una spesa gia' pagata dalla cassa, il suo importo e' gia'
