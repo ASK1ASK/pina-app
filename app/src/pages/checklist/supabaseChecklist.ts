@@ -30,27 +30,73 @@ export async function fetchChecklist(tripId: string): Promise<RealChecklistCateg
   }))
 }
 
-// Stesso pattern "cancella e riscrivi tutto" già usato per persistStops in
-// journey/supabaseJourney.ts: più semplice e corretto che calcolare un diff.
-export async function persistChecklist(tripId: string, categories: RealChecklistCategory[]): Promise<void> {
-  unwrapVoid(await supabase.from('checklist_categories').delete().eq('trip_id', tripId))
-  if (!categories.length) return
+// ---------------------------------------------------------------------------
+// Operazioni mirate sulla checklist condivisa.
+//
+// La checklist e' l'unica lista che piu' persone modificano davvero insieme.
+// Riscrivere l'intera lista ad ogni tocco significava che, se due membri
+// agivano a pochi istanti di distanza, il salvataggio del secondo cancellava
+// la voce appena aggiunta dal primo, senza che nessuno se ne accorgesse.
+// Toccando una riga sola, due persone che lavorano su voci diverse non si
+// pestano i piedi; sulla stessa voce vince l'ultimo, che e' quello che uno
+// si aspetta.
+// ---------------------------------------------------------------------------
 
-  const catRows = categories.map((c, i) => ({ trip_id: tripId, emoji: c.emoji, name: c.name, position: i }))
-  const { data: insertedCats, error } = await supabase.from('checklist_categories').insert(catRows).select()
-  if (error || !insertedCats) throw error
-
-  const itemRows = categories.flatMap((c, ci) =>
-    c.items.map((it, ii) => ({
-      category_id: insertedCats[ci].id,
-      label: it.label,
-      done: it.done,
-      assignee_member_id: it.assignee || null,
-      position: ii,
-    })),
-  )
-  if (itemRows.length) unwrapVoid(await supabase.from('checklist_items').insert(itemRows))
+export async function createChecklistCategory(
+  tripId: string,
+  input: { emoji: string; name: string; position: number },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('checklist_categories')
+    .insert({ trip_id: tripId, emoji: input.emoji, name: input.name, position: input.position })
+    .select('id')
+    .single()
+  if (error || !data) throw error ?? new Error('Errore durante la creazione della sezione.')
+  return data.id
 }
+
+export async function updateChecklistCategory(categoryId: string, patch: { emoji?: string; name?: string }): Promise<void> {
+  unwrapVoid(await supabase.from('checklist_categories').update(patch).eq('id', categoryId))
+}
+
+export async function createChecklistItem(
+  categoryId: string,
+  input: { label: string; done: boolean; assignee?: string; position: number },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('checklist_items')
+    .insert({
+      category_id: categoryId,
+      label: input.label,
+      done: input.done,
+      assignee_member_id: input.assignee || null,
+      position: input.position,
+    })
+    .select('id')
+    .single()
+  if (error || !data) throw error ?? new Error('Errore durante la creazione della voce.')
+  return data.id
+}
+
+export async function updateChecklistItem(
+  itemId: string,
+  patch: { label?: string; done?: boolean; assignee?: string | null },
+): Promise<void> {
+  const payload: { label?: string; done?: boolean; assignee_member_id?: string | null } = {}
+  if (patch.label !== undefined) payload.label = patch.label
+  if (patch.done !== undefined) payload.done = patch.done
+  if (patch.assignee !== undefined) payload.assignee_member_id = patch.assignee
+  unwrapVoid(await supabase.from('checklist_items').update(payload).eq('id', itemId))
+}
+
+export async function deleteChecklistItem(itemId: string): Promise<void> {
+  unwrapVoid(await supabase.from('checklist_items').delete().eq('id', itemId))
+}
+
+// Nota: qui esisteva persistChecklist, che ad ogni modifica cancellava e
+// riscriveva l'intera checklist del viaggio. E' stata rimossa perche' era la
+// causa della perdita silenziosa di dati quando due membri modificavano
+// insieme: ora si usano le operazioni mirate qui sopra.
 
 export interface RealEssentialsEntry {
   id: string

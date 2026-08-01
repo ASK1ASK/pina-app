@@ -22,13 +22,17 @@ import {
 import { fetchTripMembers, type RealMember } from './spese/supabaseSpese'
 import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote } from './journey/supabaseJourney'
 import {
+  createChecklistCategory,
+  createChecklistItem,
+  deleteChecklistItem,
   fetchChecklist,
   fetchEssentials,
   fetchPersonalSections,
-  persistChecklist,
   persistEssentials as persistEssentialsRemote,
   persistPersonalSections as persistPersonalSectionsRemote,
   seedEssentials,
+  updateChecklistCategory,
+  updateChecklistItem,
 } from './checklist/supabaseChecklist'
 import { ChecklistRow } from './checklist/ChecklistRow'
 import { defaultCategories, defaultPersonalSections } from './checklist/data'
@@ -86,7 +90,6 @@ export function Checklist() {
   const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
   const [tripStartDate, setTripStartDate] = useState<Date | null>(null)
   const loaded = useRef(false)
-  const skipNextPersist = useRef(false)
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const members = isRealTrip
@@ -152,27 +155,37 @@ export function Checklist() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeTripId])
 
+  // Viaggio demo: continua a salvare tutto insieme su localStorage, dove non
+  // esiste il problema della modifica in contemporanea.
   useEffect(() => {
-    if (!loaded.current) return
-    if (skipNextPersist.current) {
-      skipNextPersist.current = false
-      return
-    }
-    if (isRealTrip && routeTripId) {
-      persistChecklist(routeTripId, categories).catch((err) => showError('Non siamo riusciti a salvare la checklist.', err))
-      if (activeUser) {
-        persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) => showError('Non siamo riusciti a salvare la tua valigia.', err))
-      }
-    } else {
-      saveChecklistData({ categories, personalSections } as never)
-    }
+    if (!loaded.current || isRealTrip) return
+    saveChecklistData({ categories, personalSections } as never)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, personalSections])
+
+  // La valigia personale resta a salvataggio completo: e' di un solo membro,
+  // quindi nessun altro puo' sovrascriverla.
+  useEffect(() => {
+    if (!loaded.current || !isRealTrip || !routeTripId || !activeUser) return
+    persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) =>
+      showError('Non siamo riusciti a salvare la tua valigia.', err),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalSections])
+
+  // Salva una modifica puntuale della checklist condivisa, riallineandosi al
+  // server se fallisce: cosi' non resta a schermo qualcosa che non e' stato
+  // davvero salvato.
+  function pushChecklistChange(op: Promise<unknown>, messaggio: string) {
+    op.catch((err) => {
+      showError(messaggio, err)
+      refetchReal().catch(() => {})
+    })
+  }
 
   async function refetchReal() {
     if (!routeTripId) return
     const [fetchedChecklist, fetchedEssentials] = await Promise.all([fetchChecklist(routeTripId), fetchEssentials(routeTripId)])
-    skipNextPersist.current = true
     setCategories(fetchedChecklist)
     setEssentialsCategories(fetchedEssentials)
   }
@@ -215,47 +228,80 @@ export function Checklist() {
   }
 
   // ---- shared checklist mutations ----
+  // Ognuna aggiorna subito lo schermo e poi tocca SOLO la riga interessata sul
+  // server: due membri su voci diverse non si sovrascrivono piu' a vicenda.
   function toggleItem(catId: string, itemId: string) {
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, done: !it.done })) })))
+    const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
+    if (!current) return
+    const done = !current.done
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, done })) })))
+    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { done }), 'Non siamo riusciti a salvare la spunta.')
   }
   function deleteItem(catId: string, itemId: string) {
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.filter((it) => it.id !== itemId) })))
+    if (isRealTrip) pushChecklistChange(deleteChecklistItem(itemId), 'Non siamo riusciti a eliminare la voce.')
   }
   function updateItemLabel(catId: string, itemId: string, label: string) {
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, label: label || it.label })) })))
+    const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
+    const next = label || current?.label || ''
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, label: next })) })))
+    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { label: next }), 'Non siamo riusciti a salvare il testo.')
   }
   function cycleAssignee(catId: string, itemId: string) {
+    const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
+    if (!current || memberIds.length === 0) return
+    const idx = memberIds.indexOf(current.assignee || activeUser)
+    const next = memberIds[(idx + 1) % memberIds.length]
     setCategories((cs) =>
-      cs.map((c) =>
-        c.id !== catId
-          ? c
-          : {
-              ...c,
-              items: c.items.map((it) => {
-                if (it.id !== itemId) return it
-                const idx = memberIds.indexOf(it.assignee || activeUser)
-                const next = memberIds[(idx + 1) % memberIds.length]
-                return { ...it, assignee: next }
-              }),
-            },
-      ),
+      cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, assignee: next })) })),
     )
+    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { assignee: next }), 'Non siamo riusciti a salvare l’assegnazione.')
   }
-  function addItemToCategory(catId: string) {
+  async function addItemToCategory(catId: string) {
+    const position = categories.find((c) => c.id === catId)?.items.length ?? 0
+    const nuova = { label: 'Nuova voce', done: false, assignee: activeUser }
+    if (isRealTrip) {
+      // Qui si aspetta l'id vero prima di mostrare la voce: usare un id
+      // temporaneo e sostituirlo dopo farebbe perdere il fuoco mentre si
+      // scrive il nome.
+      try {
+        const id = await createChecklistItem(catId, { ...nuova, position })
+        setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, ...nuova }] })))
+        setFocusItemId(id)
+      } catch (err) {
+        showError('Non siamo riusciti ad aggiungere la voce.', err)
+      }
+      return
+    }
     const id = 'i' + Date.now()
     setFocusItemId(id)
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, label: 'Nuova voce', done: false, assignee: activeUser }] })))
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, ...nuova }] })))
   }
-  function addCategory() {
+  async function addCategory() {
+    const nuova = { emoji: '📌', name: 'Nuova sezione' }
+    if (isRealTrip && routeTripId) {
+      try {
+        const id = await createChecklistCategory(routeTripId, { ...nuova, position: categories.length })
+        setCategories((cs) => [...cs, { id, ...nuova, items: [] }])
+        setFocusItemId(id)
+      } catch (err) {
+        showError('Non siamo riusciti ad aggiungere la sezione.', err)
+      }
+      return
+    }
     const id = 'c' + Date.now()
     setFocusItemId(id)
-    setCategories((cs) => [...cs, { id, emoji: '📌', name: 'Nuova sezione', items: [] }])
+    setCategories((cs) => [...cs, { id, ...nuova, items: [] }])
   }
   function updateCategoryName(catId: string, name: string) {
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, name: name || c.name })))
+    const next = name || categories.find((c) => c.id === catId)?.name || ''
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, name: next })))
+    if (isRealTrip) pushChecklistChange(updateChecklistCategory(catId, { name: next }), 'Non siamo riusciti a salvare il nome della sezione.')
   }
   function updateCategoryEmoji(catId: string, emoji: string) {
-    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, emoji: emoji || c.emoji })))
+    const next = emoji || categories.find((c) => c.id === catId)?.emoji || ''
+    setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, emoji: next })))
+    if (isRealTrip) pushChecklistChange(updateChecklistCategory(catId, { emoji: next }), 'Non siamo riusciti a salvare l’icona.')
   }
 
   // ---- personal checklist mutations ----
