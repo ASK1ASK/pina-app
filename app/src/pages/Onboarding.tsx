@@ -24,6 +24,8 @@ import {
   buildMonthDefs,
   initialOnboardingState,
   isoDate,
+  riprendiStatoSalvato,
+  salvaStatoPerRitorno,
   moodLabelFor,
   preparingPhrases,
   type OnboardingState,
@@ -130,24 +132,35 @@ export function Onboarding() {
   // il nome si chiede una volta sola: se il profilo ce l'ha già (da una sessione
   // precedente) si salta dritti a "createTrip", altrimenti si passa da "yourName".
   useEffect(() => {
-    if (session && state.step === 'login') {
-      if (state.loginIntent === 'access') { navigate('/'); return }
-      if (state.loginIntent === 'join') { goStep('whoAreYou'); return }
-      supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', session.user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          const name = data?.display_name?.trim()
-          if (name && name !== 'Viaggiatore') {
-            patch({ identityName: name })
-            goStep('createTrip')
-          } else {
-            goStep('yourName')
-          }
-        })
-    }
+    if (!session) return
+
+    // Chi torna dopo aver toccato il link nell'email riprende da dove era: il
+    // controllo non puo' basarsi sull'indirizzo, perche' supabase-js rimuove il
+    // token dall'URL appena si avvia, prima ancora che la pagina sia disegnata.
+    // La comparsa della sessione e' invece un segnale affidabile.
+    const ripreso = riprendiStatoSalvato()
+    if (ripreso) setState({ ...ripreso, step: 'login' })
+
+    const passo = ripreso ? 'login' : state.step
+    const intento = ripreso ? ripreso.loginIntent : state.loginIntent
+    if (passo !== 'login') return
+
+    if (intento === 'access') { navigate('/'); return }
+    if (intento === 'join') { goStep('whoAreYou'); return }
+    supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        const name = data?.display_name?.trim()
+        if (name && name !== 'Viaggiatore') {
+          patch({ identityName: name })
+          goStep('createTrip')
+        } else {
+          goStep('yourName')
+        }
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -212,7 +225,15 @@ export function Onboarding() {
     }
     setAuthStatus('sending')
     setAuthError(null)
-    const { error } = await supabase.auth.signInWithOtp({ email: authEmail })
+    // Quanto compilato finora viene messo da parte: toccando il link nella mail
+    // si esce dall'app, e al rientro va ritrovato al suo posto.
+    salvaStatoPerRitorno(state)
+    const { error } = await supabase.auth.signInWithOtp({
+      email: authEmail,
+      // Dove riportare la persona dopo che ha toccato il link: la stessa
+      // schermata da cui e' partita, cosi' il flusso riprende da li'.
+      options: { emailRedirectTo: window.location.href },
+    })
     if (error) {
       console.error('Invio codice fallito', error)
       setAuthError(messaggioAuth(error, 'invio'))
@@ -828,8 +849,10 @@ export function Onboarding() {
 
           {codeSent ? (
             <>
-              <div className="text-center text-[11.5px] font-semibold text-[var(--color-text-secondary)]">
-                Codice inviato a <strong>{authEmail}</strong>. Controlla anche lo spam.
+              <div className="text-center text-[11.5px] font-semibold leading-relaxed text-[var(--color-text-secondary)]">
+                Ti abbiamo scritto a <strong>{authEmail}</strong>.<br />
+                Tocca il link nell’email per entrare subito, oppure copia qui il codice.<br />
+                Controlla anche lo spam.
               </div>
               <input
                 type="text"

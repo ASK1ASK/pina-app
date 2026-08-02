@@ -185,4 +185,46 @@ export function moodLabelFor(id: string, customMoods: CustomMood[]) {
   return found?.label
 }
 
+// ---------------------------------------------------------------------------
+// Ritorno dal link di accesso via email.
+//
+// Toccando il link nella mail si esce dall'app e si rientra: senza questo, chi
+// aveva gia' scritto nome, date, mood e crew se li ritroverebbe azzerati. Si usa
+// localStorage e non sessionStorage perche' il link spesso apre una scheda
+// nuova, e sessionStorage non e' condiviso fra schede.
+// ---------------------------------------------------------------------------
+
+const RIPRESA_KEY = 'pina-onboarding-ripresa'
+/** Oltre un'ora il dato e' verosimilmente di un tentativo abbandonato. */
+const RIPRESA_VALIDITA_MS = 60 * 60 * 1000
+
+export function salvaStatoPerRitorno(state: OnboardingState) {
+  try {
+    localStorage.setItem(RIPRESA_KEY, JSON.stringify({ salvatoIl: Date.now(), state }))
+  } catch {
+    // spazio esaurito o modalita' privata: si perde la ripresa, non e' critico
+  }
+}
+
+/**
+ * Restituisce lo stato salvato una sola volta, poi lo cancella.
+ *
+ * Va chiamata quando compare la sessione, non guardando l'indirizzo: supabase-js
+ * rimuove il token dall'URL appena si avvia, quindi al momento del primo
+ * disegno della pagina quel segnale non c'e' gia' piu'.
+ */
+export function riprendiStatoSalvato(): OnboardingState | null {
+  try {
+    const raw = localStorage.getItem(RIPRESA_KEY)
+    if (!raw) return null
+    localStorage.removeItem(RIPRESA_KEY)
+    const dato = JSON.parse(raw)
+    if (!dato?.state) return null
+    if (Date.now() - (dato.salvatoIl || 0) > RIPRESA_VALIDITA_MS) return null
+    return dato.state as OnboardingState
+  } catch {
+    return null
+  }
+}
+
 export type { MoodId }
