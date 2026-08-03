@@ -61,6 +61,15 @@ export function Onboarding() {
   const [authStatus, setAuthStatus] = useState<'idle' | 'sending' | 'verifying' | 'error'>('idle')
   const [authError, setAuthError] = useState<string | null>(null)
 
+  const [googleInCorso, setGoogleInCorso] = useState(false)
+  const [googleError, setGoogleError] = useState<string | null>(null)
+
+  // L'email resta raggiungibile, ma sotto un tocco: oggi non consegna (limite del
+  // servizio email di default di Supabase), e in primo piano sarebbe un vicolo
+  // cieco accanto alla porta buona. Il giorno che si compra il dominio basta
+  // rimetterla in vista: il percorso qui sotto e' intatto.
+  const [emailAperto, setEmailAperto] = useState(false)
+
   // Anteprima reale di un viaggio raggiunto via /join/:code o via link/codice
   // incollati a mano: presa da get_trip_preview_by_code, leggibile anche da chi
   // non è ancora membro (è tutto il senso di un invito).
@@ -242,6 +251,26 @@ export function Onboarding() {
       setCodeSent(true)
       setAuthStatus('idle')
     }
+  }
+
+  async function entraConGoogle() {
+    setGoogleInCorso(true)
+    setGoogleError(null)
+    // Stessa ragione dell'email: si esce dall'app per andare da Google, e al
+    // rientro quanto compilato finora va ritrovato al suo posto.
+    salvaStatoPerRitorno(state)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      // Dove riportare la persona dopo Google: la stessa schermata da cui e'
+      // partita, cosi' il flusso riprende da li'.
+      options: { redirectTo: window.location.href },
+    })
+    if (error) {
+      console.error('Accesso con Google fallito', error)
+      setGoogleError('Non siamo riusciti ad aprire l’accesso con Google. Riprova.')
+      setGoogleInCorso(false)
+    }
+    // In caso di successo il browser esce dall'app: non c'e' altro da fare qui.
   }
 
   async function verifyAuthCode() {
@@ -841,10 +870,32 @@ export function Onboarding() {
         >‹</button>
         <div className="mb-2 text-center font-display text-xl font-semibold italic text-[var(--color-coral)]">🦩 Piña</div>
         <div className="mb-1 text-center font-display text-[19px] font-semibold text-[var(--color-text)]">{loginTitle}</div>
-        <div className="mb-6 text-center text-[11px] font-semibold text-[var(--color-text-secondary)]">Per ora solo via email</div>
+        <div className="mb-6 text-center text-[11px] font-semibold text-[var(--color-text-secondary)]">Un tocco e sei dentro</div>
         <div className="flex flex-col gap-2.5">
-          <button type="button" className={disabledCls} disabled><span>🔵</span> Continua con Google</button>
+          <button
+            type="button"
+            className={`${primaryBtnClass} flex items-center justify-center gap-2 disabled:opacity-60`}
+            style={primaryBtnStyle}
+            disabled={googleInCorso}
+            onClick={entraConGoogle}
+          >
+            <span>🔵</span> {googleInCorso ? 'Apertura...' : 'Continua con Google'}
+          </button>
           <button type="button" className={disabledCls} disabled><span>🍎</span> Continua con Apple</button>
+          {googleError && (
+            <div className="text-center text-[11.5px] font-semibold text-[#c2445a]">{googleError}</div>
+          )}
+
+          {!emailAperto ? (
+            <button
+              type="button"
+              className="py-2 text-center text-[11px] font-semibold text-[var(--color-text-secondary)] underline underline-offset-2 opacity-70"
+              onClick={() => setEmailAperto(true)}
+            >
+              oppure entra con l’email
+            </button>
+          ) : (
+          <>
           <div className={selectedCls}>✉️ Continua con Email</div>
 
           {codeSent ? (
@@ -904,6 +955,8 @@ export function Onboarding() {
                 {authStatus === 'sending' ? 'Invio...' : 'Invia codice'}
               </button>
             </>
+          )}
+          </>
           )}
         </div>
       </div>
