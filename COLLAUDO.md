@@ -18,7 +18,7 @@ Modello per questa chat: **Sonnet**. Non deve aprire il codice — deve guardare
 
 | # | Gravità | Dove | Cosa succede | Visto il |
 |---|---|---|---|---|
-| 1 | 🔴 | Login | L'email col codice non arriva: SMTP di Supabase non consegna. Riprodotto con un amico reale su Gmail | 02/08 |
+| 1 | 🟡 | Login | L'email col codice non arriva: SMTP di Supabase non consegna. Riprodotto con un amico reale su Gmail. **Non blocca più**: dal 04/08 si entra con Google e l'email è in secondo piano. Si risolve solo comprando il dominio — decisione sospesa | 02/08 |
 
 ## Chiusi
 
@@ -30,7 +30,7 @@ Modello per questa chat: **Sonnet**. Non deve aprire il codice — deve guardare
 
 Lista di controllo, non ancora eseguita. Va percorsa **da telefono**, non da PC — quasi tutti i problemi finora sono emersi solo lì.
 
-- [ ] Un amico apre il link da WhatsApp, si iscrive, entra nella crew *(dipende dal cantiere 1)*
+- [ ] Un amico apre il link da WhatsApp, entra con Google, entra nella crew *(cantiere 7, prova B — è il prossimo passo)*
 - [ ] Entrata con il codice a 6 cifre
 - [ ] Entrata col QR code
 - [ ] Chi entra sceglie il proprio slot nella crew, nome e colore
