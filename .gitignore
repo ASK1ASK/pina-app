@@ -1,6 +1,11 @@
 # Claude Code local session config/tooling — not meant for version control
 .claude/
 
+# Il repo è pubblico: STATO.md contiene scadenze, strategia e la verifica del
+# marchio, che non vanno pubblicate. Resta locale di proposito — non è una
+# dimenticanza, e la copia di sicurezza va tenuta fuori da qui.
+STATO.md
+
 # Editor/OS
 .DS_Store
 .vscode/
