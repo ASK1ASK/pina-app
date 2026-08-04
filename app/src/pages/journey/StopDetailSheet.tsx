@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { AttachmentControl } from '../../components/AttachmentControl'
 import { EditableText } from '../../components/EditableText'
 import { stopNights, type Stop } from '../../lib/tripData'
 
@@ -31,12 +32,17 @@ function DaySquares({
 
 export function StopDetailSheet({
   stop,
+  photoUrl,
   onClose,
   onOpenSettings,
   activeStayDay,
   onSelectStayDay,
   onSaveStayName,
   onSaveStayLink,
+  onAttachStay,
+  onRemoveStayAttachment,
+  uploadingStayId,
+  resolveAttachment,
   onAddStay,
   onRemoveStay,
   linkEditKey,
@@ -53,12 +59,19 @@ export function StopDetailSheet({
   onAddCategory,
 }: {
   stop: Stop
+  /** Indirizzo mostrabile della foto: un percorso nel magazzino da solo non si apre. */
+  photoUrl: string | undefined
   onClose: () => void
   onOpenSettings: () => void
   activeStayDay: number | undefined
   onSelectStayDay: (day: number) => void
   onSaveStayName: (stayId: string, text: string) => void
   onSaveStayLink: (stayId: string, text: string) => void
+  onAttachStay: (stayId: string, file: File) => void
+  onRemoveStayAttachment: (stayId: string) => void
+  uploadingStayId: string | null
+  /** L'indirizzo con cui aprire un allegato: un percorso nel magazzino da solo non si apre. */
+  resolveAttachment: (attachment: string) => string
   onAddStay: () => void
   onRemoveStay: (stayId: string) => void
   linkEditKey: string | null
@@ -81,7 +94,7 @@ export function StopDetailSheet({
   const multiDay = nights.length > 1
   const stayActiveDay = activeStayDay ?? nights[nights.length - 1]
   const gradient = stop.gradient || 'linear-gradient(135deg,#ffb627,#ff8a5b)'
-  const bg = stop.photo ? `url(${stop.photo}) center/cover no-repeat` : gradient
+  const bg = photoUrl ? `url(${photoUrl}) center/cover no-repeat` : gradient
 
   const stays = (stop.stays || []).filter((s) => !multiDay || !s.day || s.day === stayActiveDay)
 
@@ -133,8 +146,27 @@ export function StopDetailSheet({
                       onBlurText={(text) => { onSaveStayLink(stay.id, text); onToggleLinkEdit(null) }}
                     />
                   )}
+                  {/*
+                    La prenotazione sta qui, sull'alloggio, e non in una
+                    categoria generica degli Essentials: arrivando in hotel a
+                    mezzanotte e' qui che uno la cerca.
+                  */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="flex-1 text-[10.5px] font-semibold text-[var(--color-text-secondary)]">
+                      {stay.attachment ? 'Prenotazione allegata' : 'Allega la prenotazione'}
+                    </span>
+                    <AttachmentControl
+                      attachment={stay.attachment}
+                      link={stay.attachment ? resolveAttachment(stay.attachment) : ''}
+                      uploading={uploadingStayId === stay.id}
+                      etichettaVuoto="📎 Allega"
+                      onAttach={(file) => onAttachStay(stay.id, file)}
+                      onRemove={() => onRemoveStayAttachment(stay.id)}
+                    />
+                  </div>
                 </div>
-                <button type="button" className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-card-border)] bg-white text-[13px] text-[var(--color-text)]" onClick={() => onToggleLinkEdit(editing ? null : key)}>📎</button>
+                {/* 🔗 e non 📎: questo apre il campo del link, non allega un file. */}
+                <button type="button" aria-label="Modifica il link dell’alloggio" className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full border border-[var(--color-card-border)] bg-white text-[13px] text-[var(--color-text)]" onClick={() => onToggleLinkEdit(editing ? null : key)}>🔗</button>
               </div>
             )
           })}

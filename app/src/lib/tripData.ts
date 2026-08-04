@@ -384,6 +384,12 @@ export interface StopStay {
   link: string
   days?: number[]
   day?: number
+  /**
+   * La prenotazione allegata all'alloggio: percorso nel magazzino, oppure un
+   * vecchio valore salvato come testo. E' attaccata qui e non in una categoria
+   * generica perche' e' qui che uno la cerca, arrivando in hotel.
+   */
+  attachment?: string | null
 }
 
 export interface Stop {

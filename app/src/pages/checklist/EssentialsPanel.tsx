@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { AttachmentControl } from '../../components/AttachmentControl'
 import { EditableText } from '../../components/EditableText'
 import type { EssentialsCategory, EssentialsEntry } from '../../lib/tripData'
 
@@ -10,6 +10,8 @@ function EntryRow({
   onAttach,
   onRemoveAttachment,
   onDelete,
+  resolveAttachment,
+  uploading,
 }: {
   entry: EssentialsEntry
   onSaveTitle: (text: string) => void
@@ -18,9 +20,11 @@ function EntryRow({
   onAttach: (file: File) => void
   onRemoveAttachment: () => void
   onDelete: () => void
+  resolveAttachment: (attachment: string) => string
+  uploading: boolean
 }) {
-  const fileRef = useRef<HTMLInputElement>(null)
   const hrefDisplay = entry.href || 'Aggiungi link (tocca)'
+  const allegato = entry.attachment || ''
 
   return (
     <div className="flex items-center gap-2 border-b border-dashed border-[var(--color-card-border)] pb-2.25 last:border-b-0">
@@ -44,31 +48,12 @@ function EntryRow({
             className="flex-1 text-[10.5px] text-[#2a8fd8]"
             onBlurText={(text) => onSaveHref(text.replace(/^🔗\s*/, ''))}
           />
-          {entry.attachment ? (
-            <>
-              <button
-                type="button"
-                className="h-6 w-6 shrink-0 rounded-md bg-cover bg-center"
-                style={{ backgroundImage: `url(${entry.attachment})` }}
-                onClick={() => window.open(entry.attachment as string, '_blank')}
-              />
-              <button type="button" className="shrink-0 text-xs text-[#c2a97e]" onClick={onRemoveAttachment}>×</button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="shrink-0 rounded-lg border border-dashed border-[var(--color-sand)] px-1.5 py-0.75 text-[10px] font-bold text-[var(--color-add-text)]"
-              onClick={() => fileRef.current?.click()}
-            >
-              📎 QR/PDF
-            </button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onAttach(f); e.target.value = '' }}
+          <AttachmentControl
+            attachment={allegato}
+            link={allegato ? resolveAttachment(allegato) : ''}
+            uploading={uploading}
+            onAttach={onAttach}
+            onRemove={onRemoveAttachment}
           />
         </div>
       </div>
@@ -90,6 +75,8 @@ export function EssentialsPanel({
   onRemoveAttachment,
   onDeleteEntry,
   onAddEntry,
+  resolveAttachment,
+  uploadingEntryId,
 }: {
   categories: EssentialsCategory[]
   activeId: string | null
@@ -99,6 +86,8 @@ export function EssentialsPanel({
   onRemoveAttachment: (catId: string, entryId: string) => void
   onDeleteEntry: (catId: string, entryId: string) => void
   onAddEntry: (catId: string) => void
+  resolveAttachment: (attachment: string) => string
+  uploadingEntryId: string | null
 }) {
   const active = categories.find((c) => c.id === activeId)
 
@@ -138,6 +127,8 @@ export function EssentialsPanel({
                 onAttach={(file) => onAttach(active.id, entry.id, file)}
                 onRemoveAttachment={() => onRemoveAttachment(active.id, entry.id)}
                 onDelete={() => onDeleteEntry(active.id, entry.id)}
+                resolveAttachment={resolveAttachment}
+                uploading={uploadingEntryId === entry.id}
               />
             ))}
             <button

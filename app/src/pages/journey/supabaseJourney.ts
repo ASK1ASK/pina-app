@@ -103,6 +103,7 @@ export async function fetchStops(tripId: string): Promise<Stop[]> {
         name: st.name,
         link: st.link,
         day: st.night_date ? new Date(st.night_date).getDate() : undefined,
+        attachment: st.attachment_url,
       })),
     categories: categories
       .filter((c) => c.stop_id === s.id)
@@ -163,6 +164,7 @@ export async function persistStops(tripId: string, stops: Stop[], tripStart: Dat
       name: stay.name,
       link: stay.link,
       night_date: stay.day ? dayIso(stay.day) : null,
+      attachment_url: stay.attachment ?? null,
     })),
   )
   if (stayRows.length) unwrapVoid(await supabase.from('stop_stays').insert(stayRows))

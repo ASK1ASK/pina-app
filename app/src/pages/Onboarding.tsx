@@ -5,8 +5,9 @@ import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min.js?url'
 import { BottomSheet } from '../components/BottomSheet'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
+import { isStoragePath, removeTripMedia, signedUrls, uploadTripMedia } from '../lib/mediaUpload'
 import { supabase } from '../lib/supabase'
-import { fetchTripMeta } from './journey/supabaseJourney'
+import { fetchTripMeta, updateTripCover } from './journey/supabaseJourney'
 
 QrScanner.WORKER_PATH = QrScannerWorkerPath
 import {
@@ -63,6 +64,31 @@ export function Onboarding() {
 
   const [googleInCorso, setGoogleInCorso] = useState(false)
   const [googleError, setGoogleError] = useState<string | null>(null)
+
+  // Indirizzo mostrabile della copertina. Tenuto fuori dallo stato
+  // dell'onboarding di proposito: quello viene salvato per intero per la
+  // ripresa dopo il login, e un'immagine non ci deve finire dentro.
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
+
+  // Tornando a modificare un viaggio, la copertina arriva come percorso nel
+  // magazzino: da sola non si apre, va firmata.
+  useEffect(() => {
+    const salvata = state.coverPhoto
+    if (!salvata || !isStoragePath(salvata)) return
+    let annullato = false
+    signedUrls([salvata], 8 * 3600).then((mappa) => {
+      const firmato = mappa[salvata]
+      if (annullato || !firmato) return
+      setCoverPreview((prec) => {
+        if (prec?.startsWith('blob:')) URL.revokeObjectURL(prec)
+        return firmato
+      })
+    })
+    return () => {
+      annullato = true
+    }
+  }, [state.coverPhoto])
 
   // L'email resta raggiungibile, ma sotto un tocco: oggi non consegna (limite del
   // servizio email di default di Supabase), e in primo piano sarebbe un vicolo
@@ -559,6 +585,9 @@ export function Onboarding() {
   const primaryMood = state.moodIds[0] || 'fiesta'
   const coverGradient =
     coverGradientById[state.coverColorId] || moodGradients[primaryMood] || moodGradients.fiesta
+  // La foto da mostrare: l'anteprima locale se c'e', altrimenti il vecchio
+  // valore salvato come testo, che resta valido e non va migrato.
+  const fotoCopertina = coverPreview ?? (state.coverPhoto && !isStoragePath(state.coverPhoto) ? state.coverPhoto : null)
 
   const crewTotal = realTripId ? crewMembers.length : (state.crew ? state.crew.length : state.participants.length) + 1
   const joinedCount = realTripId
@@ -684,11 +713,41 @@ export function Onboarding() {
     patch({ step: 'crewForming' })
   }
 
-  function onCoverFileChosen(file: File) {
-    const reader = new FileReader()
-    reader.onload = () =>
-      patch({ coverPhoto: reader.result as string, uploadMenuOpen: false, coverPickerOpen: false })
-    reader.readAsDataURL(file)
+  async function onCoverFileChosen(file: File) {
+    // Anteprima immediata dal file locale: non passa dal database e non finisce
+    // in localStorage. Prima la foto veniva convertita in testo e infilata
+    // nello stato dell'onboarding, che viene salvato per intero per la ripresa
+    // dopo il login: una foto da telefono supera da sola lo spazio disponibile,
+    // l'errore veniva ingoiato e la ripresa si perdeva in silenzio.
+    setCoverPreview((prec) => {
+      if (prec?.startsWith('blob:')) URL.revokeObjectURL(prec)
+      return URL.createObjectURL(file)
+    })
+
+    // Nel percorso di creazione il viaggio a questo punto esiste gia' (viene
+    // creato prima della schermata della copertina), quindi la sua cartella nel
+    // magazzino c'e' e la foto puo' partire subito.
+    if (!realTripId) {
+      // Recap dimostrativo: nessun viaggio vero dietro, resta com'era.
+      const reader = new FileReader()
+      reader.onload = () => patch({ coverPhoto: reader.result as string, uploadMenuOpen: false, coverPickerOpen: false })
+      reader.readAsDataURL(file)
+      return
+    }
+
+    const precedente = state.coverPhoto
+    setUploadingCover(true)
+    try {
+      const percorso = await uploadTripMedia(realTripId, file)
+      await updateTripCover(realTripId, { coverPhotoUrl: percorso })
+      patch({ coverPhoto: percorso })
+      if (precedente) removeTripMedia(precedente)
+    } catch (err) {
+      setCreateTripError(err instanceof Error ? err.message : 'Non siamo riusciti a caricare la copertina.')
+    } finally {
+      setUploadingCover(false)
+      patch({ uploadMenuOpen: false, coverPickerOpen: false })
+    }
   }
 
   function copyLink() {
@@ -739,8 +798,19 @@ export function Onboarding() {
                   boxShadow: state.coverColorId === p.id ? '0 0 0 3px var(--color-bg), 0 0 0 5px #3a2a1c' : undefined,
                 }}
                 onClick={() => {
+                  const precedente = state.coverPhoto
                   patch({ coverColorId: p.id, coverPickerOpen: false, coverPhoto: null })
+                  setCoverPreview((prec) => {
+                    if (prec?.startsWith('blob:')) URL.revokeObjectURL(prec)
+                    return null
+                  })
                   saveStoredColorFor(state.tripName, p.id)
+                  // La copertina scelta qui non veniva salvata da nessuna parte:
+                  // il viaggio nasceva col colore di default e restava cosi'.
+                  if (realTripId) {
+                    updateTripCover(realTripId, { coverColorId: p.id, coverPhotoUrl: null }).catch(() => {})
+                    if (precedente) removeTripMedia(precedente)
+                  }
                 }}
               />
             ))}
@@ -1123,8 +1193,10 @@ export function Onboarding() {
         {(state.editReturnStep || isRealTripEdit) && (
           <>
             <button type="button" className="mb-3.5 flex w-full items-center gap-3 rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => patch({ coverPickerOpen: true })}>
-              <div className="h-8.5 w-8.5 shrink-0 rounded-full" style={{ background: state.coverPhoto ? undefined : coverGradientById[state.coverColorId] || coverGradientById.fiesta, backgroundImage: state.coverPhoto ? `url(${state.coverPhoto})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-              <div className="flex-1 text-left text-[13.5px] font-bold text-[var(--color-text)]">Scegli la tua copertina</div>
+              <div className="h-8.5 w-8.5 shrink-0 rounded-full" style={{ background: fotoCopertina ? undefined : coverGradientById[state.coverColorId] || coverGradientById.fiesta, backgroundImage: fotoCopertina ? `url(${fotoCopertina})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+              <div className="flex-1 text-left text-[13.5px] font-bold text-[var(--color-text)]">
+                {uploadingCover ? 'Carico la copertina…' : 'Scegli la tua copertina'}
+              </div>
               <span className="text-[15px] text-[#c2a97e]">›</span>
             </button>
             <button type="button" className="mb-2.5 w-full text-center text-[12.5px] font-bold text-[#c2445a]" onClick={() => patch({ deleteConfirmOpen: true })}>🗑 Elimina viaggio</button>

@@ -9,13 +9,22 @@ export interface AddStopDraft {
   startDay: number | null
   endDay: number | null
   moodId: string | null
+  /** Il valore gia' salvato (percorso nello storage o vecchio testo). */
   photo: string | null
+  /**
+   * La foto appena scelta, non ancora caricata. Si carica al salvataggio e non
+   * alla scelta: chi apre il pannello, prende una foto e poi chiude senza
+   * salvare lascerebbe altrimenti un file nel magazzino che nessuno vedra' mai.
+   */
+  photoFile: File | null
   error: string | null
 }
 
 export function AddStopSheet({
   editing,
   draft,
+  photoPreview,
+  saving,
   tripStart,
   dayChips,
   onChangeName,
@@ -27,6 +36,9 @@ export function AddStopSheet({
 }: {
   editing: boolean
   draft: AddStopDraft
+  /** Indirizzo mostrabile della copertina: un percorso nello storage da solo non si apre. */
+  photoPreview: string | null
+  saving: boolean
   tripStart: Date
   /** Numeri dei giorni del viaggio in ordine cronologico (puo' scavalcare il mese). */
   dayChips: number[]
@@ -55,7 +67,7 @@ export function AddStopSheet({
   const positionOf = (day: number) => dayChips.indexOf(day)
 
   const activeMood = stopMoodDefs.find((m) => m.id === draft.moodId) || stopMoodDefs[0]
-  const coverPreview = draft.photo ? `url(${draft.photo}) center/cover no-repeat` : activeMood.gradient
+  const coverPreview = photoPreview ? `url(${photoPreview}) center/cover no-repeat` : activeMood.gradient
 
   return (
     <BottomSheet onClose={onClose}>
@@ -137,8 +149,8 @@ export function AddStopSheet({
         <div className="mb-1 mt-2.5 text-[11.5px] font-bold text-[#a3392a]">⚠️ {draft.error}</div>
       )}
 
-      <button type="button" className="mt-4 w-full rounded-full py-3.5 text-center text-[13.5px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={onSave}>
-        {editing ? 'Salva modifiche' : '+ Aggiungi tappa e continua'}
+      <button type="button" disabled={saving} className="mt-4 w-full rounded-full py-3.5 text-center text-[13.5px] font-bold text-white disabled:opacity-60" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={onSave}>
+        {saving ? 'Salvo…' : editing ? 'Salva modifiche' : '+ Aggiungi tappa e continua'}
       </button>
       <button type="button" className="mt-2.5 w-full text-center text-xs font-bold text-[var(--color-text-secondary)]" onClick={onClose}>
         Fatto, chiudi

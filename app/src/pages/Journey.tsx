@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
+import { isStoragePath, removeTripMedia, signedUrls, uploadTripMedia } from '../lib/mediaUpload'
 import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
 import { useToast } from '../lib/toast'
@@ -42,7 +43,7 @@ const initialActivity: ActivityEntry[] = [
   { person: 'Andrea', action: 'ha spostato Malaga dopo Rototom', time: 'ieri' },
 ]
 
-const emptyDraft: AddStopDraft = { name: '', startDay: null, endDay: null, moodId: null, photo: null, error: null }
+const emptyDraft: AddStopDraft = { name: '', startDay: null, endDay: null, moodId: null, photo: null, photoFile: null, error: null }
 
 export function Journey() {
   const { tripId: routeTripId } = useParams()
@@ -74,6 +75,11 @@ export function Journey() {
   const [tripMeta, setTripMeta] = useState<TripMeta | null>(null)
   const [loading, setLoading] = useState(isRealTrip)
   const [isOrganizer, setIsOrganizer] = useState(false)
+  // Indirizzi temporanei per copertina e foto delle tappe: nel database c'e'
+  // solo il percorso, e il magazzino e' chiuso a chiave.
+  const [mediaLinks, setMediaLinks] = useState<Record<string, string>>({})
+  const [savingStop, setSavingStop] = useState(false)
+  const [uploadingStayId, setUploadingStayId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isRealTrip && routeTripId) {
@@ -158,6 +164,56 @@ export function Journey() {
     persist(stops.map((s) => (s.id !== stopId ? s : fn(s))))
   }
 
+  function trovaAlloggio(stayId: string) {
+    for (const s of stops) {
+      const stay = (s.stays || []).find((st) => st.id === stayId)
+      if (stay) return { stop: s, stay }
+    }
+    return null
+  }
+
+  function scriviAllegatoAlloggio(stayId: string, attachment: string | null) {
+    persist(
+      stops.map((s) => ({
+        ...s,
+        stays: (s.stays || []).map((st) => (st.id !== stayId ? st : { ...st, attachment })),
+      })),
+    )
+  }
+
+  async function attachStay(stayId: string, file: File) {
+    const trovato = trovaAlloggio(stayId)
+    const precedente = trovato?.stay.attachment ?? null
+
+    // Il viaggio demo non ha una cartella nel magazzino: resta sul telefono.
+    if (!isRealTrip || !tripMeta) {
+      const reader = new FileReader()
+      reader.onload = () => scriviAllegatoAlloggio(stayId, reader.result as string)
+      reader.readAsDataURL(file)
+      return
+    }
+
+    setUploadingStayId(stayId)
+    try {
+      const percorso = await uploadTripMedia(tripMeta.id, file)
+      const mappa = await signedUrls([percorso], 8 * 3600)
+      setMediaLinks((prec) => ({ ...prec, ...mappa }))
+      scriviAllegatoAlloggio(stayId, percorso)
+      // Sostituire la prenotazione lascerebbe la precedente nel magazzino.
+      if (precedente) removeTripMedia(precedente)
+    } catch (err) {
+      showError('Non siamo riusciti a caricare la prenotazione.', err)
+    } finally {
+      setUploadingStayId(null)
+    }
+  }
+
+  function removeStayAttachment(stayId: string) {
+    const precedente = trovaAlloggio(stayId)?.stay.attachment ?? null
+    scriviAllegatoAlloggio(stayId, null)
+    if (precedente) removeTripMedia(precedente)
+  }
+
   const trip = computeTripPhase(tripStartDate, tripEndDate)
   const isPre = trip.phase === 'pre'
   const isTripDone = trip.phase === 'done'
@@ -181,44 +237,100 @@ export function Journey() {
 
   const tripDatesLabel = `${tripStartDate.toLocaleDateString('it-IT', { day: 'numeric' })} → ${tripEndDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`
 
-  const heroBackground = coverPhoto ? `url(${coverPhoto}) center/cover no-repeat` : coverGradientById[coverColorId] || coverGradientById.fiesta
+  // Copertina e foto delle tappe che stanno nel magazzino vanno firmate per
+  // essere mostrate. Si firmano tutte in una richiesta sola. La durata e' lunga
+  // perche' Journey e' la schermata che resta aperta piu' a lungo in viaggio.
+  useEffect(() => {
+    const percorsi = [
+      coverPhoto || '',
+      ...stops.map((s) => s.photo || ''),
+      ...stops.flatMap((s) => (s.stays || []).map((st) => st.attachment || '')),
+    ].filter(isStoragePath)
+    if (!percorsi.length) return
+    let annullato = false
+    signedUrls(percorsi, 8 * 3600).then((mappa) => {
+      if (!annullato) setMediaLinks((prec) => ({ ...prec, ...mappa }))
+    })
+    return () => {
+      annullato = true
+    }
+  }, [coverPhoto, stops])
+
+  /** L'indirizzo mostrabile di una foto, nuova o vecchia che sia. */
+  function linkMedia(valore?: string | null): string | undefined {
+    if (!valore) return undefined
+    return isStoragePath(valore) ? mediaLinks[valore] : valore
+  }
+
+  const heroPhoto = linkMedia(coverPhoto)
+  const heroBackground = heroPhoto ? `url(${heroPhoto}) center/cover no-repeat` : coverGradientById[coverColorId] || coverGradientById.fiesta
 
   function selectCoverColor(id: CoverColorId) {
+    const precedente = coverPhoto
     setCoverColorId(id)
     setCoverPhoto(null)
     setCoverPickerOpen(false)
     if (isRealTrip && tripMeta) {
       updateTripCover(tripMeta.id, { coverColorId: id, coverPhotoUrl: null })
+      // La copertina sostituita da un colore resterebbe nel magazzino senza
+      // che nessuno possa piu' vederla.
+      if (precedente) removeTripMedia(precedente)
     } else {
       saveStoredColorFor(TRIP_NAME, id)
       saveStoredPhotoFor(TRIP_NAME, null)
     }
   }
 
-  function onFileChosen(file: File) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (uploadTarget === 'newStop') {
-        setDraft((d) => ({ ...d, photo: reader.result as string }))
-        setUploadMenuOpen(false)
-      } else {
+  async function onFileChosen(file: File) {
+    // La foto di una tappa non parte subito: si tiene da parte e si carica al
+    // salvataggio, cosi' chi cambia idea e chiude il pannello non lascia un
+    // file nel magazzino che nessuno vedra' mai.
+    if (uploadTarget === 'newStop') {
+      setDraft((d) => ({ ...d, photo: URL.createObjectURL(file), photoFile: file }))
+      setUploadMenuOpen(false)
+      return
+    }
+
+    // Il viaggio demo non ha una riga su Supabase: niente cartella nel
+    // magazzino, resta com'era sul telefono.
+    if (!isRealTrip || !tripMeta) {
+      const reader = new FileReader()
+      reader.onload = () => {
         setCoverPhoto(reader.result as string)
-        if (isRealTrip && tripMeta) {
-          updateTripCover(tripMeta.id, { coverPhotoUrl: reader.result as string })
-        } else {
-          saveStoredPhotoFor(TRIP_NAME, reader.result as string)
-        }
+        saveStoredPhotoFor(TRIP_NAME, reader.result as string)
         setUploadMenuOpen(false)
         setCoverPickerOpen(false)
       }
+      reader.readAsDataURL(file)
+      return
     }
-    reader.readAsDataURL(file)
+
+    const precedente = coverPhoto
+    try {
+      const percorso = await uploadTripMedia(tripMeta.id, file)
+      await updateTripCover(tripMeta.id, { coverPhotoUrl: percorso })
+      const mappa = await signedUrls([percorso], 8 * 3600)
+      setMediaLinks((prec) => ({ ...prec, ...mappa }))
+      setCoverPhoto(percorso)
+      if (precedente) removeTripMedia(precedente)
+    } catch (err) {
+      showError('Non siamo riusciti a salvare la copertina.', err)
+    } finally {
+      setUploadMenuOpen(false)
+      setCoverPickerOpen(false)
+    }
   }
 
   function removeStop(id: string) {
     const stop = stops.find((s) => s.id === id)
     persist(stops.filter((s) => s.id !== id))
-    if (stop) logActivity(`ha rimosso ${stop.name}`)
+    if (stop) {
+      logActivity(`ha rimosso ${stop.name}`)
+      // Tolta la tappa, la sua foto e le prenotazioni dei suoi alloggi non sono
+      // piu' raggiungibili da nessuna parte.
+      if (stop.photo) removeTripMedia(stop.photo)
+      ;(stop.stays || []).forEach((st) => st.attachment && removeTripMedia(st.attachment))
+    }
   }
 
   function moveStop(id: string, dir: 1 | -1) {
@@ -247,6 +359,7 @@ export function Journey() {
       endDay: stop.endDay,
       moodId: mood ? mood.id : null,
       photo: stop.photo || null,
+      photoFile: null,
       error: null,
     })
     setStopDetailId(null)
@@ -259,7 +372,7 @@ export function Journey() {
     setDraft(emptyDraft)
   }
 
-  function saveNewStop() {
+  async function saveNewStop() {
     if (!draft.name || !draft.startDay) {
       setDraft((d) => ({ ...d, error: 'Inserisci almeno il nome e la data della tappa.' }))
       return
@@ -269,12 +382,40 @@ export function Journey() {
     const endDay = draft.endDay || draft.startDay
     const dates = endDay !== startDay ? `${startDay} → ${endDay} ${monthLabel}` : `${startDay} ${monthLabel}`
 
+    // La foto scelta parte adesso, non prima: qui sappiamo che la tappa viene
+    // davvero salvata.
+    let fotoSalvata = draft.photo
+    if (draft.photoFile) {
+      if (isRealTrip && tripMeta) {
+        setSavingStop(true)
+        try {
+          fotoSalvata = await uploadTripMedia(tripMeta.id, draft.photoFile)
+        } catch (err) {
+          showError('Non siamo riusciti a caricare la foto della tappa.', err)
+          setSavingStop(false)
+          return
+        }
+        setSavingStop(false)
+      } else {
+        // Viaggio demo: resta tutto sul telefono, come prima.
+        fotoSalvata = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.readAsDataURL(draft.photoFile as File)
+        })
+      }
+    }
+
+    // La foto sostituita non serve piu' a nessuno.
+    const fotoPrecedente = editingStopId ? stops.find((s) => s.id === editingStopId)?.photo : undefined
+    if (fotoPrecedente && fotoPrecedente !== fotoSalvata) removeTripMedia(fotoPrecedente)
+
     if (editingStopId) {
       const next = stops
         .map((st) =>
           st.id !== editingStopId
             ? st
-            : { ...st, name: draft.name, startDay, endDay, moodLine: mood.label, dates, photo: draft.photo ?? undefined, gradient: mood.gradient },
+            : { ...st, name: draft.name, startDay, endDay, moodLine: mood.label, dates, photo: fotoSalvata ?? undefined, gradient: mood.gradient },
         )
         .sort((a, b) => (a.startDay || 0) - (b.startDay || 0))
       persist(next)
@@ -288,7 +429,7 @@ export function Journey() {
         endDay,
         moodLine: mood.label,
         dates,
-        photo: draft.photo ?? undefined,
+        photo: fotoSalvata ?? undefined,
         gradient: mood.gradient,
         stays: [{ id: 'stay' + Date.now(), name: '', link: '', days: stopNights({ startDay, endDay }) }],
         categories: [
@@ -407,7 +548,7 @@ export function Journey() {
 
                   {kind === 'done' && (
                     <div className="flex flex-1 cursor-pointer items-center gap-2.5 rounded-[22px] border border-[var(--color-card-border)] bg-white p-2.5 opacity-55 shadow-[0_10px_22px_-14px_rgba(120,90,40,.3)]" onClick={() => setStopDetailId(stop.id)}>
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-[10px]" style={{ backgroundImage: stop.photo ? `url(${stop.photo})` : undefined, background: stop.photo ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'grayscale(.3)' }} />
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-[10px]" style={{ backgroundImage: linkMedia(stop.photo) ? `url(${linkMedia(stop.photo)})` : undefined, background: linkMedia(stop.photo) ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'grayscale(.3)' }} />
                       <div className="flex-1">
                         <div className="font-display text-[14.5px] font-semibold">{stop.name}</div>
                         <div className="text-[10.5px] font-semibold text-[var(--color-text-secondary)]">{stop.moodLine} · {stop.dates}</div>
@@ -422,7 +563,7 @@ export function Journey() {
                   {kind === 'today' && (
                     <div className="flex-1 cursor-pointer overflow-hidden rounded-[22px] border border-[var(--color-card-border)] bg-white shadow-[0_10px_22px_-14px_rgba(120,90,40,.3)]" onClick={() => setStopDetailId(stop.id)}>
                       <div className="relative h-42">
-                        <div className="absolute inset-0" style={{ backgroundImage: stop.photo ? `url(${stop.photo})` : undefined, background: stop.photo ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <div className="absolute inset-0" style={{ backgroundImage: linkMedia(stop.photo) ? `url(${linkMedia(stop.photo)})` : undefined, background: linkMedia(stop.photo) ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                         <div className="absolute inset-x-0 bottom-0 h-[55%]" style={{ background: 'linear-gradient(180deg,transparent,rgba(40,20,10,.75))' }} />
                         <span className="absolute left-3 top-3 rounded-full border border-white/30 bg-black/28 px-2.5 py-1.25 text-[11.5px] font-bold text-white">{stop.moodLine}</span>
                         {editMode && (
@@ -446,7 +587,7 @@ export function Journey() {
                       onClick={() => setStopDetailId(stop.id)}
                     >
                       <div className="flex gap-3 p-2.5">
-                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[14px]" style={{ backgroundImage: stop.photo ? `url(${stop.photo})` : undefined, background: stop.photo ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[14px]" style={{ backgroundImage: linkMedia(stop.photo) ? `url(${linkMedia(stop.photo)})` : undefined, background: linkMedia(stop.photo) ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                         <div className="min-w-0 flex-1 py-0.5">
                           <div className="flex items-center justify-between">
                             <div className="mb-0.5 text-[11px] font-bold text-[#c2793a]">{stop.moodLine}</div>
@@ -527,6 +668,11 @@ export function Journey() {
         <AddStopSheet
           editing={!!editingStopId}
           draft={draft}
+          // Se la foto e' appena stata scelta, draft.photo e' gia' un indirizzo
+          // locale mostrabile; se viene da una tappa salvata, e' un percorso nel
+          // magazzino e va firmato.
+          photoPreview={(draft.photoFile ? draft.photo : linkMedia(draft.photo)) ?? null}
+          saving={savingStop}
           tripStart={tripStartDate}
           dayChips={tripDayChips}
           onChangeName={(text) => setDraft((d) => ({ ...d, name: text }))}
@@ -552,18 +698,28 @@ export function Journey() {
       {detailStop && (
         <StopDetailSheet
           stop={detailStop}
+          photoUrl={linkMedia(detailStop.photo)}
           onClose={() => setStopDetailId(null)}
           onOpenSettings={() => openStopSettings(detailStop.id)}
           activeStayDay={activeDayForStay[detailStop.id]}
           onSelectStayDay={(day) => setActiveDayForStay((m) => ({ ...m, [detailStop.id]: day }))}
           onSaveStayName={(stayId, text) => updateStop(detailStop.id, (st) => ({ ...st, stays: st.stays.map((s) => (s.id !== stayId ? s : { ...s, name: text })) }))}
           onSaveStayLink={(stayId, text) => updateStop(detailStop.id, (st) => ({ ...st, stays: st.stays.map((s) => (s.id !== stayId ? s : { ...s, link: text })) }))}
+          onAttachStay={attachStay}
+          onRemoveStayAttachment={removeStayAttachment}
+          uploadingStayId={uploadingStayId}
+          resolveAttachment={(attachment) => linkMedia(attachment) ?? ''}
           onAddStay={() => {
             const nights = stopNights(detailStop)
             const activeDay = activeDayForStay[detailStop.id] || nights[nights.length - 1]
             updateStop(detailStop.id, (st) => ({ ...st, stays: [...(st.stays || []), { id: 'stay' + Date.now(), name: '', link: '', day: activeDay }] }))
           }}
-          onRemoveStay={(stayId) => updateStop(detailStop.id, (st) => ({ ...st, stays: (st.stays || []).filter((s) => s.id !== stayId) }))}
+          onRemoveStay={(stayId) => {
+            // Tolto l'alloggio, la sua prenotazione non e' piu' raggiungibile.
+            const allegato = trovaAlloggio(stayId)?.stay.attachment
+            updateStop(detailStop.id, (st) => ({ ...st, stays: (st.stays || []).filter((s) => s.id !== stayId) }))
+            if (allegato) removeTripMedia(allegato)
+          }}
           linkEditKey={linkEditKey}
           onToggleLinkEdit={setLinkEditKey}
           activeDayByCategory={Object.fromEntries(

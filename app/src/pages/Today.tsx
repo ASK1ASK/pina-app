@@ -419,7 +419,20 @@ export function Today() {
 
           <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <div className="mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Link e biglietti di oggi</div>
-            <div className="grid grid-cols-3 gap-2">
+            {/*
+              Due colonne invece di tre: i riquadri diventano abbastanza grandi
+              da prendersi al primo tocco, e ci sta la scorciatoia ai documenti.
+            */}
+            <div className="grid grid-cols-2 gap-2">
+              {/*
+                I documenti erano raggiungibili solo scendendo dentro la
+                Checklist e scegliendo la categoria giusta. In fila all'imbarco,
+                con una mano sola, e' troppo: da qui e' un tocco.
+              */}
+              <Link to={`${tripBase}/checklist?apri=documenti`} className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center text-[var(--color-text)]">
+                <div className="mb-1 text-xl">🪪</div>
+                <div className="text-[11px] font-bold">Documenti</div>
+              </Link>
               <button type="button" className="rounded-2xl bg-[var(--color-bg)] px-2 py-3 text-center" onClick={() => { setSheetMode('list'); setListType('tickets') }}>
                 <div className="mb-1 text-xl">🎫</div>
                 <div className="text-[11px] font-bold">Biglietti e Ticket</div>

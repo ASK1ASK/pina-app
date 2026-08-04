@@ -107,8 +107,8 @@ export interface Database {
         Relationships: []
       }
       stop_stays: {
-        Row: { id: string; stop_id: string; name: string; link: string; night_date: string | null; created_at: string }
-        Insert: { id?: string; stop_id: string; name?: string; link?: string; night_date?: string | null }
+        Row: { id: string; stop_id: string; name: string; link: string; night_date: string | null; attachment_url: string | null; created_at: string }
+        Insert: { id?: string; stop_id: string; name?: string; link?: string; night_date?: string | null; attachment_url?: string | null }
         Update: Partial<Database['public']['Tables']['stop_stays']['Insert']>
         Relationships: []
       }

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
 import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
+import { isStoragePath, removeTripMedia, signedUrls, uploadTripMedia } from '../lib/mediaUpload'
 import { isUuid } from '../lib/uuid'
 import {
   loadChecklistData,
@@ -77,8 +78,24 @@ const EMPTY_ESSENTIALS_CATEGORIES: EssentialsCategory[] = [
   { id: 'bookings', emoji: '🎟', name: 'Prenotazioni', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)', entries: [] },
 ]
 
+/** "Documenti" → "documenti", per riconoscere la categoria chiesta nell'indirizzo. */
+function slugCategoria(nome: string): string {
+  return nome
+    .toLowerCase()
+    .normalize('NFD')
+    // Via gli accenti: "Prenotazioni" e simili restano confrontabili anche se
+    // un giorno una categoria si chiamasse "Attività".
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+}
+
 export function Checklist() {
   const { tripId: routeTripId } = useParams()
+  const [searchParams] = useSearchParams()
+  // Scorciatoia da Today: /checklist?apri=documenti apre gia' la categoria
+  // giusta, invece di lasciare l'utente a cercarla.
+  const categoriaDaAprire = searchParams.get('apri')
+  const categoriaAperta = useRef(false)
   const isRealTrip = isUuid(routeTripId)
   const { session } = useAuth()
   const { showError } = useToast()
@@ -91,6 +108,12 @@ export function Checklist() {
   const [stops, setStops] = useState<Stop[]>([])
   const [essentialsCategories, setEssentialsCategories] = useState<EssentialsCategory[]>(isRealTrip ? EMPTY_ESSENTIALS_CATEGORIES : [])
   const [activeEssentialId, setActiveEssentialId] = useState<string | null>(null)
+  // Indirizzi temporanei per gli allegati: nel database c'e' solo il percorso
+  // nello storage, che da solo non si apre perche' il bucket e' privato.
+  const [attachmentLinks, setAttachmentLinks] = useState<Record<string, string>>({})
+  // Quale voce sta caricando: un allegato da telefono ci mette qualche secondo
+  // e senza un segno sembra che il tocco non abbia fatto niente.
+  const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null)
   const [focusItemId, setFocusItemId] = useState<string | null>(null)
   const [realMembers, setRealMembers] = useState<RealMember[]>([])
   const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
@@ -207,6 +230,41 @@ export function Checklist() {
   // compare da solo. Con i salvataggi mirati non serve piu' alcun accorgimento
   // contro il rimbalzo, perche' ricevere un aggiornamento non ne provoca uno.
   useTripTableSync(isRealTrip ? routeTripId ?? null : null, CHECKLIST_TABLES, refetchReal, CHECKLIST_NESTED_TABLES)
+
+  // Gli allegati che stanno nello storage hanno bisogno di un indirizzo firmato
+  // per essere mostrati o aperti. Quelli vecchi, salvati come testo dentro il
+  // database, non passano di qui e continuano a funzionare come prima.
+  useEffect(() => {
+    const percorsi = essentialsCategories
+      .flatMap((c) => c.entries)
+      .map((e) => e.attachment || '')
+      .filter(isStoragePath)
+    if (!percorsi.length) return
+    let annullato = false
+    signedUrls(percorsi).then((mappa) => {
+      if (!annullato) setAttachmentLinks((prec) => ({ ...prec, ...mappa }))
+    })
+    return () => {
+      annullato = true
+    }
+  }, [essentialsCategories])
+
+  // Apre la categoria chiesta dalla scorciatoia, una volta sola: dopo, chi
+  // guarda resta libero di aprirne e chiuderne altre senza che questa si
+  // riapra da sola ad ogni aggiornamento.
+  useEffect(() => {
+    if (!categoriaDaAprire || categoriaAperta.current || !essentialsCategories.length) return
+    const trovata = essentialsCategories.find((c) => slugCategoria(c.name) === categoriaDaAprire)
+    if (trovata) {
+      setActiveEssentialId(trovata.id)
+      categoriaAperta.current = true
+    }
+  }, [categoriaDaAprire, essentialsCategories])
+
+  /** L'indirizzo da usare per mostrare un allegato, nuovo o vecchio che sia. */
+  function linkAllegato(attachment: string): string {
+    return isStoragePath(attachment) ? attachmentLinks[attachment] || '' : attachment
+  }
 
   useEffect(() => {
     if (!focusItemId) return
@@ -355,18 +413,54 @@ export function Checklist() {
       ),
     )
   }
-  function attachEssential(catId: string, entryId: string, file: File) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, attachment: reader.result as string })) })))
+  function allegatoDi(catId: string, entryId: string): string | null {
+    return essentialsCategories.find((c) => c.id === catId)?.entries.find((e) => e.id === entryId)?.attachment ?? null
+  }
+
+  function conAllegato(catId: string, entryId: string, attachment: string | null) {
+    return essentialsCategories.map((c) =>
+      c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, attachment })) },
+    )
+  }
+
+  async function attachEssential(catId: string, entryId: string, file: File) {
+    const precedente = allegatoDi(catId, entryId)
+
+    // Il viaggio demo non ha un id vero, quindi non ha nemmeno una cartella nel
+    // magazzino: resta su localStorage come prima.
+    if (!isRealTrip || !routeTripId) {
+      const reader = new FileReader()
+      reader.onload = () => persistEssentials(conAllegato(catId, entryId, reader.result as string))
+      reader.readAsDataURL(file)
+      return
     }
-    reader.readAsDataURL(file)
+
+    setUploadingEntryId(entryId)
+    try {
+      const percorso = await uploadTripMedia(routeTripId, file)
+      persistEssentials(conAllegato(catId, entryId, percorso))
+      // Sostituire un allegato lascerebbe il precedente nel magazzino senza
+      // che nessuno possa piu' vederlo o cancellarlo.
+      if (precedente) removeTripMedia(precedente)
+    } catch (err) {
+      showError('Non siamo riusciti a caricare l’allegato.', err)
+    } finally {
+      setUploadingEntryId(null)
+    }
   }
+
   function removeEssentialAttachment(catId: string, entryId: string) {
-    persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, attachment: null })) })))
+    const precedente = allegatoDi(catId, entryId)
+    persistEssentials(conAllegato(catId, entryId, null))
+    if (precedente) removeTripMedia(precedente)
   }
+
   function deleteEssentialEntry(catId: string, entryId: string) {
+    const precedente = allegatoDi(catId, entryId)
     persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.filter((e) => e.id !== entryId) })))
+    // Cancellando la voce, il suo allegato non sarebbe piu' raggiungibile da
+    // nessuna parte: va tolto anche dal magazzino.
+    if (precedente) removeTripMedia(precedente)
   }
   function addEssentialEntry(catId: string) {
     persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: [...c.entries, { id: 'ee' + Date.now(), title: 'Nuova voce', subtitle: 'Aggiungi dettagli', tag: '', href: '' }] })))
@@ -490,6 +584,8 @@ export function Checklist() {
             onRemoveAttachment={removeEssentialAttachment}
             onDeleteEntry={deleteEssentialEntry}
             onAddEntry={addEssentialEntry}
+            resolveAttachment={linkAllegato}
+            uploadingEntryId={uploadingEntryId}
           />
 
           {activityGroups.length > 0 && (

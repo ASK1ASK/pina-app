@@ -5,6 +5,7 @@ import { Avatar } from '../components/Avatar'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
 import { inizialeAccount, nomeBreve } from '../lib/accountIdentity'
 import { useAuth } from '../lib/authContext'
+import { isStoragePath, removeTripMedia, signedUrls, uploadTripMedia } from '../lib/mediaUpload'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../lib/toast'
 import {
@@ -79,7 +80,11 @@ export function Home() {
     spain: 'fiesta',
   })
   const [customPhotos, setCustomPhotos] = useState<Record<string, string>>({})
+  // Indirizzi temporanei per le copertine che stanno nello storage: nel
+  // database c'e' solo il percorso, e il bucket e' privato.
+  const [coverLinks, setCoverLinks] = useState<Record<string, string>>({})
   const [pickerFor, setPickerFor] = useState<string | null>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false)
   const [demoDismissed, setDemoDismissed] = useState(() => {
     try {
@@ -174,34 +179,98 @@ export function Home() {
     }
   }, [session])
 
+  // Le copertine nello storage vanno firmate per poter essere mostrate. Si
+  // firmano tutte insieme, in una richiesta sola, non una per viaggio. La
+  // durata e' lunga perche' la Home puo' restare aperta a lungo in viaggio:
+  // con un'ora le copertine sparirebbero mentre la guardi.
+  useEffect(() => {
+    const percorsi = realTrips.map((t) => t.photo || '').filter(isStoragePath)
+    if (!percorsi.length) return
+    let annullato = false
+    signedUrls(percorsi, 8 * 3600).then((mappa) => {
+      if (!annullato) setCoverLinks((prec) => ({ ...prec, ...mappa }))
+    })
+    return () => {
+      annullato = true
+    }
+  }, [realTrips])
+
+  /** L'indirizzo da usare per una copertina, nuova o vecchia che sia. */
+  function linkCopertina(photo?: string): string | undefined {
+    if (!photo) return undefined
+    return isStoragePath(photo) ? coverLinks[photo] : photo
+  }
+
   const visibleJourneys = demoDismissed ? realTrips : [...realTrips, DEMO_JOURNEY]
   const hasJourneys = visibleJourneys.length > 0
 
+  function scordaFotoLocale(target: string) {
+    setCustomPhotos((prev) => {
+      const next = { ...prev }
+      delete next[target]
+      return next
+    })
+  }
+
   function selectColor(id: CoverColorId) {
     if (!pickerFor) return
-    setJourneyColors((prev) => ({ ...prev, [pickerFor]: id }))
-    if (pickerFor === DEMO_JOURNEY.id) {
+    const target = pickerFor
+    setJourneyColors((prev) => ({ ...prev, [target]: id }))
+    scordaFotoLocale(target)
+
+    if (target === DEMO_JOURNEY.id) {
       saveStoredColorFor(DEMO_JOURNEY.name, id)
     } else {
-      updateTripCover(pickerFor, { coverColorId: id }).catch((err) => showError('Non siamo riusciti a salvare la copertina.', err))
+      const precedente = realTrips.find((t) => t.id === target)?.photo
+      // Scegliere un colore significa togliere la foto: altrimenti la foto
+      // resterebbe sopra e il colore appena scelto non si vedrebbe.
+      updateTripCover(target, { coverColorId: id, coverPhotoUrl: null }).catch((err) =>
+        showError('Non siamo riusciti a salvare la copertina.', err),
+      )
+      setRealTrips((prec) => prec.map((t) => (t.id === target ? { ...t, photo: undefined } : t)))
+      if (precedente) removeTripMedia(precedente)
     }
     setPickerFor(null)
   }
 
-  function onCoverFileChosen(file: File) {
+  async function onCoverFileChosen(file: File) {
     if (!pickerFor) return
     const target = pickerFor
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      setCustomPhotos((prev) => ({ ...prev, [target]: dataUrl }))
+
+    // Il viaggio demo non esiste su Supabase: non ha una cartella nel magazzino
+    // e resta come prima, tutto sul telefono.
+    if (target === DEMO_JOURNEY.id) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setCustomPhotos((prev) => ({ ...prev, [target]: reader.result as string }))
+        setUploadMenuOpen(false)
+        setPickerFor(null)
+      }
+      reader.readAsDataURL(file)
+      return
+    }
+
+    const precedente = realTrips.find((t) => t.id === target)?.photo
+    setUploadingCover(true)
+    try {
+      const percorso = await uploadTripMedia(target, file)
+      await updateTripCover(target, { coverPhotoUrl: percorso })
+      // Firmato subito, cosi' la copertina nuova compare senza aspettare un
+      // altro caricamento della pagina.
+      const mappa = await signedUrls([percorso], 8 * 3600)
+      setCoverLinks((prec) => ({ ...prec, ...mappa }))
+      setRealTrips((prec) => prec.map((t) => (t.id === target ? { ...t, photo: percorso } : t)))
+      scordaFotoLocale(target)
+      // Sostituendo la copertina, la precedente resterebbe nel magazzino senza
+      // che nessuno possa piu' vederla.
+      if (precedente) removeTripMedia(precedente)
+    } catch (err) {
+      showError('Non siamo riusciti a salvare la copertina.', err)
+    } finally {
+      setUploadingCover(false)
       setUploadMenuOpen(false)
       setPickerFor(null)
-      if (target !== DEMO_JOURNEY.id) {
-        updateTripCover(target, { coverPhotoUrl: dataUrl }).catch((err) => showError('Non siamo riusciti a salvare la copertina.', err))
-      }
     }
-    reader.readAsDataURL(file)
   }
 
   if (authLoading) {
@@ -246,8 +315,10 @@ export function Home() {
           <div className="flex flex-col gap-3">
             {visibleJourneys.map((j) => {
               const customPhoto = customPhotos[j.id]
-              const hasPhoto = !!j.photo || !!customPhoto
-              const photo = customPhoto || j.photo
+              // Finche' il link firmato non e' arrivato si mostra la sfumatura
+              // di colore: meglio di un rettangolo vuoto per mezzo secondo.
+              const photo = customPhoto || linkCopertina(j.photo)
+              const hasPhoto = !!photo
               const gradient = hasPhoto
                 ? 'linear-gradient(135deg,#7a9d54,#4f8f4f)'
                 : coverGradientById[journeyColors[j.id]] || coverGradientById.fiesta
@@ -275,15 +346,19 @@ export function Home() {
                       <div className="text-[11.5px] font-semibold text-white/85">{j.sub}</div>
                     </div>
                   </Link>
-                  {!hasPhoto && (
-                    <button
-                      type="button"
-                      className="absolute bottom-2.5 right-2.5 z-20 flex h-6.5 w-6.5 items-center justify-center rounded-full bg-black/28 text-[13px] text-white"
-                      onClick={() => setPickerFor(j.id)}
-                    >
-                      🎨
-                    </button>
-                  )}
+                  {/*
+                    Sempre disponibile, anche quando c'e' gia' una foto: prima
+                    compariva solo sulle copertine a colori, e una volta messa
+                    una foto non si poteva piu' cambiare da qui.
+                  */}
+                  <button
+                    type="button"
+                    aria-label="Cambia la copertina"
+                    className="absolute bottom-2.5 right-2.5 z-20 flex h-6.5 w-6.5 items-center justify-center rounded-full bg-black/28 text-[13px] text-white"
+                    onClick={() => setPickerFor(j.id)}
+                  >
+                    🎨
+                  </button>
                   {j.status === 'demo' && (
                     <button
                       type="button"
@@ -388,6 +463,12 @@ export function Home() {
           onOpenUpload={() => setUploadMenuOpen(true)}
           onClose={() => setPickerFor(null)}
         />
+      )}
+
+      {uploadingCover && (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-[12px] font-semibold text-white">
+          Carico la copertina…
+        </div>
       )}
 
       {uploadMenuOpen && pickerFor && (
