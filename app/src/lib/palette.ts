@@ -51,11 +51,27 @@ export const moodGradients: Record<string, string> = {
   relax: 'linear-gradient(135deg,#ffb627,#ff8a5b)',
 }
 
+// I colori dell'identità dentro un viaggio: nome e colore sono per viaggio, non
+// per account (decisione del 26/07).
+//
+// L'ordine conta e non è casuale. Alla creazione del viaggio la migrazione 0008
+// li assegna a rotazione seguendo esattamente questa sequenza, e l'iniziale
+// dentro il tondo è scritta in bianco: sui primi cinque si legge, sugli ultimi
+// due (turchese e giallo) siamo intorno a 1,8:1. I più scuri stanno davanti,
+// così una crew normale pesca solo quelli leggibili.
+//
+// Gli stessi dieci valori vivono in pina_identity_colors() nella 0008: se
+// cambi qui, cambia anche là.
 export const identityColorDefs = [
+  { id: 'terracotta', hex: '#d9481f' },
+  { id: 'forest', hex: '#2d6a4f' },
+  { id: 'wine', hex: '#8a2f42' },
+  { id: 'blue', hex: '#2a8fd8' },
+  { id: 'bronze', hex: '#b8792e' },
+  { id: 'pink', hex: '#ff5f96' },
+  { id: 'green', hex: '#7a9d54' },
   { id: 'coral', hex: '#ff8a5b' },
   { id: 'teal', hex: '#3ddbc5' },
-  { id: 'green', hex: '#7a9d54' },
-  { id: 'pink', hex: '#ff5f96' },
   { id: 'yellow', hex: '#ffb627' },
 ]
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
 import { computeBalances, computeCassaTotal } from '../lib/balances'
 import { useToast } from '../lib/toast'
@@ -111,14 +112,22 @@ export function Spese() {
   const [balancesExpanded, setBalancesExpanded] = useState(false)
 
   // Elenco persone unificato: il cast demo, o i membri veri del viaggio.
+  // Comprende chi ha lasciato il viaggio: le sue spese, i suoi saldi e il suo
+  // nome devono restare leggibili, altrimenti gli importi diventano di nessuno.
   const members: PickablePerson[] = isRealTrip
     ? realMembers.map((m) => ({ id: m.id, name: m.name, color: m.color, initial: m.name.slice(0, 1).toUpperCase() }))
     : personOrder.map((code) => ({ id: code, name: people[code].name, color: people[code].color, initial: code }))
   const membersById: Record<string, { name: string; color: string }> = Object.fromEntries(members.map((m) => [m.id, m]))
   const memberIds = members.map((m) => m.id)
 
+  // Chi c'e' ancora: per le scelte che guardano avanti (chi paga una spesa
+  // nuova, fra chi dividerla, chi versa in cassa). I rimborsi restano invece
+  // aperti a tutti: un debito con chi se n'e' andato va comunque saldato.
+  const usciti = new Set(realMembers.filter((m) => m.leftAt).map((m) => m.id))
+  const membersAttivi = members.filter((m) => !usciti.has(m.id))
+
   const currentMemberId = isRealTrip
-    ? realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIds[0] ?? ''
+    ? realMembers.find((m) => m.userId === session?.user?.id)?.id ?? membersAttivi[0]?.id ?? ''
     : currentUser
 
   const [form, setForm] = useState<ExpenseForm>({ title: '', amount: '', icon: '💳', paidBy: '', splitAmong: [], note: '' })
@@ -413,7 +422,7 @@ export function Spese() {
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-4.5 flex items-center justify-between">
         <a href="/" className="font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
-        <a href="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</a>
+        <TripIdentityLink />
       </div>
 
       <div className="mb-4.5 font-display text-2xl font-semibold">Spese</div>
@@ -530,7 +539,7 @@ export function Spese() {
             <AmountEditable value={form.amount} onSave={(text) => setForm((f) => ({ ...f, amount: text }))} />
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi ha pagato</div>
-            <PersonPicker members={members} isSelected={(c) => form.paidBy === c} onClick={(c) => setForm((f) => ({ ...f, paidBy: c }))} />
+            <PersonPicker members={membersAttivi} isSelected={(c) => form.paidBy === c} onClick={(c) => setForm((f) => ({ ...f, paidBy: c }))} />
             <button
               type="button"
               className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl border px-3.5 py-2.75 text-left"
@@ -552,7 +561,7 @@ export function Spese() {
             )}
 
             <div className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Diviso tra</div>
-            <PersonPicker members={members} isSelected={(c) => form.splitAmong.includes(c)} onClick={toggleSplit} />
+            <PersonPicker members={membersAttivi} isSelected={(c) => form.splitAmong.includes(c)} onClick={toggleSplit} />
             <div className="mt-2 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">Diviso tra {form.splitAmong.length} persone</div>
 
             <div className="mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Note (opzionale)</div>
@@ -582,6 +591,11 @@ export function Spese() {
               <div className="font-display text-lg font-bold">Registra un rimborso</div>
               <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
             </div>
+            {/*
+              Qui, e solo qui, compare anche chi ha lasciato il viaggio: un
+              conto in sospeso va chiuso comunque, e senza il suo nome nella
+              lista quei soldi non avrebbero piu' modo di essere saldati.
+            */}
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi rimborsa</div>
             <div className="mb-3.5"><PersonPicker members={members} isSelected={(c) => settleForm.from === c} onClick={(c) => setSettleForm((f) => ({ ...f, from: c }))} /></div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">A chi</div>
@@ -601,7 +615,7 @@ export function Spese() {
               <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
             </div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi contribuisce</div>
-            <div className="mb-3.5"><PersonPicker members={members} isSelected={(c) => cassaForm.person === c} onClick={(c) => setCassaForm((f) => ({ ...f, person: c }))} /></div>
+            <div className="mb-3.5"><PersonPicker members={membersAttivi} isSelected={(c) => cassaForm.person === c} onClick={(c) => setCassaForm((f) => ({ ...f, person: c }))} /></div>
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Importo (€)</div>
             <AmountEditable value={cassaForm.amount} onSave={(text) => setCassaForm((f) => ({ ...f, amount: text }))} />
             <button type="button" className="mt-5.5 w-full rounded-full py-3.25 text-center text-[13.5px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={saveCassaContribution}>Aggiungi</button>

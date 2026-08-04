@@ -1,12 +1,15 @@
 import { NavLink, useParams } from 'react-router-dom'
 
+// Cinque, non sei: il profilo si raggiunge dal tondo in alto a destra, che a
+// differenza di un'icona 👤 uguale per tutti mostra la tua iniziale e il tuo
+// colore in questa crew. Su iPhone SE cinque schede prendono 75px l'una invece
+// di 62, e le etichette da 9px smettono di stare strette.
 const TABS = [
   { key: 'journey', label: 'Journey', icon: '🗺' },
   { key: 'today', label: 'Today', icon: '☀️' },
   { key: 'spese', label: 'Spese', icon: '💰' },
   { key: 'checklist', label: 'Checklist', icon: '🎒' },
   { key: 'memories', label: 'Memories', icon: '📸' },
-  { key: 'profilo', label: 'Profilo', icon: '👤' },
 ] as const
 
 export function BottomNav() {

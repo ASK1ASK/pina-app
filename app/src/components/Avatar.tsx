@@ -14,14 +14,25 @@ export function colorForPerson(personId: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
 
+/**
+ * Il tondo con l'iniziale.
+ *
+ * `color` va passato quando la persona un colore ce l'ha davvero: dentro un
+ * viaggio e' quello scelto nella crew (trip_members.color), e deve essere lo
+ * stesso che vedono gli altri. Quando manca — sulla Home, dove un viaggio non
+ * c'e' — si ricade su un colore calcolato dall'id: sempre lo stesso per la
+ * stessa persona, e non c'e' niente da salvare da nessuna parte.
+ */
 export function Avatar({
   personId,
   initial,
   size = 22,
+  color,
 }: {
   personId: string
   initial: string
   size?: number
+  color?: string
 }) {
   return (
     <div
@@ -30,7 +41,7 @@ export function Avatar({
         width: size,
         height: size,
         fontSize: size * 0.5,
-        background: colorForPerson(personId),
+        background: color || colorForPerson(personId),
       }}
     >
       {initial}

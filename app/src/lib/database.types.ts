@@ -51,6 +51,8 @@ export interface Database {
           role: TripMemberRole
           status: TripMemberStatus
           created_at: string
+          /** Valorizzato se ha lasciato il viaggio o ne e' stato rimosso (0008). */
+          left_at: string | null
         }
         Insert: {
           id?: string
@@ -62,6 +64,7 @@ export interface Database {
           vibe?: string
           role?: TripMemberRole
           status?: TripMemberStatus
+          left_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['trip_members']['Insert']>
         Relationships: []
@@ -330,6 +333,14 @@ export interface Database {
       join_trip_claim_slot: {
         Args: { p_code: string; p_member_id: string; p_display_name: string; p_color: string }
         Returns: Database['public']['Tables']['trips']['Row']
+      }
+      leave_trip: {
+        Args: { p_trip_id: string }
+        Returns: void
+      }
+      remove_trip_member: {
+        Args: { p_member_id: string }
+        Returns: void
       }
     }
     Enums: Record<string, never>

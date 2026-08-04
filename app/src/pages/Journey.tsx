@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
+import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
 import { isUuid } from '../lib/uuid'
@@ -315,9 +316,7 @@ export function Journey() {
         <Link to="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">
           🦩 Piña
         </Link>
-        <Link to="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">
-          🏠 Home
-        </Link>
+        <TripIdentityLink />
       </div>
 
       {online.length > 0 && (

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AccountSheet } from '../components/AccountSheet'
+import { Avatar } from '../components/Avatar'
 import { ColorPickerSheet, UploadMenuSheet } from '../components/CoverPickerSheets'
+import { inizialeAccount, nomeBreve } from '../lib/accountIdentity'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../lib/toast'
@@ -66,10 +69,11 @@ function formatTripRange(startDate: string | null, endDate: string | null): stri
 const statusOrder: Record<JourneyStatus, number> = { live: 0, planned: 1, completed: 2, demo: 3 }
 
 export function Home() {
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, signOut } = useAuth()
   const { showError } = useToast()
   const isLoggedIn = !!session?.user
-  const userName = session?.user?.email ? session.user.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) : null
+  // Il nome vero dell'account, non il pezzo di indirizzo prima della chiocciola.
+  const userName = nomeBreve(session?.user)
 
   const [journeyColors, setJourneyColors] = useState<Record<string, CoverColorId>>({
     spain: 'fiesta',
@@ -86,6 +90,7 @@ export function Home() {
   })
   const [realTrips, setRealTrips] = useState<JourneyDef[]>([])
   const [loadingTrips, setLoadingTrips] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   function dismissDemo() {
     setDemoDismissed(true)
@@ -129,8 +134,10 @@ export function Home() {
         const [{ data: trips }, { data: allMembers }] = await Promise.all([
           supabase.from('trips').select('*').in('id', tripIds),
           // Tutta la crew, non solo chi si e' unito dall'app: il conteggio deve
-          // corrispondere alle persone che si vedono in Spese/Checklist.
-          supabase.from('trip_members').select('trip_id').in('trip_id', tripIds),
+          // corrispondere alle persone che si vedono in Spese/Checklist. Chi ha
+          // lasciato il viaggio pero' non e' piu' un partecipante: resta nella
+          // storia delle spese, non in "· 5 Crew".
+          supabase.from('trip_members').select('trip_id').in('trip_id', tripIds).is('left_at', null),
         ])
         if (cancelled) return
 
@@ -211,13 +218,22 @@ export function Home() {
         <div className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">
           🦩 Piña
         </div>
-        <Link
-          to={`/trip/${visibleJourneys[0]?.id ?? 'demo'}/profilo`}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[15px]"
-          style={{ background: 'linear-gradient(135deg,#ffb627,#ff5f6d)' }}
-        >
-          🦩
-        </Link>
+        {/*
+          Il tondo dice chi sei su questo telefono, e apre il livello ACCOUNT.
+          Prima era un fenicottero uguale per chiunque, e portava al profilo del
+          PRIMO viaggio della lista — uno a caso, non quello che stavi guardando.
+          Il profilo di un viaggio si raggiunge da dentro quel viaggio.
+        */}
+        {isLoggedIn && session?.user && (
+          <button
+            type="button"
+            aria-label="Il tuo account"
+            className="rounded-full"
+            onClick={() => setAccountOpen(true)}
+          >
+            <Avatar personId={session.user.id} initial={inizialeAccount(session.user)} size={32} />
+          </button>
+        )}
       </div>
 
       <div className="mb-0.5 font-display text-2xl font-semibold">{isLoggedIn ? `Ciao, ${userName}` : 'Benvenuto su Piña'}</div>
@@ -359,6 +375,10 @@ export function Home() {
         >
           Hai già un account? Accedi
         </Link>
+      )}
+
+      {accountOpen && session?.user && (
+        <AccountSheet user={session.user} onSignOut={signOut} onClose={() => setAccountOpen(false)} />
       )}
 
       {pickerFor && !uploadMenuOpen && (

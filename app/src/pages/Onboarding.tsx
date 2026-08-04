@@ -1429,7 +1429,8 @@ export function Onboarding() {
             </div>
 
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Colore</div>
-            <div className="mb-5.5 flex gap-2.5">
+            {/* flex-wrap: i colori sono dieci, su iPhone SE una riga sola uscirebbe dallo schermo */}
+            <div className="mb-5.5 flex flex-wrap gap-2.5">
               {identityColorDefs.map((c) => (
                 <button key={c.id} type="button" className="h-9.5 w-9.5 rounded-full" style={{ background: c.hex, boxShadow: state.identityColorId === c.id ? `0 0 0 3px var(--color-bg), 0 0 0 5px ${c.hex}` : undefined }} onClick={() => patch({ identityColorId: c.id })} />
               ))}

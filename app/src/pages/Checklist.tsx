@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
 import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
@@ -100,9 +101,16 @@ export function Checklist() {
   const members = isRealTrip
     ? realMembers.map((m) => ({ id: m.id, name: m.name, color: m.color }))
     : personOrder.map((code) => ({ id: code, name: people[code].name, color: people[code].color }))
+  // membersById tiene TUTTI, anche chi ha lasciato il viaggio: le voci ancora
+  // assegnate a lui devono continuare a mostrare il suo nome e il suo colore.
+  // Togliendolo da qui diventerebbero pallini grigi senza lettera.
   const membersById: Record<string, { name: string; color: string }> = Object.fromEntries(members.map((m) => [m.id, m]))
   const memberIds = members.map((m) => m.id)
-  const activeUser = isRealTrip ? (realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIds[0] ?? '') : currentUser
+  // Qui invece servono solo quelli ancora nella crew: a chi ha lasciato il
+  // viaggio non si assegnano voci nuove.
+  const usciti = new Set(realMembers.filter((m) => m.leftAt).map((m) => m.id))
+  const memberIdsAttivi = memberIds.filter((id) => !usciti.has(id))
+  const activeUser = isRealTrip ? (realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIdsAttivi[0] ?? '') : currentUser
   // Per il demo l'id E' gia' l'iniziale (codici 'A'/'L'/...); per i membri
   // veri (uuid) mostriamo l'iniziale del nome invece dell'id per intero.
   function initialFor(id: string): string {
@@ -254,9 +262,12 @@ export function Checklist() {
   }
   function cycleAssignee(catId: string, itemId: string) {
     const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
-    if (!current || memberIds.length === 0) return
-    const idx = memberIds.indexOf(current.assignee || activeUser)
-    const next = memberIds[(idx + 1) % memberIds.length]
+    if (!current || memberIdsAttivi.length === 0) return
+    // Se la voce era assegnata a qualcuno che ha lasciato il viaggio, indexOf
+    // restituisce -1 e il giro riparte dal primo membro ancora presente: un
+    // tocco solo per rimettere in carico a una persona vera quello che aveva.
+    const idx = memberIdsAttivi.indexOf(current.assignee || activeUser)
+    const next = memberIdsAttivi[(idx + 1) % memberIdsAttivi.length]
     setCategories((cs) =>
       cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, assignee: next })) })),
     )
@@ -451,7 +462,7 @@ export function Checklist() {
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-3.5 flex items-center justify-between">
         <a href="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
-        <a href="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</a>
+        <TripIdentityLink />
       </div>
 
       <div className="mb-4 font-display text-2xl font-semibold">Checklist</div>

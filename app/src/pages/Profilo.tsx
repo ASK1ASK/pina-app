@@ -17,7 +17,14 @@ import {
   type Stop,
 } from '../lib/tripData'
 import { identityColorDefs } from '../lib/palette'
-import { fetchExpensesData, fetchTripMembers } from './spese/supabaseSpese'
+import {
+  fetchExpensesData,
+  fetchTripMembers,
+  leaveTrip,
+  membriAttivi,
+  removeTripMember,
+  type RealMember,
+} from './spese/supabaseSpese'
 import { fetchTripMeta, type TripMeta } from './journey/supabaseJourney'
 import { fetchMemories } from './memories/supabaseMemories'
 import { fetchEmergencyContacts, persistEmergencyContacts, updateMemberIdentity } from './profilo/supabaseProfilo'
@@ -41,6 +48,11 @@ export function Profilo() {
   const [emergencyOpen, setEmergencyOpen] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [isOrganizer, setIsOrganizer] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const [crew, setCrew] = useState<RealMember[]>([])
+  const [crewOpen, setCrewOpen] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removingBusy, setRemovingBusy] = useState(false)
 
   const [stops, setStops] = useState<Stop[]>([])
   const [memories, setMemories] = useState<MemoriesData | null>(null)
@@ -62,6 +74,7 @@ export function Profilo() {
           setTripMeta(meta)
           setMemories({ days: memData.days, items: memData.items })
           setEmergencyContacts(contacts)
+          setCrew(members)
           const me = members.find((m) => m.userId === session?.user?.id)
           setMyMemberId(me?.id ?? null)
           setName(me?.name || 'Viaggiatore')
@@ -106,6 +119,38 @@ export function Profilo() {
     setName(next)
     if (isRealTrip && myMemberId) {
       updateMemberIdentity(myMemberId, { displayName: next }).catch((err) => showError('Non siamo riusciti a salvare il nome.', err))
+    }
+  }
+
+  // Uscire davvero: prima il database, poi la schermata. Se la chiamata
+  // fallisce non si mostra niente di rassicurante — il difetto di prima era
+  // esattamente questo, una schermata che prometteva una cosa mai avvenuta.
+  async function confermaUscita() {
+    if (!isRealTrip || !routeTripId) return
+    setLeaving(true)
+    try {
+      await leaveTrip(routeTripId)
+      setLeaveConfirmOpen(false)
+      setHasLeft(true)
+    } catch (err) {
+      showError('Non siamo riusciti a farti uscire dal viaggio.', err)
+    } finally {
+      setLeaving(false)
+    }
+  }
+
+  async function confermaRimozione(memberId: string) {
+    setRemovingBusy(true)
+    try {
+      await removeTripMember(memberId)
+      setCrew((prima) =>
+        prima.map((m) => (m.id === memberId ? { ...m, leftAt: new Date().toISOString(), userId: null } : m)),
+      )
+      setRemovingId(null)
+    } catch (err) {
+      showError('Non siamo riusciti a rimuovere questa persona.', err)
+    } finally {
+      setRemovingBusy(false)
     }
   }
 
@@ -155,11 +200,21 @@ export function Profilo() {
         </div>
         <div className="mb-1.5 font-display text-lg font-semibold">Hai lasciato {tripName}</div>
         <div className="mb-5 text-[12.5px] font-semibold leading-snug text-[var(--color-text-secondary)]">
-          Il gruppo non ti vedrà più tra i<br />partecipanti attivi al viaggio
+          Il gruppo non ti vede più tra i partecipanti attivi.
+          <br />
+          Le spese che avevi registrato restano al loro posto.
+          <br />
+          Se cambi idea puoi rientrare con il codice del viaggio.
         </div>
-        <button type="button" className="rounded-full px-5.5 py-3 text-[13px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={() => setHasLeft(false)}>
-          Torna al viaggio
-        </button>
+        {/*
+          Un link vero e non un ritorno di stato: ricaricando si riparte da una
+          Home pulita, senza il viaggio da cui si e' appena usciti. Prima qui
+          c'era "Torna al viaggio", che funzionava soltanto perche' non era mai
+          successo niente.
+        */}
+        <a href="/" className="rounded-full px-5.5 py-3 text-[13px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }}>
+          Torna alla Home
+        </a>
       </div>
     )
   }
@@ -264,7 +319,7 @@ export function Profilo() {
               <EditableText key={'ns' + name} initialText={name || 'Il tuo nome'} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2 font-display text-base font-semibold" onBlurText={saveName} />
               <div className="mb-1.5 mt-3 text-[11px] font-semibold leading-snug text-[var(--color-text-secondary)]">Gli altri membri del gruppo vedranno questo nome (e questo colore) in questo viaggio — puoi usarne uno diverso in ogni viaggio.</div>
               {isRealTrip && (
-                <div className="mt-2.5 flex gap-2.5">
+                <div className="mt-2.5 flex flex-wrap gap-2.5">
                   {identityColorDefs.map((c) => (
                     <button
                       key={c.id}
@@ -298,6 +353,56 @@ export function Profilo() {
             <span className="text-xs text-[#c2a97e]">›</span>
           </a>
         )}
+        {isRealTrip && isOrganizer && (
+          <div className="border-b border-[var(--color-cream-light)]">
+            <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setCrewOpen((v) => !v)}>
+              <span className="text-base">👥</span>
+              <span className="flex-1 text-[13px] font-semibold">Gestisci la crew</span>
+              <span className="text-xs text-[#c2a97e]">{crewOpen ? '⌃' : '›'}</span>
+            </button>
+            {crewOpen && (
+              <div className="px-3.5 pb-3.5 pl-10">
+                <div className="mb-2.5 text-[11px] font-semibold leading-snug text-[var(--color-text-secondary)]">
+                  Chi rimuovi non fa più parte dei partecipanti attivi, ma le sue spese e i suoi conti in sospeso restano.
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {membriAttivi(crew)
+                    .filter((m) => m.id !== myMemberId)
+                    .map((m) => (
+                      <div key={m.id}>
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: m.color }}>
+                            {(m.name || '?').slice(0, 1).toUpperCase()}
+                          </div>
+                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{m.name}</span>
+                          <button
+                            type="button"
+                            className="shrink-0 text-[11.5px] font-bold text-[var(--color-coral)]"
+                            onClick={() => setRemovingId(removingId === m.id ? null : m.id)}
+                          >
+                            {removingId === m.id ? 'Annulla' : 'Rimuovi'}
+                          </button>
+                        </div>
+                        {removingId === m.id && (
+                          <button
+                            type="button"
+                            disabled={removingBusy}
+                            className="mt-1.5 w-full rounded-full bg-[var(--color-coral)] py-2 text-center text-[11.5px] font-bold text-white disabled:opacity-60"
+                            onClick={() => confermaRimozione(m.id)}
+                          >
+                            {removingBusy ? 'Rimuovo...' : `Sì, rimuovi ${m.name}`}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  {membriAttivi(crew).filter((m) => m.id !== myMemberId).length === 0 && (
+                    <div className="text-[11.5px] font-semibold text-[var(--color-text-secondary)]">Per ora sei l’unico nella crew.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div>
           <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setLeaveConfirmOpen((v) => !v)}>
             <span className="text-base">🚪</span>
@@ -306,11 +411,28 @@ export function Profilo() {
           </button>
           {leaveConfirmOpen && (
             <div className="px-3.5 pb-4 pl-10">
-              <div className="mb-2.5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">Sei sicuro? Non farai più parte dei partecipanti attivi a {tripName}.</div>
-              <div className="flex gap-2">
-                <button type="button" className="flex-1 rounded-full bg-[#f0e5d1] py-2.25 text-center text-xs font-bold text-[var(--color-text)]" onClick={() => setLeaveConfirmOpen(false)}>Annulla</button>
-                <button type="button" className="flex-1 rounded-full bg-[var(--color-coral)] py-2.25 text-center text-xs font-bold text-white" onClick={() => { setHasLeft(true); setLeaveConfirmOpen(false) }}>Sì, esci</button>
-              </div>
+              {isOrganizer ? (
+                // Se uscisse chi ha creato il viaggio, nessuno potrebbe piu'
+                // generare inviti, modificarlo o eliminarlo. Il passaggio di
+                // consegne e' un pezzo di prodotto che non c'e' ancora: meglio
+                // una porta chiusa e spiegata che un viaggio orfano.
+                <div className="text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">
+                  Sei tu che tieni in piedi {tripName}: se uscissi, nessuno potrebbe più invitare, modificare o eliminare il viaggio.
+                  Puoi rimuovere qualcuno dalla crew qui sopra, oppure eliminare il viaggio dalle impostazioni.
+                </div>
+              ) : (
+                <>
+                  <div className="mb-2.5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">
+                    Sei sicuro? Non farai più parte dei partecipanti attivi a {tripName}. Le spese che hai registrato restano, e i conti aperti vanno chiusi comunque.
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" className="flex-1 rounded-full bg-[#f0e5d1] py-2.25 text-center text-xs font-bold text-[var(--color-text)]" onClick={() => setLeaveConfirmOpen(false)}>Annulla</button>
+                    <button type="button" disabled={leaving} className="flex-1 rounded-full bg-[var(--color-coral)] py-2.25 text-center text-xs font-bold text-white disabled:opacity-60" onClick={confermaUscita}>
+                      {leaving ? 'Esco...' : 'Sì, esci'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -5,6 +5,21 @@ export interface RealMember {
   userId: string | null
   name: string
   color: string
+  /** Valorizzato se ha lasciato il viaggio o ne e' stato rimosso. */
+  leftAt: string | null
+}
+
+/**
+ * Chi fa ancora parte della crew.
+ *
+ * Da usare dove si guarda avanti — chi paga una spesa nuova, a chi si assegna
+ * una voce di checklist, quante persone dice la Home. NON dove si guarda
+ * indietro: le spese gia' registrate, i saldi ancora aperti e le foto gia'
+ * caricate devono continuare a mostrare il nome di chi le ha fatte, altrimenti
+ * i conti non tornano piu' e i nomi diventano "undefined".
+ */
+export function membriAttivi(membri: RealMember[]): RealMember[] {
+  return membri.filter((m) => !m.leftAt)
 }
 
 export interface RealExpense {
@@ -49,15 +64,36 @@ function formatDateLabel(dateStr: string): string {
 // e tra gli assegnatari della checklist. Quando poi si unisce reclamando il suo
 // posto, join_trip_claim_slot aggiorna QUESTA stessa riga, quindi spese e saldi
 // accumulati prima restano attaccati a lui senza perdersi.
+//
+// Restituisce anche chi ha lasciato il viaggio, con leftAt valorizzato: filtrare
+// qui una volta per tutte sarebbe comodo e sbagliato, perche' i suoi cento euro
+// di spese e il suo nome sulle foto devono restare visibili. Chi chiama decide
+// caso per caso, con membriAttivi() dove serve.
 export async function fetchTripMembers(tripId: string): Promise<RealMember[]> {
   const data = unwrap(
     await supabase
       .from('trip_members')
-      .select('id, user_id, display_name, color')
+      .select('id, user_id, display_name, color, left_at')
       .eq('trip_id', tripId)
       .order('created_at', { ascending: true }),
   )
-  return (data || []).map((m) => ({ id: m.id, userId: m.user_id, name: m.display_name, color: m.color }))
+  return (data || []).map((m) => ({
+    id: m.id,
+    userId: m.user_id,
+    name: m.display_name,
+    color: m.color,
+    leftAt: m.left_at,
+  }))
+}
+
+/** Uscita volontaria dalla crew. La riga resta, con le sue spese: vedi 0008. */
+export async function leaveTrip(tripId: string): Promise<void> {
+  unwrapVoid(await supabase.rpc('leave_trip', { p_trip_id: tripId }))
+}
+
+/** Rimozione decisa dall'organizzatore. Stesso effetto di leaveTrip. */
+export async function removeTripMember(memberId: string): Promise<void> {
+  unwrapVoid(await supabase.rpc('remove_trip_member', { p_member_id: memberId }))
 }
 
 export async function fetchExpensesData(tripId: string): Promise<{

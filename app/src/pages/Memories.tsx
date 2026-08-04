@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
+import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
 import { uploadTripMedia } from '../lib/mediaUpload'
 import { useToast } from '../lib/toast'
 import { useTripTableSync } from '../lib/useTripRealtime'
 import { isUuid } from '../lib/uuid'
 import { loadMemories, saveMemories, type MemoryDay, type MemoryItem } from '../lib/tripData'
-import { fetchTripMembers } from './spese/supabaseSpese'
+import { fetchTripMembers, membriAttivi } from './spese/supabaseSpese'
 import {
   createMemory,
   fetchMemories,
@@ -49,7 +50,7 @@ export function Memories() {
         .then(([data, members]) => {
           setDays(data.days)
           setItems(data.items)
-          setPeople(members.map((m) => m.name))
+          setPeople(membriAttivi(members).map((m) => m.name))
           const me = members.find((m) => m.userId === session?.user?.id)
           setCurrentMemberId(me?.id ?? null)
           setCurrentMemberName(me?.name ?? 'Tu')
@@ -177,7 +178,14 @@ export function Memories() {
     })),
   ]
 
-  const personStories = people.map((name) => {
+  // La striscia mostra chi c'e' adesso, piu' chiunque abbia gia' caricato
+  // qualcosa: chi ha lasciato il viaggio sparisce dalla crew ma le sue foto no,
+  // e senza il suo nome qui non ci sarebbe piu' modo di sfogliarle.
+  const personeConStorie = Array.from(
+    new Set([...people, ...items.map((it) => it.author).filter((a): a is string => !!a)]),
+  )
+
+  const personStories = personeConStorie.map((name) => {
     const cover = personCover(name)
     return {
       id: 'person:' + name,
@@ -212,7 +220,7 @@ export function Memories() {
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-3.5 flex items-center justify-between">
         <a href="/" className="font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
-        <a href="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</a>
+        <TripIdentityLink />
       </div>
 
       <div className="mb-1 flex items-baseline justify-between">
