@@ -46,11 +46,15 @@
   --color-card-border: #f0e2c8;
   --color-empty-border: #e6d5b3;
   --color-add-border: #d9b98a;
-  --color-add-text: #b8703a;
-  /* L'ambra quando fa da scritta: "Explorer · <viaggio>", il mood di una tappa,
-     l'etichetta della categoria su una voce di checklist. #c2793a stava a
-     3,3:1, questo sta a 4,57:1 sul crema e 5,13:1 sulle card chiare.
-     --color-add-text resta com'e': quello e' un bordo, non una scritta. */
+  /* Le due ambre sono scritte, non decoro, e per questo hanno lo stesso valore
+     contato: 4,57:1 sul crema, 5,13:1 sulle card chiare. Restano due token
+     perche' fanno due mestieri diversi e un giorno potrebbero divergere.
+     - add-text: la scritta dei pulsanti tratteggiati "+ Aggiungi...", ~19 punti.
+       Stava a #b8703a, cioe' 3,3-3,9:1. Il bordo tratteggiato e' un'altra cosa
+       e resta --color-add-border.
+     - amber-text: "Explorer · <viaggio>", il mood di una tappa, l'etichetta di
+       categoria su una voce di checklist. Stava a #c2793a, cioe' 3,31:1. */
+  --color-add-text: #9e5a20;
   --color-amber-text: #9e5a20;
 
   /* fixed avatar palette, reused everywhere avatars appear */
