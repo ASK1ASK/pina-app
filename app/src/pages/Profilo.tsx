@@ -248,7 +248,7 @@ export function Profilo() {
           )}
           <div className="min-w-0 flex-1">
             <EditableText key={name} initialText={name || 'Il tuo nome'} className="font-display text-xl font-bold" onBlurText={saveName} />
-            <div className="text-[11.5px] font-bold text-[#c2793a]">Explorer · {tripName} {tripYearLabel}</div>
+            <div className="text-[11.5px] font-bold text-[var(--color-amber-text)]">Explorer · {tripName} {tripYearLabel}</div>
           </div>
         </div>
         <div className="mb-3.5 border-t-[1.5px] border-dashed border-[#e6b96f]" />
@@ -319,7 +319,7 @@ export function Profilo() {
           <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setNameSettingsOpen((v) => !v)}>
             <span className="text-base">👤</span>
             <span className="flex-1 text-[13px] font-semibold">Nome e preferenze</span>
-            <span className="text-xs text-[#c2a97e]">{nameSettingsOpen ? '⌃' : '›'}</span>
+            <span className="text-xs text-[var(--color-text-secondary)]">{nameSettingsOpen ? '⌃' : '›'}</span>
           </button>
           {nameSettingsOpen && (
             <div className="px-3.5 pb-3.5 pl-10">
@@ -358,7 +358,7 @@ export function Profilo() {
           <a href={`/onboarding?step=createTrip&trip=${routeTripId}`} className="flex w-full items-center gap-2.5 border-b border-[var(--color-cream-light)] px-3.5 py-3.25 text-left">
             <span className="text-base">⚙️</span>
             <span className="flex-1 text-[13px] font-semibold">Impostazioni viaggio</span>
-            <span className="text-xs text-[#c2a97e]">›</span>
+            <span className="text-xs text-[var(--color-text-secondary)]">›</span>
           </a>
         )}
         {isRealTrip && isOrganizer && (
@@ -366,7 +366,7 @@ export function Profilo() {
             <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setCrewOpen((v) => !v)}>
               <span className="text-base">👥</span>
               <span className="flex-1 text-[13px] font-semibold">Gestisci la crew</span>
-              <span className="text-xs text-[#c2a97e]">{crewOpen ? '⌃' : '›'}</span>
+              <span className="text-xs text-[var(--color-text-secondary)]">{crewOpen ? '⌃' : '›'}</span>
             </button>
             {crewOpen && (
               <div className="px-3.5 pb-3.5 pl-10">
@@ -385,7 +385,7 @@ export function Profilo() {
                           <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{m.name}</span>
                           <button
                             type="button"
-                            className="shrink-0 text-[11.5px] font-bold text-[var(--color-coral)]"
+                            className="shrink-0 text-[11.5px] font-bold text-[var(--color-coral-text)]"
                             onClick={() => setRemovingId(removingId === m.id ? null : m.id)}
                           >
                             {removingId === m.id ? 'Annulla' : 'Rimuovi'}
@@ -414,8 +414,8 @@ export function Profilo() {
         <div>
           <button type="button" className="flex w-full items-center gap-2.5 px-3.5 py-3.25 text-left" onClick={() => setLeaveConfirmOpen((v) => !v)}>
             <span className="text-base">🚪</span>
-            <span className="flex-1 text-[13px] font-bold text-[var(--color-coral)]">Esci dal viaggio</span>
-            <span className="text-xs text-[#c2a97e]">{leaveConfirmOpen ? '⌃' : '›'}</span>
+            <span className="flex-1 text-[13px] font-bold text-[var(--color-coral-text)]">Esci dal viaggio</span>
+            <span className="text-xs text-[var(--color-text-secondary)]">{leaveConfirmOpen ? '⌃' : '›'}</span>
           </button>
           {leaveConfirmOpen && (
             <div className="px-3.5 pb-4 pl-10">

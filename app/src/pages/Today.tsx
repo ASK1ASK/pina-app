@@ -304,7 +304,7 @@ export function Today() {
           <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <div className="mb-2.5 flex items-baseline justify-between">
               <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Programma di oggi</div>
-              <div className="text-[10.5px] font-bold text-[#c2a97e]">ora {currentTimeLabel}</div>
+              <div className="text-[10.5px] font-bold text-[var(--color-text-secondary)]">ora {currentTimeLabel}</div>
             </div>
             {hasSchedule ? (
               <div className="flex flex-col gap-1.5">
@@ -332,13 +332,13 @@ export function Today() {
                         <button type="button" disabled={!canUp} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canUp ? 'var(--color-text-secondary)' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, -1)}>▴</button>
                         <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? 'var(--color-text-secondary)' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
                       </div>
-                      <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? '#d9481f' : 'var(--color-text-secondary)' }} onClick={open}>
+                      <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? 'var(--color-coral-text)' : 'var(--color-text-secondary)' }} onClick={open}>
                         {hasTime ? it.time : 'Orario'}
                       </button>
                       <button type="button" className="w-5 shrink-0 text-center text-[15px]" onClick={open}>{it.icon || it.catIcon || '📌'}</button>
                       <button type="button" className="min-w-0 flex-1 truncate text-left text-[13px]" style={{ fontWeight: isCurrent || isNext ? 700 : 600 }} onClick={open}>{it.label}</button>
                       {(isCurrent || isNext) && (
-                        <button type="button" className="shrink-0 rounded-full bg-[#fde3d0] px-1.75 py-0.75 text-[9.5px] font-bold text-[var(--color-coral)]" onClick={open}>
+                        <button type="button" className="shrink-0 rounded-full bg-[#fde3d0] px-1.75 py-0.75 text-[9.5px] font-bold text-[var(--color-coral-text)]" onClick={open}>
                           {isCurrent ? 'ORA' : 'PROSSIMO'}
                         </button>
                       )}
@@ -349,7 +349,7 @@ export function Today() {
             ) : (
               <div className="py-3.5 text-center">
                 <div className="mb-2 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessuna attività con la stellina per oggi.</div>
-                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral)]">⭐ Aggiungi stelline su Journey</Link>
+                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral-text)]">⭐ Aggiungi stelline su Journey</Link>
               </div>
             )}
           </div>
@@ -377,7 +377,7 @@ export function Today() {
             ) : (
               <div className="py-1 text-center">
                 <div className="mb-2 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">Nessun alloggio segnato per questa notte.</div>
-                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral)]">🏨 Aggiungilo sulla tappa in Journey</Link>
+                <Link to={`${tripBase}/journey`} className="text-xs font-bold text-[var(--color-coral-text)]">🏨 Aggiungilo sulla tappa in Journey</Link>
               </div>
             )}
           </div>
@@ -385,7 +385,7 @@ export function Today() {
           <div className="mb-3 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <div className="mb-2.5 flex items-center justify-between">
               <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Checklist di oggi</div>
-              <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-bold text-[var(--color-coral)]" onClick={addChecklistItem}>+</button>
+              <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-bold text-[var(--color-coral-text)]" onClick={addChecklistItem}>+</button>
             </div>
             <div className="flex flex-col gap-2.25">
               {fullChecklist.map((c, i) => {
@@ -465,7 +465,7 @@ export function Today() {
             <div className="mx-2 w-0.5 self-stretch bg-[var(--color-sand)]" />
             <div className="flex-1 text-center">
               <div className="mb-2.25 text-[10px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Aggiungi</div>
-              <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fdece0] text-lg font-bold text-[var(--color-coral)]" onClick={() => setSheetMode('addExpense')}>+</button>
+              <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fdece0] text-lg font-bold text-[var(--color-coral-text)]" onClick={() => setSheetMode('addExpense')}>+</button>
             </div>
           </div>
 
@@ -484,7 +484,7 @@ export function Today() {
                 ))}
               </div>
             )}
-            <Link to={`${tripBase}/memories`} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-coral)]">+ Aggiungi ricordi</Link>
+            <Link to={`${tripBase}/memories`} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-coral-text)]">+ Aggiungi ricordi</Link>
           </div>
         </>
       )}

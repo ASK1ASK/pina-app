@@ -642,7 +642,7 @@ export function Checklist() {
                         onBlurText={(text) => updateCategoryName(cat.id, text)}
                       />
                       <span className="text-[11.5px] font-bold text-[var(--color-eyebrow)]">{done}/{cat.items.length}</span>
-                      <button type="button" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fdeee0] text-[15px] font-bold text-[var(--color-coral)]" onClick={() => addItemToCategory(cat.id)}>+</button>
+                      <button type="button" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fdeee0] text-[15px] font-bold text-[var(--color-coral-text)]" onClick={() => addItemToCategory(cat.id)}>+</button>
                     </div>
                     <div className="border-t border-dashed border-[var(--color-card-border)]">
                       {cat.items.map((it) => (
@@ -762,7 +762,7 @@ export function Checklist() {
                     onBlurText={(text) => updatePersonalSectionName(sec.id, text)}
                   />
                   <span className="text-[11.5px] font-bold text-[var(--color-eyebrow)]">{done}/{sec.items.length}</span>
-                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fdeee0] text-[15px] font-bold text-[var(--color-coral)]" onClick={() => addPersonalItem(sec.id)}>+</button>
+                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fdeee0] text-[15px] font-bold text-[var(--color-coral-text)]" onClick={() => addPersonalItem(sec.id)}>+</button>
                 </div>
                 <div className="border-t border-dashed border-[var(--color-card-border)]">
                   {sec.items.map((it) => (

@@ -135,7 +135,7 @@ export function ScheduleItemSheet({
 
         <div className="mb-1.5 flex items-center justify-between">
           <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Checklist attività</div>
-          <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-card-border)] bg-white text-[13px] font-bold text-[var(--color-coral)]" onClick={onAddChecklistItem}>+</button>
+          <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-card-border)] bg-white text-[13px] font-bold text-[var(--color-coral-text)]" onClick={onAddChecklistItem}>+</button>
         </div>
         <div className="mb-3.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-3 py-2.5">
           {item.checklist.length === 0 ? (
@@ -159,7 +159,7 @@ export function ScheduleItemSheet({
                     style={c.done ? { color: 'var(--color-text-secondary)', textDecoration: 'line-through' } : { color: 'var(--color-text)' }}
                     onBlurText={(text) => onEditChecklistLabel(c.id, text)}
                   />
-                  <button type="button" className="shrink-0 text-[15px] text-[#c2a97e]" onClick={() => onRemoveChecklistItem(c.id)}>×</button>
+                  <button type="button" className="shrink-0 text-[15px] text-[var(--color-text-secondary)]" onClick={() => onRemoveChecklistItem(c.id)}>×</button>
                 </div>
               ))}
             </div>

@@ -522,7 +522,7 @@ export function Journey() {
 
           <div className="mx-0.5 mb-3.5 flex items-center justify-between">
             <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Le tappe</div>
-            <button type="button" className="whitespace-nowrap text-[11.5px] font-bold text-[var(--color-coral)]" onClick={() => setEditMode((v) => !v)}>
+            <button type="button" className="whitespace-nowrap text-[11.5px] font-bold text-[var(--color-coral-text)]" onClick={() => setEditMode((v) => !v)}>
               {editMode ? 'Fatto' : 'Modifica'}
             </button>
           </div>
@@ -555,7 +555,7 @@ export function Journey() {
                       </div>
                       <span className="text-xs">✓</span>
                       {editMode && (
-                        <button type="button" className="text-[15px] text-[#c2a97e]" onClick={(e) => { e.stopPropagation(); removeStop(stop.id) }}>×</button>
+                        <button type="button" className="text-[15px] text-[var(--color-text-secondary)]" onClick={(e) => { e.stopPropagation(); removeStop(stop.id) }}>×</button>
                       )}
                     </div>
                   )}
@@ -590,9 +590,9 @@ export function Journey() {
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[14px]" style={{ backgroundImage: linkMedia(stop.photo) ? `url(${linkMedia(stop.photo)})` : undefined, background: linkMedia(stop.photo) ? undefined : stop.gradient, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                         <div className="min-w-0 flex-1 py-0.5">
                           <div className="flex items-center justify-between">
-                            <div className="mb-0.5 text-[11px] font-bold text-[#c2793a]">{stop.moodLine}</div>
+                            <div className="mb-0.5 text-[11px] font-bold text-[var(--color-amber-text)]">{stop.moodLine}</div>
                             {editMode && (
-                              <button type="button" className="text-[15px] text-[#c2a97e]" onClick={(e) => { e.stopPropagation(); removeStop(stop.id) }}>×</button>
+                              <button type="button" className="text-[15px] text-[var(--color-text-secondary)]" onClick={(e) => { e.stopPropagation(); removeStop(stop.id) }}>×</button>
                             )}
                           </div>
                           <div className="font-display text-[17px] font-semibold">{stop.name}</div>
@@ -621,7 +621,7 @@ export function Journey() {
           <div className="mt-5.5 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
             <button type="button" className="flex w-full items-center justify-between" onClick={() => setActivityExpanded((v) => !v)}>
               <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Attività recenti · {activityLog.length}</div>
-              <span className="text-[11px] font-bold text-[var(--color-coral)]">{activityExpanded ? 'Chiudi ⌃' : 'Apri ⌄'}</span>
+              <span className="text-[11px] font-bold text-[var(--color-coral-text)]">{activityExpanded ? 'Chiudi ⌃' : 'Apri ⌄'}</span>
             </button>
             {activityExpanded && (
               <div className="mt-3 flex flex-col gap-2.25">
@@ -629,7 +629,7 @@ export function Journey() {
                   <div key={i} className="flex items-baseline gap-1.5 text-[12.5px]">
                     <span className="shrink-0 font-bold">{a.person}</span>
                     <span className="flex-1 text-[#8a7256]">{a.action}</span>
-                    <span className="shrink-0 text-[11px] text-[#c2a97e]">{a.time}</span>
+                    <span className="shrink-0 text-[11px] text-[var(--color-text-secondary)]">{a.time}</span>
                   </div>
                 ))}
               </div>

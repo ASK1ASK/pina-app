@@ -75,7 +75,7 @@ export function AddStopSheet({
         <div className="font-display text-lg font-bold text-[var(--color-text)]">
           {editing ? 'Modifica tappa' : 'Nuova tappa'}
         </div>
-        <button type="button" className="text-base text-[#c2a97e]" onClick={onClose}>×</button>
+        <button type="button" className="text-base text-[var(--color-text-secondary)]" onClick={onClose}>×</button>
       </div>
 
       <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Nome del luogo</div>

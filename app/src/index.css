@@ -15,6 +15,11 @@
 
   /* coral / mango / sunset — primary warm palette */
   --color-coral: #d9481f;
+  /* Il coral quando fa da scritta piccola, non da fondo. #d9481f su crema sta
+     a 3,68:1 e sotto i 18px non vale l'eccezione del testo grande; questo sta
+     a 4,85:1 sul crema e 5,44:1 sulla barra in basso. Il marchio "Piña" resta
+     --color-coral: e' il marchio, non una didascalia. */
+  --color-coral-text: #b44117;
   --color-coral-light: #ff8a5b;
   --color-sunset: #ff5f6d;
   --color-mango: #ffb627;
@@ -42,6 +47,11 @@
   --color-empty-border: #e6d5b3;
   --color-add-border: #d9b98a;
   --color-add-text: #b8703a;
+  /* L'ambra quando fa da scritta: "Explorer · <viaggio>", il mood di una tappa,
+     l'etichetta della categoria su una voce di checklist. #c2793a stava a
+     3,3:1, questo sta a 4,57:1 sul crema e 5,13:1 sulle card chiare.
+     --color-add-text resta com'e': quello e' un bordo, non una scritta. */
+  --color-amber-text: #9e5a20;
 
   /* fixed avatar palette, reused everywhere avatars appear */
   --color-avatar-1: #ff8a5b;

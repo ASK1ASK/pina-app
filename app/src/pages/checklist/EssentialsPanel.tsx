@@ -57,11 +57,11 @@ function EntryRow({
           />
         </div>
       </div>
-      {entry.tag && <span className="shrink-0 text-[10.5px] font-bold text-[var(--color-coral)]">{entry.tag}</span>}
+      {entry.tag && <span className="shrink-0 text-[10.5px] font-bold text-[var(--color-coral-text)]">{entry.tag}</span>}
       {entry.href && (
         <button type="button" className="shrink-0 text-sm" onClick={() => window.open(entry.href, '_blank')}>↗</button>
       )}
-      <button type="button" className="shrink-0 text-sm text-[#c2a97e]" onClick={onDelete}>×</button>
+      <button type="button" className="shrink-0 text-sm text-[var(--color-text-secondary)]" onClick={onDelete}>×</button>
     </div>
   )
 }

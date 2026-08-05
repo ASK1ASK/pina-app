@@ -918,7 +918,7 @@ export function Onboarding() {
           <div className="flex flex-col gap-2.5">
             <button type="button" className={primaryBtnClass} style={primaryBtnStyle} onClick={() => patch({ step: 'login', loginIntent: 'create' })}>Crea un viaggio</button>
             <button type="button" className={secondaryBtnClass} onClick={() => goStep('joinCode')}>Unisciti a un viaggio</button>
-            <button type="button" className="py-2 text-center text-xs font-bold text-[var(--color-coral)]" onClick={() => patch({ step: 'login', loginIntent: 'access' })}>I tuoi viaggi / Accedi</button>
+            <button type="button" className="py-2 text-center text-xs font-bold text-[var(--color-coral-text)]" onClick={() => patch({ step: 'login', loginIntent: 'access' })}>I tuoi viaggi / Accedi</button>
           </div>
         </div>
       </div>
@@ -1110,10 +1110,10 @@ export function Onboarding() {
             <span className="whitespace-nowrap text-xs font-bold text-[var(--color-text)]">{activeMonth.label}</span>
             <button type="button" className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[13px] text-[var(--color-text)]" onClick={() => patch((s) => ({ monthIndex: Math.min(monthDefs.length - 1, s.monthIndex + 1) }))}>›</button>
           </div>
-          <div className="mb-2 whitespace-nowrap text-center text-[11px] font-bold text-[var(--color-coral)]">{tripDates}</div>
+          <div className="mb-2 whitespace-nowrap text-center text-[11px] font-bold text-[var(--color-coral-text)]">{tripDates}</div>
           <div className="mb-1 grid grid-cols-7 gap-1">
             {WEEKDAY_LABELS.map((wd, i) => (
-              <div key={i} className="text-center text-[9.5px] font-bold text-[#c2a97e]">{wd}</div>
+              <div key={i} className="text-center text-[9.5px] font-bold text-[var(--color-text-secondary)]">{wd}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">{blanks}{days}</div>
@@ -1197,7 +1197,7 @@ export function Onboarding() {
               <div className="flex-1 text-left text-[13.5px] font-bold text-[var(--color-text)]">
                 {uploadingCover ? 'Carico la copertina…' : 'Scegli la tua copertina'}
               </div>
-              <span className="text-[15px] text-[#c2a97e]">›</span>
+              <span className="text-[15px] text-[var(--color-text-secondary)]">›</span>
             </button>
             <button type="button" className="mb-2.5 w-full text-center text-[12.5px] font-bold text-[#c2445a]" onClick={() => patch({ deleteConfirmOpen: true })}>🗑 Elimina viaggio</button>
           </>
@@ -1321,11 +1321,11 @@ export function Onboarding() {
               >
                 <span className="text-lg">{m.joined ? '✅' : '⏳'}</span>
                 <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{m.name}</span>
-                <span className="text-[11px] font-bold" style={{ color: m.isOrganizer ? 'var(--color-coral)' : m.joined ? '#4f8f4f' : '#c2a97e' }}>
+                <span className="text-[11px] font-bold" style={{ color: m.isOrganizer ? 'var(--color-coral)' : m.joined ? '#4f8f4f' : 'var(--color-text-secondary)' }}>
                   {m.isOrganizer ? 'Tu · organizzatore' : m.joined ? 'A bordo' : 'In attesa'}
                 </span>
                 {!m.isOrganizer && !m.joined && (
-                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[#c2a97e]" onClick={() => removeCrewMember(m.id)}>×</button>
+                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[var(--color-text-secondary)]" onClick={() => removeCrewMember(m.id)}>×</button>
                 )}
               </div>
             ))
@@ -1334,14 +1334,14 @@ export function Onboarding() {
               <div className="flex items-center gap-2.5 rounded-2xl border-[1.5px] border-[#ffb627] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
                 <span className="text-lg">✅</span>
                 <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{state.identityName}</span>
-                <span className="text-[11px] font-bold text-[var(--color-coral)]">Tu · organizzatore</span>
+                <span className="text-[11px] font-bold text-[var(--color-coral-text)]">Tu · organizzatore</span>
               </div>
               {(state.crew ?? []).map((c, i) => (
                 <div key={i} className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-3 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]" onClick={() => patch((s) => ({ crew: (s.crew ?? []).map((m, idx) => idx !== i ? m : { ...m, status: m.status === 'joined' ? 'pending' : 'joined' }) }))}>
                   <span className="text-lg">{c.status === 'joined' ? '✅' : '⏳'}</span>
                   <span className="flex-1 text-[13.5px] font-bold text-[var(--color-text)]">{c.name}</span>
-                  <span className="text-[11px] font-bold" style={{ color: c.status === 'joined' ? '#4f8f4f' : '#c2a97e' }}>{c.status === 'joined' ? 'A bordo' : 'In attesa'}</span>
-                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[#c2a97e]" onClick={(e) => { e.stopPropagation(); patch((s) => ({ crew: (s.crew ?? []).filter((_, idx) => idx !== i) })) }}>×</button>
+                  <span className="text-[11px] font-bold" style={{ color: c.status === 'joined' ? '#4f8f4f' : 'var(--color-text-secondary)' }}>{c.status === 'joined' ? 'A bordo' : 'In attesa'}</span>
+                  <button type="button" className="flex h-5 w-5 items-center justify-center rounded-full text-[15px] text-[var(--color-text-secondary)]" onClick={(e) => { e.stopPropagation(); patch((s) => ({ crew: (s.crew ?? []).filter((_, idx) => idx !== i) })) }}>×</button>
                 </div>
               ))}
             </>
@@ -1439,7 +1439,7 @@ export function Onboarding() {
               <div key={i} className="flex items-center gap-2 py-1.5"><span className="text-[15px]">✅</span><span className="text-[13px] font-bold text-[var(--color-text)]">{name}</span></div>
             ))
           )}
-          <div className="flex items-center gap-2 py-1.5"><span className="text-[15px]">🆕</span><span className="text-[13px] font-bold text-[var(--color-coral)]">Tu</span></div>
+          <div className="flex items-center gap-2 py-1.5"><span className="text-[15px]">🆕</span><span className="text-[13px] font-bold text-[var(--color-coral-text)]">Tu</span></div>
         </div>
 
         <button

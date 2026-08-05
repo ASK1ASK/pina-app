@@ -95,7 +95,7 @@ export function AttachmentControl({
       <button
         type="button"
         aria-label="Togli l’allegato"
-        className={`flex ${ALTEZZA_TOCCO} w-7 items-center justify-center text-sm text-[#c2a97e]`}
+        className={`flex ${ALTEZZA_TOCCO} w-7 items-center justify-center text-sm text-[var(--color-text-secondary)]`}
         onClick={onRemove}
       >
         ×

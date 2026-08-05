@@ -132,7 +132,7 @@ export function StopDetailSheet({
                       onBlurText={(text) => onSaveStayName(stay.id, text)}
                     />
                     {stays.length > 1 && (
-                      <button type="button" className="shrink-0 text-sm text-[#c2a97e]" onClick={() => onRemoveStay(stay.id)}>×</button>
+                      <button type="button" className="shrink-0 text-sm text-[var(--color-text-secondary)]" onClick={() => onRemoveStay(stay.id)}>×</button>
                     )}
                   </div>
                   {!editing && stay.link && (
@@ -203,7 +203,7 @@ export function StopDetailSheet({
                               className="flex-1 text-[12.5px] font-semibold text-[var(--color-text)]"
                               onBlurText={(text) => onSaveItemLabel(cat.id, it.id, text)}
                             />
-                            <button type="button" className="shrink-0 text-[13px] text-[#c2a97e]" onClick={() => onRemoveItem(cat.id, it.id)}>×</button>
+                            <button type="button" className="shrink-0 text-[13px] text-[var(--color-text-secondary)]" onClick={() => onRemoveItem(cat.id, it.id)}>×</button>
                           </div>
                           {!editing && it.link && (
                             <a href={it.link} target="_blank" rel="noreferrer" className="mt-1 block pl-5.75 text-[11px] font-semibold text-[#8a6a3e] underline">🔗 Apri link</a>

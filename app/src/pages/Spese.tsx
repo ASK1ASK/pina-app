@@ -460,14 +460,14 @@ export function Spese() {
             <div className="text-[11px] font-bold tracking-[.04em] text-[var(--color-eyebrow)]">Cassa comune</div>
             <div className="font-display text-lg font-semibold">{fmtAmount(cassaTotal)}€</div>
           </div>
-          <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdeee0] text-lg font-bold text-[var(--color-coral)]" onClick={openCassa}>＋</button>
+          <button type="button" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fdeee0] text-lg font-bold text-[var(--color-coral-text)]" onClick={openCassa}>＋</button>
         </div>
         <div className="mt-2 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{cassaContributions.length} contribut{cassaContributions.length === 1 ? 'o' : 'i'} disponibili</div>
       </div>
 
       <div className="mx-0.5 mb-3.5 flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Spese recenti</span>
-        <button type="button" className="text-xs font-bold text-[var(--color-coral)]" onClick={() => setSheetMode('ledger')}>Tutte →</button>
+        <button type="button" className="text-xs font-bold text-[var(--color-coral-text)]" onClick={() => setSheetMode('ledger')}>Tutte →</button>
       </div>
 
       {expenses.length > 0 ? (
@@ -529,7 +529,7 @@ export function Spese() {
           <div className="max-h-[88%] w-full max-w-md overflow-y-auto rounded-t-3xl bg-[var(--color-bg)] p-5.5 shadow-[0_-20px_50px_-20px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="font-display text-lg font-bold">{sheetTitle}</div>
-              <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
+              <button type="button" className="text-xl text-[var(--color-text-secondary)]" onClick={closeSheet}>×</button>
             </div>
 
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">La tua spesa</div>
@@ -589,7 +589,7 @@ export function Spese() {
           <div className="w-full max-w-md rounded-t-3xl bg-[var(--color-bg)] p-5.5 shadow-[0_-20px_50px_-20px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="font-display text-lg font-bold">Registra un rimborso</div>
-              <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
+              <button type="button" className="text-xl text-[var(--color-text-secondary)]" onClick={closeSheet}>×</button>
             </div>
             {/*
               Qui, e solo qui, compare anche chi ha lasciato il viaggio: un
@@ -612,7 +612,7 @@ export function Spese() {
           <div className="w-full max-w-md rounded-t-3xl bg-[var(--color-bg)] p-5.5 shadow-[0_-20px_50px_-20px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div className="font-display text-lg font-bold">Aggiungi alla cassa comune</div>
-              <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
+              <button type="button" className="text-xl text-[var(--color-text-secondary)]" onClick={closeSheet}>×</button>
             </div>
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Chi contribuisce</div>
             <div className="mb-3.5"><PersonPicker members={membersAttivi} isSelected={(c) => cassaForm.person === c} onClick={(c) => setCassaForm((f) => ({ ...f, person: c }))} /></div>
@@ -628,7 +628,7 @@ export function Spese() {
           <div className="flex h-[82%] w-full max-w-md flex-col rounded-t-3xl bg-[var(--color-bg)] shadow-[0_-20px_50px_-20px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5.5 pb-3.5 pt-5.5">
               <div className="font-display text-lg font-bold">Tutte le spese</div>
-              <button type="button" className="text-xl text-[#c2a97e]" onClick={closeSheet}>×</button>
+              <button type="button" className="text-xl text-[var(--color-text-secondary)]" onClick={closeSheet}>×</button>
             </div>
             <div className="flex-1 overflow-y-auto px-5.5">
               {ledgerRows.map((row) => (

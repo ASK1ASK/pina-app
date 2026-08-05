@@ -30,7 +30,7 @@ export function BottomNav() {
           to={`/trip/${tripId}/${tab.key}`}
           className={({ isActive }) =>
             `flex flex-col items-center text-center ${
-              isActive ? 'text-[var(--color-coral)]' : 'text-[#c2a97e]'
+              isActive ? 'text-[var(--color-coral-text)]' : 'text-[var(--color-text-secondary)]'
             }`
           }
         >

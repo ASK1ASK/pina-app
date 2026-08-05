@@ -399,7 +399,7 @@ export function Home() {
 
           <Link
             to="/onboarding?step=joinCode"
-            className="mt-2.5 block text-center text-[12.5px] font-bold text-[var(--color-coral)]"
+            className="mt-2.5 block text-center text-[12.5px] font-bold text-[var(--color-coral-text)]"
           >
             Hai un codice? Unisciti a un viaggio
           </Link>
@@ -436,7 +436,7 @@ export function Home() {
 
           <Link
             to="/onboarding?step=joinCode"
-            className="block text-center text-[12.5px] font-bold text-[var(--color-coral)]"
+            className="block text-center text-[12.5px] font-bold text-[var(--color-coral-text)]"
           >
             Hai un codice? Unisciti a un viaggio
           </Link>

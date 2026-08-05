@@ -225,7 +225,7 @@ export function Memories() {
 
       <div className="mb-1 flex items-baseline justify-between">
         <div className="font-display text-2xl font-semibold">Memories</div>
-        <button type="button" className="whitespace-nowrap text-[11px] font-bold text-[var(--color-coral)]" onClick={exportAll}>⬇ Esporta tutto</button>
+        <button type="button" className="whitespace-nowrap text-[11px] font-bold text-[var(--color-coral-text)]" onClick={exportAll}>⬇ Esporta tutto</button>
       </div>
       <div className="mb-4 text-[12.5px] font-semibold text-[var(--color-text-secondary)]">I ricordi del gruppo, tappa per tappa</div>
 

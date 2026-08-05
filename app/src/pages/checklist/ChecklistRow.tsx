@@ -37,7 +37,7 @@ export function ChecklistRow({
         {done ? '✓' : ''}
       </button>
       {catTag && (
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-[#fdeee0] px-1.75 py-0.75 text-[10.5px] font-bold text-[#c2793a]">{catTag}</span>
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-[#fdeee0] px-1.75 py-0.75 text-[10.5px] font-bold text-[var(--color-amber-text)]">{catTag}</span>
       )}
       <EditableText
         ref={itemRef}
@@ -57,7 +57,7 @@ export function ChecklistRow({
         </button>
       )}
       {onDelete && (
-        <button type="button" className="shrink-0 text-[15px] leading-none text-[#c2a97e]" onClick={onDelete}>×</button>
+        <button type="button" className="shrink-0 text-[15px] leading-none text-[var(--color-text-secondary)]" onClick={onDelete}>×</button>
       )}
     </div>
   )

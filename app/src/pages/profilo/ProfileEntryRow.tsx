@@ -35,7 +35,7 @@ export function ProfileEntryRow({
       {href && (
         <button type="button" className="shrink-0 text-sm" onClick={() => window.open(href, '_blank')}>↗</button>
       )}
-      <button type="button" className="shrink-0 text-sm text-[#c2a97e]" onClick={onDelete}>×</button>
+      <button type="button" className="shrink-0 text-sm text-[var(--color-text-secondary)]" onClick={onDelete}>×</button>
     </div>
   )
 }
