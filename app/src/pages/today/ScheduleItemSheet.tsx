@@ -24,7 +24,7 @@ function FieldBox({
         key={value}
         initialText={value || placeholder}
         className={`text-[11.5px] font-semibold ${mono ? 'font-mono' : ''}`}
-        style={{ color: filled ? '#3a2a1c' : '#b39a78', fontStyle: filled ? 'normal' : 'italic' }}
+        style={{ color: filled ? '#3a2a1c' : 'var(--color-eyebrow)', fontStyle: filled ? 'normal' : 'italic' }}
         onFocus={(e) => { if (!filled) e.currentTarget.textContent = '' }}
         onBlurText={onSave}
       />
@@ -171,7 +171,7 @@ export function ScheduleItemSheet({
           key={'notes-' + item.id}
           initialText={item.notes || 'Aggiungi una nota'}
           className="block min-h-14 rounded-2xl border border-[var(--color-card-border)] bg-white p-3 text-[11.5px] font-semibold"
-          style={{ color: item.notes ? '#3a2a1c' : '#b39a78', fontStyle: item.notes ? 'normal' : 'italic' }}
+          style={{ color: item.notes ? '#3a2a1c' : 'var(--color-eyebrow)', fontStyle: item.notes ? 'normal' : 'italic' }}
           onFocus={(e) => { if (!item.notes) e.currentTarget.textContent = '' }}
           onBlurText={onSaveNotes}
         />

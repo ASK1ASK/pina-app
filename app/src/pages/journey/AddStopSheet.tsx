@@ -84,7 +84,7 @@ export function AddStopSheet({
         ref={nameRef}
         initialText={draft.name || 'Nome del luogo'}
         className="rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-3 font-display text-[17px]"
-        style={{ color: draft.name ? '#3a2a1c' : '#b39a78', fontWeight: draft.name ? 700 : 600 }}
+        style={{ color: draft.name ? '#3a2a1c' : 'var(--color-eyebrow)', fontWeight: draft.name ? 700 : 600 }}
         onFocus={(e) => { if (!draft.name) e.currentTarget.textContent = '' }}
         onBlurText={onChangeName}
       />

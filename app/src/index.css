@@ -28,8 +28,14 @@
   /* text */
   --color-text: #3a2a1c;
   --color-text-strong: #2b2118;
-  --color-text-secondary: #a9906f;
-  --color-eyebrow: #b39a78;
+  /* Contrasto verificato su --color-cream (#f2ede3), il fondo piu' scuro
+     dell'app, quindi il caso peggiore: secondary 4,92:1 ed eyebrow 5,61:1,
+     contro il minimo di 4,5:1. I valori di prima (#a9906f e #b39a78) stavano
+     a 2,6:1 e 2,3:1. L'eyebrow e' il piu' scuro dei due di proposito: e'
+     l'etichettina maiuscola da 10-11px, il testo piu' piccolo dell'app.
+     Se cambi questi valori, rifai il conto: sono testo piccolo, non decoro. */
+  --color-text-secondary: #7a6244;
+  --color-eyebrow: #6f5a3e;
 
   /* borders / states */
   --color-card-border: #f0e2c8;

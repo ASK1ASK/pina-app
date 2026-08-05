@@ -87,7 +87,7 @@ function AmountEditable({ value, onSave, placeholder = '0' }: { value: string; o
       key={value}
       initialText={value || placeholder}
       className="rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-2.75 font-display text-base"
-      style={{ color: filled ? '#3a2a1c' : '#b39a78', fontWeight: filled ? 700 : 600, fontStyle: filled ? 'normal' : 'italic' }}
+      style={{ color: filled ? '#3a2a1c' : 'var(--color-eyebrow)', fontWeight: filled ? 700 : 600, fontStyle: filled ? 'normal' : 'italic' }}
       onFocus={(e) => { if (!filled) e.currentTarget.textContent = '' }}
       onBlurText={onSave}
     />
@@ -569,7 +569,7 @@ export function Spese() {
               key={form.note}
               initialText={form.note || 'Aggiungi una nota...'}
               className="rounded-2xl border border-[var(--color-card-border)] bg-white px-3.5 py-2.75 text-[13px] font-semibold"
-              style={{ color: form.note ? '#3a2a1c' : '#b39a78', fontStyle: form.note ? 'normal' : 'italic' }}
+              style={{ color: form.note ? '#3a2a1c' : 'var(--color-eyebrow)', fontStyle: form.note ? 'normal' : 'italic' }}
               onFocus={(e) => { if (!form.note) e.currentTarget.textContent = '' }}
               onBlurText={(text) => setForm((f) => ({ ...f, note: text }))}
             />

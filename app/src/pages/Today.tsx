@@ -329,10 +329,10 @@ export function Today() {
                       }}
                     >
                       <div className="flex w-3.75 shrink-0 flex-col">
-                        <button type="button" disabled={!canUp} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canUp ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, -1)}>▴</button>
-                        <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? '#a9906f' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
+                        <button type="button" disabled={!canUp} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canUp ? 'var(--color-text-secondary)' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, -1)}>▴</button>
+                        <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? 'var(--color-text-secondary)' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
                       </div>
-                      <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? '#d9481f' : '#a9906f' }} onClick={open}>
+                      <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? '#d9481f' : 'var(--color-text-secondary)' }} onClick={open}>
                         {hasTime ? it.time : 'Orario'}
                       </button>
                       <button type="button" className="w-5 shrink-0 text-center text-[15px]" onClick={open}>{it.icon || it.catIcon || '📌'}</button>

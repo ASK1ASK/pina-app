@@ -1098,7 +1098,7 @@ export function Onboarding() {
           ref={tripNameRef}
           initialText={state.tripName || 'Il nome del tuo viaggio...'}
           className="mb-6.5 rounded-2xl border border-[var(--color-card-border)] bg-white px-4 py-3.5 font-display text-2xl"
-          style={{ color: state.tripName ? '#3a2a1c' : '#b39a78', fontWeight: state.tripName ? 700 : 600 }}
+          style={{ color: state.tripName ? '#3a2a1c' : 'var(--color-eyebrow)', fontWeight: state.tripName ? 700 : 600 }}
           onFocus={(e) => { if (!state.tripName) e.currentTarget.textContent = '' }}
           onBlurText={(text) => patch({ tripName: text })}
         />

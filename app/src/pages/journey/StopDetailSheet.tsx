@@ -20,7 +20,7 @@ function DaySquares({
           key={day}
           type="button"
           className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-bold"
-          style={day === activeDay ? { background: '#3a2a1c', color: '#fff' } : { background: 'var(--color-bg)', border: '1px solid var(--color-card-border)', color: '#a9906f' }}
+          style={day === activeDay ? { background: '#3a2a1c', color: '#fff' } : { background: 'var(--color-bg)', border: '1px solid var(--color-card-border)', color: 'var(--color-text-secondary)' }}
           onClick={() => onSelect(day)}
         >
           {day}
@@ -127,7 +127,7 @@ export function StopDetailSheet({
                       key={stay.id + stay.name}
                       initialText={stay.name || 'Nome del B&B/hotel/appartamento'}
                       className="flex-1 text-[13.5px] font-bold"
-                      style={{ color: stay.name ? '#3a2a1c' : '#b39a78' }}
+                      style={{ color: stay.name ? '#3a2a1c' : 'var(--color-eyebrow)' }}
                       onFocus={(e) => { if (e.currentTarget.textContent?.trim() === 'Nome del B&B/hotel/appartamento') e.currentTarget.textContent = '' }}
                       onBlurText={(text) => onSaveStayName(stay.id, text)}
                     />
