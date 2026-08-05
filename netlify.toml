@@ -3,8 +3,23 @@
   command = "npm run build"
   publish = "dist"
 
+# Netlify non conosce l'estensione .webmanifest e serviva il manifest come
+# application/octet-stream. I browser lo leggono lo stesso, ma e' fuori
+# specifica: il tipo giusto e' application/manifest+json.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
 # React Router usa client-side routing: qualunque percorso deve servire
 # index.html e lasciare che React Router gestisca la rotta lato client.
+#
+# ⚠️ Attenzione, e' anche una trappola: un percorso sbagliato NON da' 404,
+# restituisce l'HTML della pagina con esito 200. Se si sbaglia il nome di
+# un'icona, in Network la richiesta sembra riuscita, il browser riceve HTML
+# credendolo un PNG, e l'icona non appare — senza un solo errore da nessuna
+# parte. I percorsi dei file statici vanno controllati aprendoli e guardando
+# il Content-Type, non l'esito.
 [[redirects]]
   from = "/*"
   to = "/index.html"
