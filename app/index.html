@@ -5,6 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Piña</title>
+
+    <!-- Aggiunta a schermata Home. I PNG li produce scripts/genera-icone.mjs,
+         a mano, da public/icona-sorgente.png: non si generano durante il build.
+         ⚠️ netlify.toml rimanda /* a /index.html con status 200: se uno di
+         questi percorsi e' sbagliato NON si vede un 404, arriva l'HTML della
+         pagina con esito 200 e l'icona semplicemente non compare. I nomi qui
+         sotto vanno verificati aprendo i file e guardando il Content-Type. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#f2ede3" />
+
+    <!-- iOS non legge il manifest ne' per l'icona ne' per il display: senza
+         queste quattro righe l'iPhone si prende uno screenshot della pagina
+         come icona e apre l'app con la barra dell'indirizzo. Il nome sotto
+         l'icona viene da apple-mobile-web-app-title, non da short_name. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Piña" />
   </head>
   <body>
     <div id="root"></div>
