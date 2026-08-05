@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { useAuth } from '../lib/authContext'
 import { supabase } from '../lib/supabase'
@@ -207,10 +207,13 @@ export function Profilo() {
           Se cambi idea puoi rientrare con il codice del viaggio.
         </div>
         {/*
-          Un link vero e non un ritorno di stato: ricaricando si riparte da una
-          Home pulita, senza il viaggio da cui si e' appena usciti. Prima qui
-          c'era "Torna al viaggio", che funzionava soltanto perche' non era mai
-          successo niente.
+          ⚠️ QUESTO <a> VA LASCIATO <a>. Non convertirlo a <Link> per simmetria
+          con gli altri ritorni alla Home di questa pagina: qui la ricarica
+          completa e' voluta. Serve a ripartire da una Home pulita, senza il
+          viaggio da cui si e' appena usciti; con un <Link> lo stato React
+          resterebbe quello di prima e il viaggio lasciato comparirebbe ancora
+          nell'elenco. Prima qui c'era "Torna al viaggio", che funzionava
+          soltanto perche' non era mai successo niente.
         */}
         <a href="/" className="rounded-full px-5.5 py-3 text-[13px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }}>
           Torna alla Home
@@ -222,8 +225,13 @@ export function Profilo() {
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-3.5 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
-        <a href="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</a>
+        <Link to="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</Link>
+        {/*
+          Profilo e' l'unica pagina di viaggio senza TripIdentityLink: questo
+          pulsante e' la sua unica via d'uscita, quindi resta. E' navigazione
+          normale, non il ritorno dopo l'uscita dal viaggio: <Link>, non <a>.
+        */}
+        <Link to="/" className="whitespace-nowrap rounded-xl border border-[var(--color-card-border)] bg-white px-3.5 py-1.75 text-xs font-bold text-[var(--color-text)]">🏠 Home</Link>
       </div>
 
       <div className="mb-1 font-display text-2xl font-semibold">Profilo</div>

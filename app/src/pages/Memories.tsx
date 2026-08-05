@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
@@ -219,7 +219,7 @@ export function Memories() {
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-3.5 flex items-center justify-between">
-        <a href="/" className="font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
+        <Link to="/" className="font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</Link>
         <TripIdentityLink />
       </div>
 

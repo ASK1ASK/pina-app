@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { EditableText } from '../components/EditableText'
 import { TripIdentityLink } from '../components/TripIdentityLink'
 import { useAuth } from '../lib/authContext'
@@ -555,7 +555,7 @@ export function Checklist() {
   return (
     <div className="mx-auto min-h-svh max-w-md bg-[var(--color-cream)] px-4.5 pb-24 pt-8 text-[var(--color-text)]">
       <div className="mb-3.5 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</a>
+        <Link to="/" className="flex items-center gap-1.5 font-display text-[19px] font-semibold italic text-[var(--color-coral)]">🦩 Piña</Link>
         <TripIdentityLink />
       </div>
 
