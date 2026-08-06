@@ -35,7 +35,10 @@ interface JourneyDef {
 const DEMO_JOURNEY: JourneyDef = {
   id: 'spain',
   name: 'Spain Roadtrip',
-  sub: '14 → 26 agosto · 5 Crew',
+  // Il badge da solo non bastava: chi apriva l'app la prima volta lo scambiava
+  // per un viaggio suo. La riga sotto al nome lo dice a parole, dove prima
+  // c'erano delle date che lo facevano sembrare ancora piu' vero.
+  sub: 'Non è un tuo viaggio · serve solo per curiosare',
   status: 'demo',
   href: '/trip/spain/journey',
   isReal: false,
@@ -45,7 +48,7 @@ const statusMeta: Record<JourneyStatus, string> = {
   live: '🟢 Live',
   planned: '📅 Planned',
   completed: '✅ Completed',
-  demo: '🧪 Demo',
+  demo: '🧪 ESEMPIO',
 }
 
 // Stato derivato dalle date: vissuto, in corso, o ancora da vivere/in creazione.
@@ -323,10 +326,17 @@ export function Home() {
                 ? 'linear-gradient(135deg,#7a9d54,#4f8f4f)'
                 : coverGradientById[journeyColors[j.id]] || coverGradientById.fiesta
 
+              const isDemo = j.status === 'demo'
+
               return (
                 <div
                   key={j.id}
                   className="relative h-28 overflow-hidden rounded-[22px] shadow-[0_10px_22px_-14px_rgba(120,90,40,.3)]"
+                  // La demo porta un bordo tratteggiato: e' il segno che l'app
+                  // usa gia' per "qui non c'e' ancora niente di vero" (i
+                  // pulsanti "+ Aggiungi", gli stati vuoti), quindi non e' un
+                  // linguaggio nuovo da imparare.
+                  style={isDemo ? { outline: '2px dashed rgba(255,255,255,.75)', outlineOffset: '-5px' } : undefined}
                 >
                   <Link to={j.href} className="absolute inset-0 block">
                     <div className="absolute inset-0" style={{ background: gradient }} />
@@ -336,14 +346,32 @@ export function Home() {
                         style={{ backgroundImage: `url(${photo})` }}
                       />
                     )}
+                    {isDemo && (
+                      // Le righe diagonali si leggono da lontano, prima ancora
+                      // delle parole: la scheda "non e' come le altre" si vede
+                      // con la coda dell'occhio.
+                      <div
+                        className="absolute inset-0"
+                        style={{ background: 'repeating-linear-gradient(45deg,rgba(255,255,255,.13),rgba(255,255,255,.13) 9px,transparent 9px,transparent 18px)' }}
+                      />
+                    )}
                     <div className="relative z-10 flex h-full flex-col justify-between px-4 py-3.5 text-white">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="font-display text-[19px] font-bold leading-tight">{j.name}</div>
-                        <span className="shrink-0 rounded-full bg-black/28 px-2.5 py-1 text-[10.5px] font-bold">
+                        <span
+                          className={
+                            isDemo
+                              // mr-7 lascia passare la × che sta sopra, in
+                              // posizione assoluta: senza, le due si
+                              // sovrappongono nell'angolo.
+                              ? 'mr-7 shrink-0 rounded-full bg-white px-2.5 py-1 text-[10.5px] font-bold tracking-[.06em] text-[#3a2a1c]'
+                              : 'shrink-0 rounded-full bg-black/28 px-2.5 py-1 text-[10.5px] font-bold'
+                          }
+                        >
                           {statusMeta[j.status]}
                         </span>
                       </div>
-                      <div className="text-[11.5px] font-semibold text-white/85">{j.sub}</div>
+                      <div className={isDemo ? 'text-[11.5px] font-bold text-white' : 'text-[11.5px] font-semibold text-white/85'}>{j.sub}</div>
                     </div>
                   </Link>
                   {/*

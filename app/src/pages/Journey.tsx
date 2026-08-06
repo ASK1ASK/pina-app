@@ -31,6 +31,11 @@ const TRIP_START = new Date(TRIP_YEAR, TRIP_MONTH, 14)
 const TRIP_END = new Date(TRIP_YEAR, TRIP_MONTH, 26)
 const FRIENDS_COUNT = 5
 
+// Serve solo a far girare i calcoli mentre i dati del viaggio vero sono per
+// strada: non viene mai mostrata (vedi `datiPronti`). E' una costante di modulo
+// e non `new Date()` ad ogni render, che rifarebbe i conti in continuazione.
+const DATA_NEUTRA = new Date(0)
+
 interface ActivityEntry {
   person: string
   action: string
@@ -136,10 +141,19 @@ export function Journey() {
     },
   })
 
-  const tripName = isRealTrip && tripMeta ? tripMeta.name : TRIP_NAME
-  const tripStartDate = isRealTrip && tripMeta ? tripMeta.startDate : TRIP_START
-  const tripEndDate = isRealTrip && tripMeta ? tripMeta.endDate : TRIP_END
-  const friendsCount = isRealTrip && tripMeta ? tripMeta.membersCount : FRIENDS_COUNT
+  // Su un viaggio vero non si ripiega mai sulle costanti del viaggio
+  // dimostrativo: erano le SUE date a finire nel conto alla rovescia finche' i
+  // dati veri non arrivavano, e su rete lenta ci restavano per secondi. Meglio
+  // niente che un numero sbagliato: `datiPronti` tiene fuori dallo schermo
+  // tutto il blocco, invece di mostrarlo con dei valori di comodo.
+  const datiPronti = !isRealTrip || !!tripMeta
+  const tripName = isRealTrip ? tripMeta?.name ?? '' : TRIP_NAME
+  // Gli hook qui sotto non possono stare dietro a una condizione, quindi il
+  // calcolo gira lo stesso su una data neutra: non e' un ripiego, e' un valore
+  // che non arriva mai a schermo perche' `datiPronti` e' falso.
+  const tripStartDate = isRealTrip ? tripMeta?.startDate ?? DATA_NEUTRA : TRIP_START
+  const tripEndDate = isRealTrip ? tripMeta?.endDate ?? DATA_NEUTRA : TRIP_END
+  const friendsCount = isRealTrip ? tripMeta?.membersCount ?? 0 : FRIENDS_COUNT
   const monthLabel = tripStartDate.toLocaleDateString('it-IT', { month: 'long' })
   // Giorni del viaggio in ordine cronologico: regge anche il cambio di mese,
   // dove una semplice sequenza numerica da inizio a fine non funzionerebbe.
@@ -415,7 +429,10 @@ export function Journey() {
         .map((st) =>
           st.id !== editingStopId
             ? st
-            : { ...st, name: draft.name, startDay, endDay, moodLine: mood.label, dates, photo: fotoSalvata ?? undefined, gradient: mood.gradient },
+            // moodId va scritto insieme a moodLine e gradient: e' l'unico dei
+            // tre che Today legge. Cambiare mood senza aggiornarlo lasciava la
+            // tappa col colore nuovo in Journey e quello vecchio in Today.
+            : { ...st, name: draft.name, startDay, endDay, moodId: mood.id, moodLine: mood.label, dates, photo: fotoSalvata ?? undefined, gradient: mood.gradient },
         )
         .sort((a, b) => (a.startDay || 0) - (b.startDay || 0))
       persist(next)
@@ -427,6 +444,10 @@ export function Journey() {
         name: draft.name,
         startDay,
         endDay,
+        // Senza moodId la tappa nasceva con mood_id vuoto nel database: Journey
+        // non se ne accorgeva (usa il gradiente), Today si', ed e' il motivo per
+        // cui tutti i giorni erano dello stesso colore.
+        moodId: mood.id,
         moodLine: mood.label,
         dates,
         photo: fotoSalvata ?? undefined,
@@ -481,6 +502,15 @@ export function Journey() {
 
       {loading ? (
         <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">Caricamento viaggio...</div>
+      ) : !datiPronti ? (
+        // Caricamento finito ma il viaggio non e' arrivato: prima si finiva
+        // qui col conto alla rovescia del viaggio dimostrativo a schermo, per
+        // sempre e senza che niente lo dicesse.
+        <div className="py-20 text-center text-sm font-semibold text-[var(--color-text-secondary)]">
+          Non riusciamo a leggere questo viaggio.
+          <br />
+          Controlla la connessione e ricarica.
+        </div>
       ) : stops.length > 0 ? (
         <>
           <div className="mb-4">
