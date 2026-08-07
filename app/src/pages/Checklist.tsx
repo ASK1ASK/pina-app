@@ -10,20 +10,15 @@ import { isUuid } from '../lib/uuid'
 import {
   loadChecklistData,
   loadEssentialsData,
-  loadStops,
   saveChecklistData,
   saveEssentialsData,
-  saveStops,
-  updateItem,
   people,
   personOrder,
   currentUser,
   type EssentialsCategory,
   type EssentialsEntry,
-  type Stop,
 } from '../lib/tripData'
 import { fetchTripMembers, type RealMember } from './spese/supabaseSpese'
-import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote } from './journey/supabaseJourney'
 import {
   createChecklistCategory,
   createChecklistItem,
@@ -138,7 +133,6 @@ export function Checklist() {
   const [loading, setLoading] = useState(isRealTrip)
   const [categories, setCategories] = useState<UIChecklistCategory[]>(isRealTrip ? [] : defaultCategories)
   const [personalSections, setPersonalSections] = useState<UIPersonalSection[]>(isRealTrip ? [] : defaultPersonalSections)
-  const [stops, setStops] = useState<Stop[]>([])
   const [essentialsCategories, setEssentialsCategories] = useState<EssentialsCategory[]>(isRealTrip ? EMPTY_ESSENTIALS_CATEGORIES : [])
   const [activeEssentialId, setActiveEssentialId] = useState<string | null>(null)
   // Indirizzi temporanei per gli allegati: nel database c'e' solo il percorso
@@ -149,8 +143,6 @@ export function Checklist() {
   const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null)
   const [focusItemId, setFocusItemId] = useState<string | null>(null)
   const [realMembers, setRealMembers] = useState<RealMember[]>([])
-  const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
-  const [tripStartDate, setTripStartDate] = useState<Date | null>(null)
   const loaded = useRef(false)
   // Viaggio demo: non si risalva su localStorage quello che si e' appena letto.
   //
@@ -197,16 +189,13 @@ export function Checklist() {
   useEffect(() => {
     if (isRealTrip && routeTripId) {
       setLoading(true)
-      Promise.all([fetchTripMembers(routeTripId), fetchChecklist(routeTripId), fetchStops(routeTripId), fetchTripMeta(routeTripId), fetchEssentials(routeTripId)]).then(
-        async ([fetchedMembers, fetchedChecklist, fetchedStops, meta, fetchedEssentials]) => {
+      // Le tappe e i dati del viaggio non si leggono piu' qui: servivano solo
+      // al blocco "Attivita'", che dal 07/08 non c'e' piu' (#33). Sono due
+      // richieste in meno ad ogni apertura della Checklist.
+      Promise.all([fetchTripMembers(routeTripId), fetchChecklist(routeTripId), fetchEssentials(routeTripId)]).then(
+        async ([fetchedMembers, fetchedChecklist, fetchedEssentials]) => {
           setRealMembers(fetchedMembers)
           setCategories(fetchedChecklist)
-          setStops(fetchedStops)
-          if (meta) {
-            const days = Math.ceil((meta.startDate.getTime() - Date.now()) / 86400000)
-            setDaysUntilStart(days)
-            setTripStartDate(meta.startDate)
-          }
           if (fetchedEssentials.length) {
             setEssentialsCategories(fetchedEssentials)
           } else {
@@ -240,7 +229,6 @@ export function Checklist() {
       setCategories(saved.categories)
       setPersonalSections(saved.personalSections)
     }
-    setStops(loadStops())
     const essentialsLetti = loadEssentialsData().categories
     lettoDaLocale.current.essentials = essentialsLetti
     setEssentialsCategories(essentialsLetti)
@@ -357,15 +345,6 @@ export function Checklist() {
     }
     setFocusItemId(null)
   }, [focusItemId])
-
-  function persistStops(next: Stop[]) {
-    setStops(next)
-    if (isRealTrip && routeTripId && tripStartDate) {
-      persistStopsRemote(routeTripId, next, tripStartDate).catch((err) => showError('Non siamo riusciti a salvare le tappe.', err))
-    } else if (!isRealTrip) {
-      saveStops(next)
-    }
-  }
 
   /**
    * Aggiorna una voce degli Essentials a schermo.
@@ -579,46 +558,7 @@ export function Checklist() {
     setEssentialsCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, entries: [...c.entries, { id: 'ee' + Date.now(), ...nuova }] })))
   }
 
-  // ---- activity (Journey starred-item sub-checklist) mutations ----
-  function toggleActivityChecklistItem(stopId: string, catId: string, itemId: string, checklistId: string) {
-    const stop = stops.find((s) => s.id === stopId)
-    const cat = stop?.categories.find((c) => c.id === catId)
-    const item = cat?.items.find((i) => i.id === itemId)
-    if (!item) return
-    const list = (item.checklist || []).map((c) => (c.id !== checklistId ? c : { ...c, done: !c.done }))
-    persistStops(updateItem(stops, stopId, catId, itemId, { checklist: list }))
-  }
-  function updateActivityChecklistLabel(stopId: string, catId: string, itemId: string, checklistId: string, label: string) {
-    const stop = stops.find((s) => s.id === stopId)
-    const cat = stop?.categories.find((c) => c.id === catId)
-    const item = cat?.items.find((i) => i.id === itemId)
-    if (!item) return
-    const list = (item.checklist || []).map((c) => (c.id !== checklistId ? c : { ...c, label: label || c.label }))
-    persistStops(updateItem(stops, stopId, catId, itemId, { checklist: list }))
-  }
-
   // ---- derived data ----
-  const activityGroups = stops.flatMap((stop) =>
-    stop.categories.flatMap((cat) =>
-      cat.items
-        .filter((item) => item.checklist && item.checklist.length > 0)
-        .map((item) => {
-          const done = (item.checklist || []).filter((c) => c.done).length
-          return {
-            key: `${stop.id}:${cat.id}:${item.id}`,
-            icon: cat.icon,
-            title: `${item.label} · ${stop.name}`,
-            countLabel: `${done}/${item.checklist!.length}`,
-            items: (item.checklist || []).map((c) => ({
-              ...c,
-              toggle: () => toggleActivityChecklistItem(stop.id, cat.id, item.id, c.id),
-              save: (text: string) => updateActivityChecklistLabel(stop.id, cat.id, item.id, c.id, text),
-            })),
-          }
-        }),
-    ),
-  )
-
   const flat = categories.flatMap((c) => c.items.map((it) => ({ ...it, catEmoji: c.emoji, catName: c.name, catId: c.id })))
   const totalItems = flat.length
   const doneItems = flat.filter((i) => i.done).length
@@ -649,14 +589,6 @@ export function Checklist() {
   const viewBtnClass = (active: boolean) =>
     `flex-1 rounded-[10px] py-2 text-center text-xs font-bold ${active ? 'bg-white text-[var(--color-text)] shadow-[0_3px_8px_-5px_rgba(120,90,40,.4)]' : 'text-[var(--color-text-secondary)]'}`
 
-  const countdownLabel = !isRealTrip
-    ? '🧳 Si parte tra 12 giorni'
-    : daysUntilStart === null
-      ? '🧳 Checklist del viaggio'
-      : daysUntilStart > 0
-        ? `🧳 Si parte tra ${daysUntilStart} giorn${daysUntilStart === 1 ? 'o' : 'i'}`
-        : '🧳 Siete in viaggio'
-
   if (loading) {
     return (
       <div className="mx-auto flex min-h-svh max-w-md items-center justify-center bg-[var(--color-cream)] text-sm font-semibold text-[var(--color-text-secondary)]">
@@ -681,13 +613,20 @@ export function Checklist() {
 
       {tab === 'condivisa' ? (
         <div>
-          <div className="mb-3.5 rounded-[26px] p-5 text-white shadow-[0_18px_36px_-18px_rgba(217,72,31,.45)]" style={{ background: 'linear-gradient(135deg,#ff8a5b,#d9481f)' }}>
-            <div className="mb-1 text-xs font-bold text-white/85">{countdownLabel}</div>
-            <div className="mb-2.5 font-display text-xl font-bold leading-tight">Essentials del viaggio</div>
-            <div className="text-xs font-bold">{percent}% completato · {assignedToYou} assegnate a te</div>
+          {/*
+            Un blocco solo, che si chiama come quello che contiene (#32).
+            Prima qui sopra c'era un riquadro arancione intitolato "Essentials
+            del viaggio" che però mostrava la percentuale della checklist "Da
+            fare": due nomi per la stessa cosa e un titolo che contava quello
+            di un'altra sezione. Il conto alla rovescia è sparito con lui — il
+            viaggio ce l'ha già in Journey, ed è il suo posto.
+          */}
+          <div className="mb-2.5 rounded-[26px] p-5 text-white shadow-[0_18px_36px_-18px_rgba(217,72,31,.45)]" style={{ background: 'linear-gradient(135deg,#ff8a5b,#d9481f)' }}>
+            <div className="mb-1 text-xs font-bold text-white/85">📎 Essentials</div>
+            <div className="mb-1.5 font-display text-xl font-bold leading-tight">I riferimenti del viaggio</div>
+            <div className="text-xs font-bold text-white/85">Quello che serve ritrovare in fretta: documenti, alloggi, trasporti, prenotazioni</div>
           </div>
 
-          <div className="mx-0.5 mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">📎 Riferimenti</div>
           <EssentialsPanel
             categories={essentialsCategories}
             activeId={activeEssentialId}
@@ -701,23 +640,31 @@ export function Checklist() {
             uploadingEntryId={uploadingEntryId}
           />
 
-          {activityGroups.length > 0 && (
-            <div className="mb-4">
-              <div className="mx-0.5 mb-2.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Attività</div>
-              {activityGroups.map((ag) => (
-                <div key={ag.key} className="mb-3 overflow-hidden rounded-[20px] border border-[var(--color-card-border)] bg-white shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-                  <div className="flex items-center gap-2.5 px-3.5 py-3.25">
-                    <span className="text-lg">{ag.icon}</span>
-                    <span className="flex-1 text-[14.5px] font-bold">{ag.title}</span>
-                    <span className="text-[11.5px] font-bold text-[var(--color-eyebrow)]">{ag.countLabel}</span>
-                  </div>
-                  <div className="border-t border-dashed border-[var(--color-card-border)]">
-                    {ag.items.map((it) => (
-                      <ChecklistRow key={it.id} done={it.done} label={it.label} onToggle={it.toggle} onSaveLabel={it.save} doneColor="#2a8fd8" />
-                    ))}
-                  </div>
-                </div>
-              ))}
+          {/*
+            Qui stava il blocco "Attività": le micro-liste attaccate alle cose
+            stellate in Journey. Tolto il 07/08 (#33) perché non si creano da
+            qui, arrivano da un'altra schermata, e stavano sopra la lista per
+            cui la Checklist si apre. Il posto dove hanno senso è Today: il
+            calcolo che le raggruppa resta, serve appena ci arrivano.
+          */}
+
+          {/*
+            I due numeri che stavano nell'intestazione arancione: sono di
+            questa sezione e adesso stanno qui, dove contano quello che
+            l'utente ha davanti (#32).
+          */}
+          <div className="mx-0.5 mb-2.5 mt-1 flex items-baseline justify-between gap-2">
+            <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">✅ Da fare</div>
+            {totalItems > 0 && (
+              <div className="text-[11.5px] font-bold text-[var(--color-text-secondary)]">
+                {percent}% · {assignedToYou} a te
+              </div>
+            )}
+          </div>
+
+          {totalItems > 0 && (
+            <div className="mx-0.5 mb-3.5 h-1.5 overflow-hidden rounded-full bg-[#f0e5d1]">
+              <div className="h-full rounded-full bg-[var(--color-coral)]" style={{ width: `${percent}%` }} />
             </div>
           )}
 
@@ -725,8 +672,6 @@ export function Checklist() {
             <button type="button" className={viewBtnClass(viewMode === 'categoria')} onClick={() => setViewMode('categoria')}>Per categoria</button>
             <button type="button" className={viewBtnClass(viewMode === 'persona')} onClick={() => setViewMode('persona')}>Per persona</button>
           </div>
-
-          <div className="mx-0.5 mb-2.5 mt-4.5 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">✅ Da fare</div>
 
           {viewMode === 'categoria' ? (
             <div>
