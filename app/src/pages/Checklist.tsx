@@ -19,6 +19,7 @@ import {
   personOrder,
   currentUser,
   type EssentialsCategory,
+  type EssentialsEntry,
   type Stop,
 } from '../lib/tripData'
 import { fetchTripMembers, type RealMember } from './spese/supabaseSpese'
@@ -26,15 +27,17 @@ import { fetchStops, fetchTripMeta, persistStops as persistStopsRemote } from '.
 import {
   createChecklistCategory,
   createChecklistItem,
+  createEssentialsEntry,
   deleteChecklistItem,
+  deleteEssentialsEntry,
   fetchChecklist,
   fetchEssentials,
   fetchPersonalSections,
-  persistEssentials as persistEssentialsRemote,
   persistPersonalSections as persistPersonalSectionsRemote,
   seedEssentials,
   updateChecklistCategory,
   updateChecklistItem,
+  updateEssentialsEntry,
 } from './checklist/supabaseChecklist'
 import { ChecklistRow } from './checklist/ChecklistRow'
 import { defaultCategories, defaultPersonalSections } from './checklist/data'
@@ -50,7 +53,12 @@ const CHECKLIST_TABLES = ['checklist_categories', 'essentials_categories']
 // vanno ascoltate a parte. Servono da quando le modifiche sono mirate: prima
 // spuntare una voce riscriveva anche le sezioni e l'aggiornamento arrivava
 // agli altri di rimbalzo, ora tocca solo questa tabella.
-const CHECKLIST_NESTED_TABLES = ['checklist_items']
+// `essentials_entries` e' entrata qui per lo stesso identico motivo, ma piu'
+// tardi (#31): finche' salvare un allegato riscriveva anche le categorie,
+// l'aggiornamento agli altri arrivava di rimbalzo da li'. Ora che si tocca la
+// sola riga della voce, senza questa riga il compagno di viaggio non vedrebbe
+// piu' niente. La tabella e' gia' pubblicata dalla migrazione 0006.
+const CHECKLIST_NESTED_TABLES = ['checklist_items', 'essentials_entries']
 
 // Forma unificata: compatibile sia con il cast demo (PersonId) sia con i
 // membri veri (id uuid da trip_members), stesso approccio usato in Spese.
@@ -76,6 +84,31 @@ const EMPTY_ESSENTIALS_CATEGORIES: EssentialsCategory[] = [
   { id: 'stay', emoji: '🏕', name: 'Alloggi', gradient: 'linear-gradient(135deg,#ffb627,#d9481f)', entries: [] },
   { id: 'transport', emoji: '🚐', name: 'Trasporti', gradient: 'linear-gradient(135deg,#8fbf6b,#4f7a3a)', entries: [] },
   { id: 'bookings', emoji: '🎟', name: 'Prenotazioni', gradient: 'linear-gradient(135deg,#ffb627,#ff5f6d)', entries: [] },
+]
+
+// Da dove si comincia, invece che da un foglio bianco (COLLAUDO #28).
+//
+// Non sono sezioni create d'ufficio: sono proposte, e nascono solo se qualcuno
+// le tocca. La differenza conta. Creandole da sole servirebbe un modo per
+// cancellarle (oggi non c'e'), e chi le cancellasse tutte se le ritroverebbe
+// alla visita dopo — l'app che rifa' quello che hai appena disfatto. Cosi'
+// invece il foglio bianco sparisce lo stesso, e chi non le vuole non deve fare
+// niente.
+//
+// Poche e larghe: quelle che ci sono in ogni viaggio, senza voci dentro. La
+// struttura serve, il contenuto no. Sono volutamente diverse dai quattro
+// raggruppamenti degli Essentials, che servono ad archiviare riferimenti: qui
+// si tratta di cose da fare.
+const SEZIONI_PROPOSTE = [
+  { emoji: '📄', name: 'Prima di partire' },
+  { emoji: '🎒', name: 'Da portare insieme' },
+  { emoji: '🛒', name: 'Da comprare' },
+]
+
+const SEZIONI_VALIGIA_PROPOSTE = [
+  { emoji: '👕', name: 'Vestiti' },
+  { emoji: '🧴', name: 'Bagno' },
+  { emoji: '🔌', name: 'Elettronica' },
 ]
 
 /** "Documenti" → "documenti", per riconoscere la categoria chiesta nell'indirizzo. */
@@ -119,6 +152,26 @@ export function Checklist() {
   const [daysUntilStart, setDaysUntilStart] = useState<number | null>(null)
   const [tripStartDate, setTripStartDate] = useState<Date | null>(null)
   const loaded = useRef(false)
+  // Viaggio demo: non si risalva su localStorage quello che si e' appena letto.
+  //
+  // Un effetto che salva "ad ogni cambiamento di stato" salva anche il primo
+  // giro, quando lo stato e' ancora quello iniziale e i dati appena letti non
+  // ci sono ancora arrivati. Con StrictMode, che monta il componente due
+  // volte, quel giro a vuoto arriva a sovrascrivere sul serio: gli Essentials
+  // del demo si sono azzerati cosi'.
+  //
+  // Qui si tiene da parte l'oggetto esatto che e' stato letto: finche' lo
+  // stato e' ancora quello, non c'e' niente da salvare. Ogni modifica ne crea
+  // uno nuovo, quindi il confronto e' per identita' e non serve guardarci
+  // dentro.
+  const lettoDaLocale = useRef<{ categories: unknown; personalSections: unknown; essentials: unknown }>({
+    categories: null,
+    personalSections: null,
+    essentials: null,
+  })
+  // Si alza quando lo stato a schermo e' finalmente quello letto: da quel
+  // momento ogni cambiamento e' farina dell'utente, e va salvato.
+  const prontoASalvare = useRef({ checklist: false, essentials: false })
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const members = isRealTrip
@@ -182,11 +235,15 @@ export function Checklist() {
     }
     const saved = loadChecklistData()
     if (saved) {
+      lettoDaLocale.current.categories = saved.categories
+      lettoDaLocale.current.personalSections = saved.personalSections
       setCategories(saved.categories)
       setPersonalSections(saved.personalSections)
     }
     setStops(loadStops())
-    setEssentialsCategories(loadEssentialsData().categories)
+    const essentialsLetti = loadEssentialsData().categories
+    lettoDaLocale.current.essentials = essentialsLetti
+    setEssentialsCategories(essentialsLetti)
     loaded.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeTripId])
@@ -194,10 +251,31 @@ export function Checklist() {
   // Viaggio demo: continua a salvare tutto insieme su localStorage, dove non
   // esiste il problema della modifica in contemporanea.
   useEffect(() => {
-    if (!loaded.current || isRealTrip) return
+    if (isRealTrip) return
+    // Finche' a schermo non sono comparsi i dati letti, non c'e' niente da
+    // salvare: quello che si vedrebbe qui e' ancora lo stato iniziale.
+    if (!prontoASalvare.current.checklist) {
+      if (categories === lettoDaLocale.current.categories && personalSections === lettoDaLocale.current.personalSections) {
+        prontoASalvare.current.checklist = true
+      }
+      return
+    }
     saveChecklistData({ categories, personalSections } as never)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, personalSections])
+
+  // Stessa cosa per gli Essentials del demo. Prima il salvataggio su
+  // localStorage viaggiava insieme a quello sul server dentro un'unica
+  // funzione: separandoli, il ramo del demo ha bisogno del suo posto.
+  useEffect(() => {
+    if (isRealTrip) return
+    if (!prontoASalvare.current.essentials) {
+      if (essentialsCategories === lettoDaLocale.current.essentials) prontoASalvare.current.essentials = true
+      return
+    }
+    saveEssentialsData({ categories: essentialsCategories })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [essentialsCategories])
 
   // La valigia personale resta a salvataggio completo: e' di un solo membro,
   // quindi nessun altro puo' sovrascriverla.
@@ -209,10 +287,10 @@ export function Checklist() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personalSections])
 
-  // Salva una modifica puntuale della checklist condivisa, riallineandosi al
-  // server se fallisce: cosi' non resta a schermo qualcosa che non e' stato
-  // davvero salvato.
-  function pushChecklistChange(op: Promise<unknown>, messaggio: string) {
+  // Salva una modifica puntuale — checklist condivisa o Essentials —
+  // riallineandosi al server se fallisce: cosi' non resta a schermo qualcosa
+  // che non e' stato davvero salvato.
+  function pushRemoteChange(op: Promise<unknown>, messaggio: string) {
     op.catch((err) => {
       showError(messaggio, err)
       refetchReal().catch(() => {})
@@ -289,13 +367,18 @@ export function Checklist() {
     }
   }
 
-  function persistEssentials(next: EssentialsCategory[]) {
-    setEssentialsCategories(next)
-    if (isRealTrip && routeTripId) {
-      persistEssentialsRemote(routeTripId, next).catch((err) => showError('Non siamo riusciti a salvare i riferimenti.', err))
-    } else {
-      saveEssentialsData({ categories: next })
-    }
+  /**
+   * Aggiorna una voce degli Essentials a schermo.
+   *
+   * Sempre in forma di funzione e mai partendo da `essentialsCategories`
+   * catturato al momento del tocco: fra il tocco e la risposta possono passare
+   * secondi (un allegato che sale), e in quei secondi l'elenco puo' essere gia'
+   * cambiato per mano di un altro membro.
+   */
+  function aggiornaVoce(catId: string, entryId: string, patch: Partial<EssentialsEntry>) {
+    setEssentialsCategories((cs) =>
+      cs.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, ...patch })) })),
+    )
   }
 
   // ---- shared checklist mutations ----
@@ -306,17 +389,17 @@ export function Checklist() {
     if (!current) return
     const done = !current.done
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, done })) })))
-    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { done }), 'Non siamo riusciti a salvare la spunta.')
+    if (isRealTrip) pushRemoteChange(updateChecklistItem(itemId, { done }), 'Non siamo riusciti a salvare la spunta.')
   }
   function deleteItem(catId: string, itemId: string) {
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.filter((it) => it.id !== itemId) })))
-    if (isRealTrip) pushChecklistChange(deleteChecklistItem(itemId), 'Non siamo riusciti a eliminare la voce.')
+    if (isRealTrip) pushRemoteChange(deleteChecklistItem(itemId), 'Non siamo riusciti a eliminare la voce.')
   }
   function updateItemLabel(catId: string, itemId: string, label: string) {
     const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
     const next = label || current?.label || ''
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, label: next })) })))
-    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { label: next }), 'Non siamo riusciti a salvare il testo.')
+    if (isRealTrip) pushRemoteChange(updateChecklistItem(itemId, { label: next }), 'Non siamo riusciti a salvare il testo.')
   }
   function cycleAssignee(catId: string, itemId: string) {
     const current = categories.find((c) => c.id === catId)?.items.find((it) => it.id === itemId)
@@ -329,11 +412,13 @@ export function Checklist() {
     setCategories((cs) =>
       cs.map((c) => (c.id !== catId ? c : { ...c, items: c.items.map((it) => (it.id !== itemId ? it : { ...it, assignee: next })) })),
     )
-    if (isRealTrip) pushChecklistChange(updateChecklistItem(itemId, { assignee: next }), 'Non siamo riusciti a salvare l’assegnazione.')
+    if (isRealTrip) pushRemoteChange(updateChecklistItem(itemId, { assignee: next }), 'Non siamo riusciti a salvare l’assegnazione.')
   }
   async function addItemToCategory(catId: string) {
     const position = categories.find((c) => c.id === catId)?.items.length ?? 0
-    const nuova = { label: 'Nuova voce', done: false, assignee: activeUser }
+    // Etichetta vuota: l'invito lo disegna il campo (#27). Prima nasceva con
+    // dentro "Nuova voce", da cancellare a mano su una tastiera del telefono.
+    const nuova = { label: '', done: false, assignee: activeUser }
     if (isRealTrip) {
       // Qui si aspetta l'id vero prima di mostrare la voce: usare un id
       // temporaneo e sostituirlo dopo farebbe perdere il fuoco mentre si
@@ -351,31 +436,33 @@ export function Checklist() {
     setFocusItemId(id)
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id, ...nuova }] })))
   }
-  async function addCategory() {
-    const nuova = { emoji: '📌', name: 'Nuova sezione' }
+  async function addCategory(preset?: { emoji: string; name: string }) {
+    const nuova = preset ?? { emoji: '📌', name: '' }
     if (isRealTrip && routeTripId) {
       try {
         const id = await createChecklistCategory(routeTripId, { ...nuova, position: categories.length })
         setCategories((cs) => [...cs, { id, ...nuova, items: [] }])
-        setFocusItemId(id)
+        // Una sezione proposta arriva già col nome giusto: mettere il cursore
+        // dentro obbligherebbe a chiudere la tastiera prima di poterla usare.
+        if (!preset) setFocusItemId(id)
       } catch (err) {
         showError('Non siamo riusciti ad aggiungere la sezione.', err)
       }
       return
     }
     const id = 'c' + Date.now()
-    setFocusItemId(id)
+    if (!preset) setFocusItemId(id)
     setCategories((cs) => [...cs, { id, ...nuova, items: [] }])
   }
   function updateCategoryName(catId: string, name: string) {
     const next = name || categories.find((c) => c.id === catId)?.name || ''
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, name: next })))
-    if (isRealTrip) pushChecklistChange(updateChecklistCategory(catId, { name: next }), 'Non siamo riusciti a salvare il nome della sezione.')
+    if (isRealTrip) pushRemoteChange(updateChecklistCategory(catId, { name: next }), 'Non siamo riusciti a salvare il nome della sezione.')
   }
   function updateCategoryEmoji(catId: string, emoji: string) {
     const next = emoji || categories.find((c) => c.id === catId)?.emoji || ''
     setCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, emoji: next })))
-    if (isRealTrip) pushChecklistChange(updateChecklistCategory(catId, { emoji: next }), 'Non siamo riusciti a salvare l’icona.')
+    if (isRealTrip) pushRemoteChange(updateChecklistCategory(catId, { emoji: next }), 'Non siamo riusciti a salvare l’icona.')
   }
 
   // ---- personal checklist mutations ----
@@ -391,12 +478,12 @@ export function Checklist() {
   function addPersonalItem(sectionId: string) {
     const id = 'pi' + Date.now()
     setFocusItemId(id)
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: [...s.items, { id, label: 'Nuova voce', done: false }] })))
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: [...s.items, { id, label: '', done: false }] })))
   }
-  function addPersonalSection() {
+  function addPersonalSection(preset?: { emoji: string; name: string }) {
     const id = 'ps' + Date.now()
-    setFocusItemId(id)
-    setPersonalSections((ss) => [...ss, { id, emoji: '📦', name: 'Nuova sezione', items: [] }])
+    if (!preset) setFocusItemId(id)
+    setPersonalSections((ss) => [...ss, { id, ...(preset ?? { emoji: '📦', name: '' }), items: [] }])
   }
   function updatePersonalSectionName(sectionId: string, name: string) {
     setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, name: name || s.name })))
@@ -406,21 +493,22 @@ export function Checklist() {
   }
 
   // ---- essentials mutations ----
+  // Ognuna tocca SOLO la riga che l'utente ha toccato. Prima ogni salvataggio
+  // cancellava e riscriveva tutte le categorie del viaggio, e con la
+  // cancellazione a cascata ogni voce rinasceva con un identificativo nuovo:
+  // era il COLLAUDO #31, dove un allegato finiva su una voce che nel frattempo
+  // aveva smesso di esistere.
   function saveEssentialField(catId: string, entryId: string, field: 'title' | 'subtitle' | 'href', text: string) {
-    persistEssentials(
-      essentialsCategories.map((c) =>
-        c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, [field]: text || (e as unknown as Record<string, string>)[field] })) },
-      ),
-    )
-  }
-  function allegatoDi(catId: string, entryId: string): string | null {
-    return essentialsCategories.find((c) => c.id === catId)?.entries.find((e) => e.id === entryId)?.attachment ?? null
+    const corrente = essentialsCategories.find((c) => c.id === catId)?.entries.find((e) => e.id === entryId)
+    // Titolo e sottotitolo svuotati per sbaglio si riprendono quello che
+    // c'era; il link no, perche' toglierlo deve restare possibile.
+    const next = field === 'href' ? text : text || corrente?.[field] || ''
+    aggiornaVoce(catId, entryId, { [field]: next })
+    if (isRealTrip) pushRemoteChange(updateEssentialsEntry(entryId, { [field]: next }), 'Non siamo riusciti a salvare il riferimento.')
   }
 
-  function conAllegato(catId: string, entryId: string, attachment: string | null) {
-    return essentialsCategories.map((c) =>
-      c.id !== catId ? c : { ...c, entries: c.entries.map((e) => (e.id !== entryId ? e : { ...e, attachment })) },
-    )
+  function allegatoDi(catId: string, entryId: string): string | null {
+    return essentialsCategories.find((c) => c.id === catId)?.entries.find((e) => e.id === entryId)?.attachment ?? null
   }
 
   async function attachEssential(catId: string, entryId: string, file: File) {
@@ -430,7 +518,7 @@ export function Checklist() {
     // magazzino: resta su localStorage come prima.
     if (!isRealTrip || !routeTripId) {
       const reader = new FileReader()
-      reader.onload = () => persistEssentials(conAllegato(catId, entryId, reader.result as string))
+      reader.onload = () => aggiornaVoce(catId, entryId, { attachment: reader.result as string })
       reader.readAsDataURL(file)
       return
     }
@@ -438,7 +526,12 @@ export function Checklist() {
     setUploadingEntryId(entryId)
     try {
       const percorso = await uploadTripMedia(routeTripId, file)
-      persistEssentials(conAllegato(catId, entryId, percorso))
+      // Si scrive una colonna sola, sulla riga che esisteva gia' prima che il
+      // file partisse e che esiste ancora adesso. Si aspetta l'esito prima di
+      // mostrarlo: cosi' l'allegato non compare a schermo se non e' stato
+      // davvero salvato.
+      await updateEssentialsEntry(entryId, { attachment: percorso })
+      aggiornaVoce(catId, entryId, { attachment: percorso })
       // Sostituire un allegato lascerebbe il precedente nel magazzino senza
       // che nessuno possa piu' vederlo o cancellarlo.
       if (precedente) removeTripMedia(precedente)
@@ -451,19 +544,39 @@ export function Checklist() {
 
   function removeEssentialAttachment(catId: string, entryId: string) {
     const precedente = allegatoDi(catId, entryId)
-    persistEssentials(conAllegato(catId, entryId, null))
+    aggiornaVoce(catId, entryId, { attachment: null })
+    if (isRealTrip) pushRemoteChange(updateEssentialsEntry(entryId, { attachment: null }), 'Non siamo riusciti a togliere l’allegato.')
     if (precedente) removeTripMedia(precedente)
   }
 
   function deleteEssentialEntry(catId: string, entryId: string) {
     const precedente = allegatoDi(catId, entryId)
-    persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.filter((e) => e.id !== entryId) })))
+    setEssentialsCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, entries: c.entries.filter((e) => e.id !== entryId) })))
+    if (isRealTrip) pushRemoteChange(deleteEssentialsEntry(entryId), 'Non siamo riusciti a eliminare la voce.')
     // Cancellando la voce, il suo allegato non sarebbe piu' raggiungibile da
     // nessuna parte: va tolto anche dal magazzino.
     if (precedente) removeTripMedia(precedente)
   }
-  function addEssentialEntry(catId: string) {
-    persistEssentials(essentialsCategories.map((c) => (c.id !== catId ? c : { ...c, entries: [...c.entries, { id: 'ee' + Date.now(), title: 'Nuova voce', subtitle: 'Aggiungi dettagli', tag: '', href: '' }] })))
+
+  async function addEssentialEntry(catId: string) {
+    const position = essentialsCategories.find((c) => c.id === catId)?.entries.length ?? 0
+    // Campi vuoti, non "Nuova voce" e "Aggiungi dettagli" da cancellare a mano
+    // dentro un contenteditable (#27): l'invito sta scritto nel campo come
+    // suggerimento, e sparisce appena si scrive.
+    const nuova = { title: '', subtitle: '', tag: '', href: '' }
+    if (isRealTrip) {
+      // Si aspetta l'identificativo vero prima di mostrare la voce: con uno
+      // provvisorio, il primo tocco su 📎 finirebbe su una riga che il
+      // database non conosce.
+      try {
+        const id = await createEssentialsEntry(catId, { ...nuova, position })
+        setEssentialsCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, entries: [...c.entries, { id, ...nuova }] })))
+      } catch (err) {
+        showError('Non siamo riusciti ad aggiungere la voce.', err)
+      }
+      return
+    }
+    setEssentialsCategories((cs) => cs.map((c) => (c.id !== catId ? c : { ...c, entries: [...c.entries, { id: 'ee' + Date.now(), ...nuova }] })))
   }
 
   // ---- activity (Journey starred-item sub-checklist) mutations ----
@@ -619,8 +732,20 @@ export function Checklist() {
             <div>
               {categories.length === 0 && (
                 <div className="mb-3 rounded-[22px] border-[1.5px] border-dashed border-[var(--color-empty-border)] px-5 py-7 text-center">
-                  <div className="mb-1 font-display text-base font-semibold">Nessuna sezione ancora</div>
-                  <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Aggiungine una qui sotto per iniziare a organizzarvi</div>
+                  <div className="mb-1 font-display text-base font-semibold">Da dove cominciamo?</div>
+                  <div className="mb-4 text-xs font-semibold text-[var(--color-text-secondary)]">Tocca una di queste per aprirla, o creane una tua qui sotto</div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {SEZIONI_PROPOSTE.map((s) => (
+                      <button
+                        key={s.name}
+                        type="button"
+                        className="rounded-full border border-[var(--color-card-border)] bg-white px-3.5 py-2.5 text-xs font-bold text-[var(--color-text)]"
+                        onClick={() => addCategory(s)}
+                      >
+                        {s.emoji} {s.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {categories.map((cat) => {
@@ -638,6 +763,7 @@ export function Checklist() {
                         ref={(el) => { itemRefs.current[cat.id] = el }}
                         key={'name-' + cat.name}
                         initialText={cat.name}
+                        placeholder="Nome della sezione"
                         className="flex-1 text-[14.5px] font-bold"
                         onBlurText={(text) => updateCategoryName(cat.id, text)}
                       />
@@ -663,7 +789,7 @@ export function Checklist() {
                   </div>
                 )
               })}
-              <button type="button" className="mb-3 w-full rounded-2xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-3 text-center text-[12.5px] font-bold text-[var(--color-add-text)]" onClick={addCategory}>
+              <button type="button" className="mb-3 w-full rounded-2xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-3 text-center text-[12.5px] font-bold text-[var(--color-add-text)]" onClick={() => addCategory()}>
                 + Aggiungi sezione
               </button>
             </div>
@@ -745,7 +871,19 @@ export function Checklist() {
           {personalSections.length === 0 && (
             <div className="mb-3 rounded-[22px] border-[1.5px] border-dashed border-[var(--color-empty-border)] px-5 py-7 text-center">
               <div className="mb-1 font-display text-base font-semibold">Valigia ancora da fare</div>
-              <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Aggiungi una sezione qui sotto (es. Documenti, Vestiti)</div>
+              <div className="mb-4 text-xs font-semibold text-[var(--color-text-secondary)]">Tocca una di queste per aprirla, o creane una tua qui sotto</div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {SEZIONI_VALIGIA_PROPOSTE.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    className="rounded-full border border-[var(--color-card-border)] bg-white px-3.5 py-2.5 text-xs font-bold text-[var(--color-text)]"
+                    onClick={() => addPersonalSection(s)}
+                  >
+                    {s.emoji} {s.name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {personalSections.map((sec) => {
@@ -758,6 +896,7 @@ export function Checklist() {
                     ref={(el) => { itemRefs.current[sec.id] = el }}
                     key={'n' + sec.name}
                     initialText={sec.name}
+                    placeholder="Nome della sezione"
                     className="flex-1 text-[14.5px] font-bold"
                     onBlurText={(text) => updatePersonalSectionName(sec.id, text)}
                   />
@@ -780,7 +919,7 @@ export function Checklist() {
               </div>
             )
           })}
-          <button type="button" className="mb-3 w-full rounded-2xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-3 text-center text-[12.5px] font-bold text-[var(--color-add-text)]" onClick={addPersonalSection}>
+          <button type="button" className="mb-3 w-full rounded-2xl border-[1.5px] border-dashed border-[var(--color-add-border)] py-3 text-center text-[12.5px] font-bold text-[var(--color-add-text)]" onClick={() => addPersonalSection()}>
             + Aggiungi sezione
           </button>
 

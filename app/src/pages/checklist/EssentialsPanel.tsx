@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { AttachmentControl } from '../../components/AttachmentControl'
 import { EditableText } from '../../components/EditableText'
 import type { EssentialsCategory, EssentialsEntry } from '../../lib/tripData'
 
 function EntryRow({
   entry,
+  editingLink,
+  onToggleLinkEdit,
   onSaveTitle,
   onSaveSubtitle,
   onSaveHref,
@@ -14,6 +17,8 @@ function EntryRow({
   uploading,
 }: {
   entry: EssentialsEntry
+  editingLink: boolean
+  onToggleLinkEdit: () => void
   onSaveTitle: (text: string) => void
   onSaveSubtitle: (text: string) => void
   onSaveHref: (text: string) => void
@@ -23,7 +28,6 @@ function EntryRow({
   resolveAttachment: (attachment: string) => string
   uploading: boolean
 }) {
-  const hrefDisplay = entry.href || 'Aggiungi link (tocca)'
   const allegato = entry.attachment || ''
 
   return (
@@ -32,22 +36,56 @@ function EntryRow({
         <EditableText
           key={'t' + entry.title}
           initialText={entry.title}
+          placeholder="Che cos'è"
           className="text-[12.5px] font-bold"
           onBlurText={onSaveTitle}
         />
         <EditableText
           key={'s' + entry.subtitle}
           initialText={entry.subtitle}
+          placeholder="Dettagli, se servono"
           className="mt-0.5 text-[11px] text-[var(--color-text-secondary)]"
           onBlurText={onSaveSubtitle}
         />
         <div className="mt-1.25 flex items-center gap-1.5">
-          <EditableText
-            key={'h' + entry.href}
-            initialText={hrefDisplay ? `🔗 ${hrefDisplay}` : '🔗'}
-            className="flex-1 text-[10.5px] text-[#2a8fd8]"
-            onBlurText={(text) => onSaveHref(text.replace(/^🔗\s*/, ''))}
-          />
+          {/*
+            Come in Journey (StopDetailSheet): il link non è modificabile
+            finché non lo si chiede, e quando si apre il campo contiene
+            l'indirizzo vero — vuoto se non ce n'è ancora uno. Mai un invito
+            scritto dentro da cancellare a mano prima di incollare (#19).
+          */}
+          <div className="min-w-0 flex-1">
+            {editingLink ? (
+              <EditableText
+                key={'h' + entry.href}
+                initialText={entry.href}
+                placeholder="Incolla l’indirizzo"
+                inputMode="url"
+                className="w-full border-b-[1.5px] border-[#ffb627] pb-0.5 text-[10.5px] text-[var(--color-text)]"
+                onBlurText={(text) => {
+                  onSaveHref(text)
+                  onToggleLinkEdit()
+                }}
+              />
+            ) : entry.href ? (
+              <a
+                href={entry.href}
+                target="_blank"
+                rel="noreferrer"
+                className="block truncate text-[10.5px] font-semibold text-[#2a8fd8] underline"
+              >
+                🔗 Apri link
+              </a>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            aria-label={entry.href ? 'Modifica il link' : 'Aggiungi un link'}
+            className="flex h-11 w-9 shrink-0 items-center justify-center text-[13px]"
+            onClick={onToggleLinkEdit}
+          >
+            🔗
+          </button>
           <AttachmentControl
             attachment={allegato}
             link={allegato ? resolveAttachment(allegato) : ''}
@@ -58,9 +96,6 @@ function EntryRow({
         </div>
       </div>
       {entry.tag && <span className="shrink-0 text-[10.5px] font-bold text-[var(--color-coral-text)]">{entry.tag}</span>}
-      {entry.href && (
-        <button type="button" className="shrink-0 text-sm" onClick={() => window.open(entry.href, '_blank')}>↗</button>
-      )}
       <button type="button" className="shrink-0 text-sm text-[var(--color-text-secondary)]" onClick={onDelete}>×</button>
     </div>
   )
@@ -90,6 +125,9 @@ export function EssentialsPanel({
   uploadingEntryId: string | null
 }) {
   const active = categories.find((c) => c.id === activeId)
+  // Quale link e' aperto in modifica: e' una cosa di questo schermo e basta,
+  // non deve salire fino alla pagina ne' tantomeno al database.
+  const [linkEditId, setLinkEditId] = useState<string | null>(null)
 
   return (
     <>
@@ -121,6 +159,8 @@ export function EssentialsPanel({
               <EntryRow
                 key={entry.id}
                 entry={entry}
+                editingLink={linkEditId === entry.id}
+                onToggleLinkEdit={() => setLinkEditId((cur) => (cur === entry.id ? null : entry.id))}
                 onSaveTitle={(text) => onSaveField(active.id, entry.id, 'title', text)}
                 onSaveSubtitle={(text) => onSaveField(active.id, entry.id, 'subtitle', text)}
                 onSaveHref={(text) => onSaveField(active.id, entry.id, 'href', text)}

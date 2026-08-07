@@ -142,6 +142,8 @@ export function StopDetailSheet({
                     <EditableText
                       key={stay.id + 'link'}
                       initialText={stay.link || ''}
+                      placeholder="Incolla l’indirizzo"
+                      inputMode="url"
                       className="mt-1.5 border-b-[1.5px] border-[#ffb627] pb-0.5 text-[11.5px] font-semibold text-[var(--color-text)]"
                       onBlurText={(text) => { onSaveStayLink(stay.id, text); onToggleLinkEdit(null) }}
                     />
@@ -212,6 +214,8 @@ export function StopDetailSheet({
                             <EditableText
                               key={it.id + 'link'}
                               initialText={it.link || ''}
+                              placeholder="Incolla l’indirizzo"
+                              inputMode="url"
                               className="mt-1 border-b-[1.5px] border-[#ffb627] pb-0.5 pl-5.75 text-[11px] font-semibold text-[var(--color-text)]"
                               onBlurText={(text) => { onSaveItemLink(cat.id, it.id, text); onToggleLinkEdit(null) }}
                             />

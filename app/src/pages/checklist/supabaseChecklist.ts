@@ -152,26 +152,66 @@ export async function seedEssentials(tripId: string): Promise<RealEssentialsCate
   return data.map((c) => ({ id: c.id, emoji: c.emoji, name: c.name, gradient: c.gradient || '', entries: [] }))
 }
 
-export async function persistEssentials(tripId: string, categories: RealEssentialsCategory[]): Promise<void> {
-  unwrapVoid(await supabase.from('essentials_categories').delete().eq('trip_id', tripId))
-  if (!categories.length) return
+// ---------------------------------------------------------------------------
+// Operazioni mirate sugli Essentials.
+//
+// Qui esisteva persistEssentials, che ad ogni salvataggio cancellava tutte le
+// categorie del viaggio e le riscriveva da zero. Con la cancellazione a
+// cascata su essentials_entries, questo voleva dire che **ogni identificativo
+// cambiava ad ogni tocco**: categorie e voci.
+//
+// Era la causa del COLLAUDO #31, "allegare non riesce proprio": il caricamento
+// di un file dura qualche secondo, e in quei secondi il telefono che salva
+// sente la propria stessa modifica arrivare dal canale live, si rilegge tutto,
+// e il pulsante che stava caricando punta a una voce che non esiste piu'. Il
+// sintomo visibile era il pannello che si chiudeva da solo dopo ogni
+// salvataggio, perche' cercava una categoria con un identificativo morto.
+//
+// Le quattro categorie, per giunta, non sono mai modificabili: nascono da
+// seedEssentials e da li' non cambiano. Venivano distrutte e ricostruite per
+// niente.
+//
+// Stessa medicina gia' applicata alla checklist condivisa il 01/08, e per lo
+// stesso motivo: si tocca la riga che l'utente ha toccato, e basta.
+// ---------------------------------------------------------------------------
 
-  const catRows = categories.map((c, i) => ({ trip_id: tripId, emoji: c.emoji, name: c.name, gradient: c.gradient, position: i }))
-  const { data: insertedCats, error } = await supabase.from('essentials_categories').insert(catRows).select()
-  if (error || !insertedCats) throw error
+export async function createEssentialsEntry(
+  categoryId: string,
+  input: { title: string; subtitle: string; tag: string; href: string; position: number },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('essentials_entries')
+    .insert({
+      category_id: categoryId,
+      title: input.title,
+      subtitle: input.subtitle,
+      tag: input.tag,
+      href: input.href,
+      position: input.position,
+    })
+    .select('id')
+    .single()
+  if (error || !data) throw error ?? new Error('Errore durante la creazione della voce.')
+  return data.id
+}
 
-  const entryRows = categories.flatMap((c, ci) =>
-    c.entries.map((e, ei) => ({
-      category_id: insertedCats[ci].id,
-      title: e.title,
-      subtitle: e.subtitle,
-      tag: e.tag,
-      href: e.href,
-      attachment_url: e.attachment || null,
-      position: ei,
-    })),
-  )
-  if (entryRows.length) unwrapVoid(await supabase.from('essentials_entries').insert(entryRows))
+export async function updateEssentialsEntry(
+  entryId: string,
+  patch: { title?: string; subtitle?: string; tag?: string; href?: string; attachment?: string | null },
+): Promise<void> {
+  const payload: { title?: string; subtitle?: string; tag?: string; href?: string; attachment_url?: string | null } = {}
+  if (patch.title !== undefined) payload.title = patch.title
+  if (patch.subtitle !== undefined) payload.subtitle = patch.subtitle
+  if (patch.tag !== undefined) payload.tag = patch.tag
+  if (patch.href !== undefined) payload.href = patch.href
+  // `attachment` distingue "non lo tocco" (undefined) da "toglilo" (null): con
+  // un solo valore non si potrebbe piu' rimuovere un allegato.
+  if (patch.attachment !== undefined) payload.attachment_url = patch.attachment
+  unwrapVoid(await supabase.from('essentials_entries').update(payload).eq('id', entryId))
+}
+
+export async function deleteEssentialsEntry(entryId: string): Promise<void> {
+  unwrapVoid(await supabase.from('essentials_entries').delete().eq('id', entryId))
 }
 
 export async function fetchPersonalSections(tripId: string, memberId: string): Promise<RealChecklistCategory[]> {

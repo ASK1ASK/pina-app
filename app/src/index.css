@@ -102,3 +102,19 @@ h1, h2, h3, h4 {
 #root {
   min-height: 100svh;
 }
+
+/* L'invito dentro un campo da riempire.
+   Prima il testo d'esempio era scritto DENTRO il campo come contenuto vero
+   ("Nuova voce", "🔗 Aggiungi link (tocca)"): per scrivere il proprio bisognava
+   prima cancellarlo a mano, e da telefono un contenteditable non ha ne'
+   selezione automatica ne' pulsante per svuotare. Chi incollava un indirizzo si
+   ritrovava l'invito attaccato davanti (COLLAUDO #19 e #27).
+   Cosi' invece il campo e' davvero vuoto: questo e' disegnato, non contenuto,
+   non finisce mai in quello che viene salvato e sparisce appena si scrive. */
+[contenteditable][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  /* Senza, il cursore si posizionerebbe dopo l'invito invece che all'inizio. */
+  pointer-events: none;
+}

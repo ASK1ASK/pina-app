@@ -42,6 +42,9 @@ export function ChecklistRow({
       <EditableText
         ref={itemRef}
         initialText={label}
+        // Una voce nuova nasce vuota: l'invito e' disegnato, non e' testo da
+        // cancellare prima di poter scrivere il proprio (#27).
+        placeholder="Cosa c'è da fare"
         className="min-w-0 flex-1 text-[13px] font-semibold"
         style={done ? { color: '#b7a586', textDecoration: 'line-through' } : { color: 'var(--color-text)' }}
         onBlurText={onSaveLabel}
