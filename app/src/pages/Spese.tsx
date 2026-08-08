@@ -20,7 +20,9 @@ import {
   createCassaContribution,
   createExpense,
   createSettlement,
+  deleteCassaContribution as deleteCassaContributionRemote,
   deleteExpense as deleteExpenseRemote,
+  deleteSettlement as deleteSettlementRemote,
   fetchExpensesData,
   fetchTripMembers,
   updateExpense as updateExpenseRemote,
@@ -31,6 +33,17 @@ import { PersonPicker, type PickablePerson } from './spese/PersonPicker'
 type SheetMode = null | 'expense' | 'settlement' | 'cassa' | 'ledger'
 
 const SPESE_TABLES = ['expenses', 'settlements', 'cassa_contributions']
+
+// I tre movimenti che entrano nei saldi. Cancellarli e' l'unico modo di
+// rimediare a una cifra sbagliata: l'importo non accetta zero ne' negativi,
+// quindi non si puo' compensare con un movimento opposto.
+type MovimentoKind = 'expense' | 'settlement' | 'cassa'
+
+const TESTI_ELIMINA: Record<MovimentoKind, { titolo: string; errore: string }> = {
+  expense: { titolo: 'Eliminare questa spesa?', errore: 'Non siamo riusciti a eliminare la spesa.' },
+  settlement: { titolo: 'Eliminare questo rimborso?', errore: 'Non siamo riusciti a eliminare il rimborso.' },
+  cassa: { titolo: 'Eliminare questo contributo?', errore: 'Non siamo riusciti a eliminare il contributo.' },
+}
 
 // Forma unificata: compatibile sia con i dati demo (PersonId, un carattere)
 // sia con i membri reali (id uuid da trip_members).
@@ -110,6 +123,8 @@ export function Spese() {
   const [sheetMode, setSheetMode] = useState<SheetMode>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [balancesExpanded, setBalancesExpanded] = useState(false)
+  const [daEliminare, setDaEliminare] = useState<{ kind: MovimentoKind; id: string } | null>(null)
+  const [eliminando, setEliminando] = useState(false)
 
   // Elenco persone unificato: il cast demo, o i membri veri del viaggio.
   // Comprende chi ha lasciato il viaggio: le sue spese, i suoi saldi e il suo
@@ -246,20 +261,42 @@ export function Spese() {
     closeSheet()
   }
 
-  async function deleteExpense() {
-    if (!editingId) return
+  // Un solo percorso per tutti e tre i movimenti, e tutti e tre passano dalla
+  // conferma: sono soldi, la cancellazione non si annulla, e un movimento
+  // rifatto tornerebbe comunque con la data di oggi. Prima la spesa partiva al
+  // primo tocco: ora no, altrimenti nella stessa schermata due movimenti
+  // identici si comporterebbero in due modi diversi.
+  async function eliminaMovimento() {
+    if (!daEliminare) return
+    const { kind, id } = daEliminare
+
     if (isRealTrip) {
+      setEliminando(true)
       try {
-        await deleteExpenseRemote(editingId)
+        if (kind === 'expense') await deleteExpenseRemote(id)
+        else if (kind === 'settlement') await deleteSettlementRemote(id)
+        else await deleteCassaContributionRemote(id)
       } catch (err) {
-        showError('Non siamo riusciti a eliminare la spesa.', err)
+        showError(TESTI_ELIMINA[kind].errore, err)
+        setEliminando(false)
         return
       }
+      // I saldi e il totale della cassa si ricalcolano da qui: sono derivati
+      // dagli elenchi, quindi tornano da soli senza ricaricare la pagina.
       await refetchReal()
+      setEliminando(false)
+    } else if (kind === 'expense') {
+      persistDemo({ expenses: expenses.filter((e) => e.id !== id) })
+    } else if (kind === 'settlement') {
+      persistDemo({ settlements: settlements.filter((s) => s.id !== id) })
     } else {
-      persistDemo({ expenses: expenses.filter((e) => e.id !== editingId) })
+      persistDemo({ cassaContributions: cassaContributions.filter((c) => c.id !== id) })
     }
-    closeSheet()
+
+    setDaEliminare(null)
+    // La spesa si cancella anche dal pannello di modifica, che va chiuso: il
+    // rimborso e il contributo si cancellano dal registro, che resta aperto.
+    if (kind === 'expense' && editingId === id) closeSheet()
   }
 
   function openSettlement() {
@@ -362,7 +399,7 @@ export function Spese() {
     const among = e.splitAmong.length ? e.splitAmong : memberIds
     const payer = e.paidBy !== 'cassa' ? membersById[e.paidBy] : null
     return {
-      id: e.id,
+      id: e.id, kind: 'expense' as MovimentoKind,
       date: e.dateLabel, desc: e.title, typeLabel: 'Uscita', badgeStyle: badgeCls('#fdeceb', '#c2445a'),
       who: payer ? payer.name : 'Cassa comune', toWhom: among.map((c) => membersById[c]?.name || c).join(', '),
       whoLine: `${payer ? payer.name : 'Cassa'} → ${among.map((c) => membersById[c]?.name || c).join(', ')}`,
@@ -372,7 +409,8 @@ export function Spese() {
   const settlementRows = settlements.map((s) => {
     const fromP = membersById[s.from], toP = membersById[s.to]
     return {
-      id: s.id, date: s.dateLabel || 'Oggi', desc: 'Rimborso', typeLabel: 'Rimborso', badgeStyle: badgeCls('#e9f7f0', '#3f8f5f'),
+      id: s.id, kind: 'settlement' as MovimentoKind,
+      date: s.dateLabel || 'Oggi', desc: 'Rimborso', typeLabel: 'Rimborso', badgeStyle: badgeCls('#e9f7f0', '#3f8f5f'),
       who: fromP?.name || '?', toWhom: toP?.name || '?', whoLine: `${fromP?.name || '?'} → ${toP?.name || '?'}`,
       amountLabel: `${s.amount}€`, amountColor: '#3f8f5f', rawAmount: s.amount,
     }
@@ -380,7 +418,8 @@ export function Spese() {
   const cassaRows = cassaContributions.map((c) => {
     const p = membersById[c.person]
     return {
-      id: c.id, date: c.dateLabel || 'Oggi', desc: 'Contributo cassa comune', typeLabel: 'Cassa', badgeStyle: badgeCls('#fdf3d9', '#b8792e'),
+      id: c.id, kind: 'cassa' as MovimentoKind,
+      date: c.dateLabel || 'Oggi', desc: 'Contributo cassa comune', typeLabel: 'Cassa', badgeStyle: badgeCls('#fdf3d9', '#b8792e'),
       who: p?.name || '?', toWhom: 'Cassa comune', whoLine: `${p?.name || '?'} → Cassa comune`,
       amountLabel: `${c.amount}€`, amountColor: '#b8792e', rawAmount: c.amount,
     }
@@ -576,7 +615,7 @@ export function Spese() {
 
             <div className="mt-5.5 flex gap-2.5">
               {editingId && (
-                <button type="button" className="shrink-0 rounded-full bg-[#fdeceb] px-4.5 py-3.25 text-center text-[12.5px] font-bold text-[#c2445a]" onClick={deleteExpense}>🗑 Elimina</button>
+                <button type="button" className="shrink-0 rounded-full bg-[#fdeceb] px-4.5 py-3.25 text-center text-[12.5px] font-bold text-[#c2445a]" onClick={() => setDaEliminare({ kind: 'expense', id: editingId })}>🗑 Elimina</button>
               )}
               <button type="button" className="flex-1 rounded-full py-3.25 text-center text-[13.5px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#ff8a5b,#ff5f6d)' }} onClick={saveExpenseForm}>{sheetSaveLabel}</button>
             </div>
@@ -633,9 +672,28 @@ export function Spese() {
             <div className="flex-1 overflow-y-auto px-5.5">
               {ledgerRows.map((row) => (
                 <div key={row.id} className="mb-2 rounded-2xl border border-[var(--color-card-border)] bg-white p-3">
-                  <div className="mb-1.5 flex items-center justify-between">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
                     <span className="rounded-full px-2.25 py-0.75 text-[10px] font-bold" style={row.badgeStyle}>{row.typeLabel}</span>
-                    <span className="text-[10.5px] font-bold text-[var(--color-text-secondary)]">{row.date}</span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="text-[10.5px] font-bold text-[var(--color-text-secondary)]">{row.date}</span>
+                      {/*
+                        Il registro e' l'unico posto dove rimborsi e contributi
+                        si vedono, quindi e' l'unico posto da cui si possono
+                        togliere. Il cestino c'e' anche sulle uscite, che
+                        restano cancellabili pure dal loro pannello: tre
+                        movimenti nello stesso elenco, tre volte la stessa
+                        mossa. Bersaglio da 44px con margini negativi, cosi'
+                        la riga non si alza.
+                      */}
+                      <button
+                        type="button"
+                        aria-label={`Elimina ${row.typeLabel.toLowerCase()}`}
+                        className="-my-2.5 -mr-1.5 flex h-11 w-11 items-center justify-center rounded-full text-sm text-[#c2445a]"
+                        onClick={() => setDaEliminare({ kind: row.kind, id: row.id })}
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </div>
                   <div className="mb-0.75 text-[13.5px] font-bold">{row.desc}</div>
                   <div className="flex items-center justify-between">
@@ -656,6 +714,41 @@ export function Spese() {
                 ))}
               </div>
               <button type="button" className="w-full rounded-full bg-[var(--color-text-strong)] py-3 text-center text-[12.5px] font-bold text-white" onClick={exportCsv}>⬇️ Esporta su Excel (CSV)</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*
+        Stessa finestra dell'eliminazione di un viaggio: quando l'app chiede
+        "sei sicuro" lo fa sempre nello stesso modo. z-50 perche' deve stare
+        sopra il registro e sopra il pannello della spesa, che sono a z-40.
+      */}
+      {daEliminare && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-8" onClick={() => !eliminando && setDaEliminare(null)}>
+          <div className="rounded-[22px] bg-white p-6 text-center shadow-[0_30px_60px_-20px_rgba(0,0,0,.5)]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2.5 text-3xl">⚠️</div>
+            <div className="mb-2 font-display text-[17px] font-bold text-[var(--color-text)]">{TESTI_ELIMINA[daEliminare.kind].titolo}</div>
+            <div className="mb-5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">
+              I saldi di tutta la crew si ricalcolano. L'azione non si può annullare.
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                className="flex-1 rounded-full border border-[var(--color-card-border)] bg-white py-3 text-center text-xs font-bold text-[var(--color-text)] disabled:opacity-60"
+                disabled={eliminando}
+                onClick={() => setDaEliminare(null)}
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-full bg-[#c2445a] py-3 text-center text-xs font-bold text-white disabled:opacity-60"
+                disabled={eliminando}
+                onClick={eliminaMovimento}
+              >
+                {eliminando ? 'Eliminazione...' : 'Elimina'}
+              </button>
             </div>
           </div>
         </div>

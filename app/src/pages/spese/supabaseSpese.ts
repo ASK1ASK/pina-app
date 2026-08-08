@@ -230,3 +230,21 @@ export async function createSettlement(tripId: string, input: { fromMemberId: st
 export async function createCassaContribution(tripId: string, input: { memberId: string; amount: number }): Promise<void> {
   unwrapVoid(await supabase.from('cassa_contributions').insert({ trip_id: tripId, member_id: input.memberId, amount: input.amount }))
 }
+
+// Rimborsi e contributi entrano in computeBalances esattamente come le spese:
+// senza un modo di toglierli, una cifra sbagliata o un versamento registrato
+// due volte falsava i conti di tutta la crew per il resto del viaggio, e
+// l'importo non accetta zero ne' valori negativi, quindi non si poteva
+// nemmeno compensare con un movimento opposto.
+//
+// Non serve alcuna migrazione: le due tabelle stanno fra le trip_scoped_tables
+// della 0001, che ricevono una policy "for all" — la cancellazione e' gia'
+// compresa, per chiunque sia nella crew.
+
+export async function deleteSettlement(settlementId: string): Promise<void> {
+  unwrapVoid(await supabase.from('settlements').delete().eq('id', settlementId))
+}
+
+export async function deleteCassaContribution(contributionId: string): Promise<void> {
+  unwrapVoid(await supabase.from('cassa_contributions').delete().eq('id', contributionId))
+}

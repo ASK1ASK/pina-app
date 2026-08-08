@@ -11,6 +11,7 @@ import { loadMemories, saveMemories, type MemoryDay, type MemoryItem } from '../
 import { fetchTripMembers, membriAttivi } from './spese/supabaseSpese'
 import {
   createMemory,
+  deleteMemory,
   fetchMemories,
   getOrCreateTodayMemoryDay,
   toggleMemoryFavorite,
@@ -37,6 +38,8 @@ export function Memories() {
   const [items, setItems] = useState<MemoryItem[]>([])
   const [filter, setFilter] = useState<string | null>(null)
   const [viewer, setViewer] = useState<ViewerState | null>(null)
+  const [daEliminare, setDaEliminare] = useState<string | null>(null)
+  const [eliminando, setEliminando] = useState(false)
   const [currentMemberId, setCurrentMemberId] = useState<string | null>(null)
   const [currentMemberName, setCurrentMemberName] = useState('Tu')
   const [people, setPeople] = useState<string[]>(isRealTrip ? [] : DEMO_PEOPLE)
@@ -106,6 +109,39 @@ export function Memories() {
     } else {
       persistDemo(items.map((it) => (it.id !== id ? it : { ...it, caption: caption || it.caption })))
     }
+  }
+
+  // Una foto caricata per sbaglio restava lì per sempre, per chiunque. La
+  // conferma c'è perché il cestino sta nel visualizzatore a fianco di ✕, e
+  // perché quello che sparisce è di tutta la crew.
+  async function eliminaRicordo() {
+    if (!daEliminare) return
+    const id = daEliminare
+
+    if (isRealTrip) {
+      setEliminando(true)
+      try {
+        // Toglie la riga E il file dal magazzino: senza il secondo pezzo
+        // resterebbe un file che nessuno può più vedere né cancellare.
+        await deleteMemory(id)
+      } catch (err) {
+        showError('Non siamo riusciti a eliminare il ricordo.', err)
+        setEliminando(false)
+        return
+      }
+      setItems((its) => its.filter((it) => it.id !== id))
+      setEliminando(false)
+    } else {
+      persistDemo(items.filter((it) => it.id !== id))
+    }
+
+    setDaEliminare(null)
+    // Il visualizzatore lavora su un elenco di identificativi fissato quando si
+    // è aperto: se non lo si aggiorna, si ritrova a puntare a un ricordo che non
+    // c'è più. Tolta l'ultima foto della raccolta, si chiude come farebbe la ✕.
+    const rimasti = viewer ? viewer.ids.filter((x) => x !== id) : []
+    if (rimasti.length === 0) closeViewer()
+    else setViewer((v) => (v ? { ids: rimasti, index: Math.min(v.index, rimasti.length - 1) } : v))
   }
 
   async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
@@ -324,6 +360,7 @@ export function Memories() {
             <div className="relative flex-1">
               <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${currentItem.url})` }} />
               <button type="button" className="absolute right-4 top-3.5 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/40 text-sm text-white" onClick={closeViewer}>✕</button>
+              <button type="button" aria-label="Elimina ricordo" className="absolute right-13 top-3.5 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/40 text-xs text-white" onClick={() => setDaEliminare(currentItem.id)}>🗑</button>
               <button type="button" className="absolute left-4 top-3.5 flex h-7.5 w-7.5 items-center justify-center rounded-full bg-black/40 text-sm text-white" onClick={() => toggleFavorite(currentItem.id)}>{currentItem.isFavorite ? '⭐' : '☆'}</button>
               {viewer.index > 0 && (
                 <button type="button" className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-base text-white" onClick={() => setViewer((v) => (v ? { ...v, index: Math.max(0, v.index - 1) } : v))}>‹</button>
@@ -340,6 +377,39 @@ export function Memories() {
                 onBlurText={(text) => updateCaption(currentItem.id, text)}
               />
               <div className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Caricata da {currentItem.author}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stessa finestra dell'eliminazione di un viaggio e di un movimento di
+          spesa: quando l'app chiede "sei sicuro" lo fa sempre nello stesso
+          modo. z-50 perché deve stare sopra il visualizzatore, che è a z-40. */}
+      {daEliminare && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-8" onClick={() => !eliminando && setDaEliminare(null)}>
+          <div className="rounded-[22px] bg-white p-6 text-center shadow-[0_30px_60px_-20px_rgba(0,0,0,.5)]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2.5 text-3xl">⚠️</div>
+            <div className="mb-2 font-display text-[17px] font-bold text-[var(--color-text)]">Eliminare questo ricordo?</div>
+            <div className="mb-5 text-xs font-semibold leading-snug text-[var(--color-text-secondary)]">
+              Sparisce per tutta la crew. L'azione non si può annullare.
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                className="flex-1 rounded-full border border-[var(--color-card-border)] bg-white py-3 text-center text-xs font-bold text-[var(--color-text)] disabled:opacity-60"
+                disabled={eliminando}
+                onClick={() => setDaEliminare(null)}
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-full bg-[#c2445a] py-3 text-center text-xs font-bold text-white disabled:opacity-60"
+                disabled={eliminando}
+                onClick={eliminaRicordo}
+              >
+                {eliminando ? 'Eliminazione...' : 'Elimina'}
+              </button>
             </div>
           </div>
         </div>

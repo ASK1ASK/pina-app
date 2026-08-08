@@ -1,4 +1,4 @@
-import { signedUrls } from '../../lib/mediaUpload'
+import { removeTripMedia, signedUrls } from '../../lib/mediaUpload'
 import { supabase, unwrap, unwrapVoid } from '../../lib/supabase'
 import type { MemoryDay, MemoryItem } from '../../lib/tripData'
 
@@ -110,4 +110,22 @@ export async function toggleMemoryFavorite(id: string, isFavorite: boolean): Pro
 
 export async function updateMemoryCaption(id: string, caption: string): Promise<void> {
   unwrapVoid(await supabase.from('memories').update({ caption }).eq('id', id))
+}
+
+/**
+ * Cancella un ricordo: prima la riga, poi il file nel magazzino.
+ *
+ * Il percorso del file si fa restituire dalla cancellazione stessa
+ * (`delete().select('url')`), invece di leggerlo prima: `memories.url` a
+ * schermo e' gia' diventato un indirizzo firmato e temporaneo, quindi il
+ * percorso vero la schermata non ce l'ha piu'. Togliendo solo la riga
+ * resterebbe nel magazzino un file che nessuno puo' piu' vedere ne' cancellare.
+ *
+ * I ricordi caricati prima dello Storage hanno il contenuto salvato come testo
+ * e non hanno alcun file: `isStoragePath` li riconosce e `removeTripMedia` non
+ * fa niente. Non serve un caso a parte.
+ */
+export async function deleteMemory(id: string): Promise<void> {
+  const riga = unwrap(await supabase.from('memories').delete().eq('id', id).select('url').maybeSingle())
+  if (riga?.url) await removeTripMedia(riga.url)
 }
