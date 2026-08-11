@@ -236,16 +236,68 @@ export async function fetchPersonalSections(tripId: string, memberId: string): P
   }))
 }
 
-export async function persistPersonalSections(tripId: string, memberId: string, sections: RealChecklistCategory[]): Promise<void> {
-  unwrapVoid(await supabase.from('personal_checklist_sections').delete().eq('trip_id', tripId).eq('member_id', memberId))
-  if (!sections.length) return
+// ---------------------------------------------------------------------------
+// Operazioni mirate sulla valigia personale.
+//
+// Qui esisteva persistPersonalSections, che ad ogni salvataggio cancellava
+// tutte le sezioni di quel membro e le riscriveva da capo. Era l'ultimo posto
+// rimasto col metodo che il cantiere F ha tolto dagli Essentials (#31), e ha
+// fatto lo stesso danno: COLLAUDO #34.
+//
+// Perche' duplicava, visto che la valigia e' di una persona sola e nessun altro
+// la tocca. Perche' non serve un secondo telefono: bastano due salvataggi dello
+// stesso telefono che si accavallano. Cancellare e riscrivere non sono una
+// operazione sola, sono due, e in mezzo c'e' la rete. Se il secondo salvataggio
+// cancella prima che il primo abbia inserito, l'ordine diventa
+// cancella-cancella-inserisci-inserisci: una cancellazione sola, due
+// inserimenti, e la sezione compare due volte identica.
+//
+// Ed e' anche il motivo per cui i doppioni cancellati a mano tornavano: chi
+// salva riscrive la fotografia della lista che aveva in mano quando e' partito,
+// quindi un salvataggio piu' vecchio che arriva dopo rimette dentro quello che
+// era appena stato tolto. Difetto e irreparabilita' hanno la stessa causa.
+//
+// Stessa medicina della checklist condivisa (01/08) e degli Essentials (07/08):
+// si tocca la riga che l'utente ha toccato, e basta. Il test qui accanto tiene
+// una copia del metodo vecchio e riproduce entrambi i sintomi, cosi' la
+// differenza fra i due modi resta dimostrata e non affidata alla memoria.
+// ---------------------------------------------------------------------------
 
-  const secRows = sections.map((s, i) => ({ trip_id: tripId, member_id: memberId, emoji: s.emoji, name: s.name, position: i }))
-  const { data: insertedSecs, error } = await supabase.from('personal_checklist_sections').insert(secRows).select()
-  if (error || !insertedSecs) throw error
+export async function createPersonalSection(
+  tripId: string,
+  memberId: string,
+  input: { emoji: string; name: string; position: number },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('personal_checklist_sections')
+    .insert({ trip_id: tripId, member_id: memberId, emoji: input.emoji, name: input.name, position: input.position })
+    .select('id')
+    .single()
+  if (error || !data) throw error ?? new Error('Errore durante la creazione della sezione.')
+  return data.id
+}
 
-  const itemRows = sections.flatMap((s, si) =>
-    s.items.map((it, ii) => ({ section_id: insertedSecs[si].id, label: it.label, done: it.done, position: ii })),
-  )
-  if (itemRows.length) unwrapVoid(await supabase.from('personal_checklist_items').insert(itemRows))
+export async function updatePersonalSection(sectionId: string, patch: { emoji?: string; name?: string }): Promise<void> {
+  unwrapVoid(await supabase.from('personal_checklist_sections').update(patch).eq('id', sectionId))
+}
+
+export async function createPersonalItem(
+  sectionId: string,
+  input: { label: string; done: boolean; position: number },
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('personal_checklist_items')
+    .insert({ section_id: sectionId, label: input.label, done: input.done, position: input.position })
+    .select('id')
+    .single()
+  if (error || !data) throw error ?? new Error('Errore durante la creazione della voce.')
+  return data.id
+}
+
+export async function updatePersonalItem(itemId: string, patch: { label?: string; done?: boolean }): Promise<void> {
+  unwrapVoid(await supabase.from('personal_checklist_items').update(patch).eq('id', itemId))
+}
+
+export async function deletePersonalItem(itemId: string): Promise<void> {
+  unwrapVoid(await supabase.from('personal_checklist_items').delete().eq('id', itemId))
 }

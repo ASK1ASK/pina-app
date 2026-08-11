@@ -23,16 +23,20 @@ import {
   createChecklistCategory,
   createChecklistItem,
   createEssentialsEntry,
+  createPersonalItem,
+  createPersonalSection,
   deleteChecklistItem,
   deleteEssentialsEntry,
+  deletePersonalItem as deletePersonalItemRemote,
   fetchChecklist,
   fetchEssentials,
   fetchPersonalSections,
-  persistPersonalSections as persistPersonalSectionsRemote,
   seedEssentials,
   updateChecklistCategory,
   updateChecklistItem,
   updateEssentialsEntry,
+  updatePersonalItem,
+  updatePersonalSection,
 } from './checklist/supabaseChecklist'
 import { ChecklistRow } from './checklist/ChecklistRow'
 import { defaultCategories, defaultPersonalSections } from './checklist/data'
@@ -143,7 +147,6 @@ export function Checklist() {
   const [uploadingEntryId, setUploadingEntryId] = useState<string | null>(null)
   const [focusItemId, setFocusItemId] = useState<string | null>(null)
   const [realMembers, setRealMembers] = useState<RealMember[]>([])
-  const loaded = useRef(false)
   // Viaggio demo: non si risalva su localStorage quello che si e' appena letto.
   //
   // Un effetto che salva "ad ogni cambiamento di stato" salva anche il primo
@@ -179,6 +182,14 @@ export function Checklist() {
   const usciti = new Set(realMembers.filter((m) => m.leftAt).map((m) => m.id))
   const memberIdsAttivi = memberIds.filter((id) => !usciti.has(id))
   const activeUser = isRealTrip ? (realMembers.find((m) => m.userId === session?.user?.id)?.id ?? memberIdsAttivi[0] ?? '') : currentUser
+  // La valigia e' di chi la fa, e qui non esiste ripiego: se non riconosciamo
+  // chi sta guardando resta vuoto, e senza non si carica ne' si salva niente.
+  //
+  // Prima si ripiegava sul primo membro della crew — di norma l'organizzatore —
+  // e tanto bastava perche' un membro non riconosciuto leggesse e riscrivesse
+  // la valigia di un altro (#34). Un ripiego che va bene per scegliere un
+  // colore non va bene per decidere di chi sono le cose.
+  const mioMemberId = isRealTrip ? (realMembers.find((m) => m.userId === session?.user?.id)?.id ?? '') : currentUser
   // Per il demo l'id E' gia' l'iniziale (codici 'A'/'L'/...); per i membri
   // veri (uuid) mostriamo l'iniziale del nome invece dell'id per intero.
   function initialFor(id: string): string {
@@ -211,11 +222,11 @@ export function Checklist() {
             }
           }
 
+          // Nessun ripiego sul primo membro della crew: se non sappiamo chi sta
+          // guardando, la valigia non si carica affatto. Meglio una schermata
+          // che lo dice che la valigia di un altro spacciata per la tua (#34).
           const me = fetchedMembers.find((m) => m.userId === session?.user?.id)
-          const myMemberId = me?.id ?? fetchedMembers[0]?.id ?? null
-          if (myMemberId) setPersonalSections(await fetchPersonalSections(routeTripId, myMemberId))
-
-          loaded.current = true
+          if (me) setPersonalSections(await fetchPersonalSections(routeTripId, me.id))
         },
       )
         .catch((err) => showError('Non siamo riusciti a caricare la checklist.', err))
@@ -232,7 +243,6 @@ export function Checklist() {
     const essentialsLetti = loadEssentialsData().categories
     lettoDaLocale.current.essentials = essentialsLetti
     setEssentialsCategories(essentialsLetti)
-    loaded.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeTripId])
 
@@ -265,23 +275,21 @@ export function Checklist() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [essentialsCategories])
 
-  // La valigia personale resta a salvataggio completo: e' di un solo membro,
-  // quindi nessun altro puo' sovrascriverla.
-  useEffect(() => {
-    if (!loaded.current || !isRealTrip || !routeTripId || !activeUser) return
-    persistPersonalSectionsRemote(routeTripId, activeUser, personalSections).catch((err) =>
-      showError('Non siamo riusciti a salvare la tua valigia.', err),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personalSections])
+  // Qui c'era il salvataggio completo della valigia personale, che ad ogni
+  // cambiamento riscriveva tutta la lista. Era rimasto perche' la valigia e' di
+  // un solo membro e sembrava che nessuno potesse sovrascriverla: il #34 ha
+  // mostrato che a sovrascriverla bastava lo stesso telefono, con due
+  // salvataggi accavallati. Ora ogni gesto tocca la sua riga, come nella
+  // checklist condivisa e negli Essentials.
 
-  // Salva una modifica puntuale — checklist condivisa o Essentials —
-  // riallineandosi al server se fallisce: cosi' non resta a schermo qualcosa
-  // che non e' stato davvero salvato.
-  function pushRemoteChange(op: Promise<unknown>, messaggio: string) {
+  // Salva una modifica puntuale riallineandosi al server se fallisce: cosi' non
+  // resta a schermo qualcosa che non e' stato davvero salvato. Chi salva dice
+  // anche da dove rileggere, perche' la valigia non sta nelle stesse tabelle
+  // della checklist condivisa.
+  function pushRemoteChange(op: Promise<unknown>, messaggio: string, riallinea: () => Promise<void> = refetchReal) {
     op.catch((err) => {
       showError(messaggio, err)
-      refetchReal().catch(() => {})
+      riallinea().catch(() => {})
     })
   }
 
@@ -290,6 +298,13 @@ export function Checklist() {
     const [fetchedChecklist, fetchedEssentials] = await Promise.all([fetchChecklist(routeTripId), fetchEssentials(routeTripId)])
     setCategories(fetchedChecklist)
     setEssentialsCategories(fetchedEssentials)
+  }
+
+  // La valigia non e' fra le tabelle in sync live — nessun altro la modifica —
+  // quindi si rilegge solo quando un salvataggio e' fallito.
+  async function refetchPersonal() {
+    if (!routeTripId || !mioMemberId) return
+    setPersonalSections(await fetchPersonalSections(routeTripId, mioMemberId))
   }
 
   // Aggiornamenti live: quello che un altro membro spunta, rinomina o aggiunge
@@ -445,30 +460,74 @@ export function Checklist() {
   }
 
   // ---- personal checklist mutations ----
+  // Come per la checklist condivisa e per gli Essentials: si aggiorna subito lo
+  // schermo e si tocca SOLO la riga interessata sul server. Prima ogni gesto
+  // cancellava tutte le sezioni del membro e le riscriveva da capo, ed erano
+  // due salvataggi accavallati a bastare per ritrovarsi la valigia doppia (#34).
   function togglePersonalItem(sectionId: string, itemId: string) {
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: s.items.map((it) => (it.id !== itemId ? it : { ...it, done: !it.done })) })))
+    const current = personalSections.find((s) => s.id === sectionId)?.items.find((it) => it.id === itemId)
+    if (!current) return
+    const done = !current.done
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: s.items.map((it) => (it.id !== itemId ? it : { ...it, done })) })))
+    if (isRealTrip) pushRemoteChange(updatePersonalItem(itemId, { done }), 'Non siamo riusciti a salvare la spunta.', refetchPersonal)
   }
   function deletePersonalItem(sectionId: string, itemId: string) {
     setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: s.items.filter((it) => it.id !== itemId) })))
+    if (isRealTrip) pushRemoteChange(deletePersonalItemRemote(itemId), 'Non siamo riusciti a eliminare la voce.', refetchPersonal)
   }
   function updatePersonalItemLabel(sectionId: string, itemId: string, label: string) {
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: s.items.map((it) => (it.id !== itemId ? it : { ...it, label: label || it.label })) })))
+    const current = personalSections.find((s) => s.id === sectionId)?.items.find((it) => it.id === itemId)
+    const next = label || current?.label || ''
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: s.items.map((it) => (it.id !== itemId ? it : { ...it, label: next })) })))
+    if (isRealTrip) pushRemoteChange(updatePersonalItem(itemId, { label: next }), 'Non siamo riusciti a salvare il testo.', refetchPersonal)
   }
-  function addPersonalItem(sectionId: string) {
+  async function addPersonalItem(sectionId: string) {
+    const position = personalSections.find((s) => s.id === sectionId)?.items.length ?? 0
+    const nuova = { label: '', done: false }
+    if (isRealTrip) {
+      // Si aspetta l'id vero prima di mostrare la voce: con uno provvisorio, la
+      // prima spunta finirebbe su una riga che il database non conosce.
+      try {
+        const id = await createPersonalItem(sectionId, { ...nuova, position })
+        setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: [...s.items, { id, ...nuova }] })))
+        setFocusItemId(id)
+      } catch (err) {
+        showError('Non siamo riusciti ad aggiungere la voce.', err)
+      }
+      return
+    }
     const id = 'pi' + Date.now()
     setFocusItemId(id)
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: [...s.items, { id, label: '', done: false }] })))
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, items: [...s.items, { id, ...nuova }] })))
   }
-  function addPersonalSection(preset?: { emoji: string; name: string }) {
+  async function addPersonalSection(preset?: { emoji: string; name: string }) {
+    const nuova = preset ?? { emoji: '📦', name: '' }
+    if (isRealTrip && routeTripId) {
+      if (!mioMemberId) return
+      try {
+        const id = await createPersonalSection(routeTripId, mioMemberId, { ...nuova, position: personalSections.length })
+        setPersonalSections((ss) => [...ss, { id, ...nuova, items: [] }])
+        // Una sezione proposta arriva gia' col nome giusto: mettere il cursore
+        // dentro obbligherebbe a chiudere la tastiera prima di poterla usare.
+        if (!preset) setFocusItemId(id)
+      } catch (err) {
+        showError('Non siamo riusciti ad aggiungere la sezione.', err)
+      }
+      return
+    }
     const id = 'ps' + Date.now()
     if (!preset) setFocusItemId(id)
-    setPersonalSections((ss) => [...ss, { id, ...(preset ?? { emoji: '📦', name: '' }), items: [] }])
+    setPersonalSections((ss) => [...ss, { id, ...nuova, items: [] }])
   }
   function updatePersonalSectionName(sectionId: string, name: string) {
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, name: name || s.name })))
+    const next = name || personalSections.find((s) => s.id === sectionId)?.name || ''
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, name: next })))
+    if (isRealTrip) pushRemoteChange(updatePersonalSection(sectionId, { name: next }), 'Non siamo riusciti a salvare il nome della sezione.', refetchPersonal)
   }
   function updatePersonalSectionEmoji(sectionId: string, emoji: string) {
-    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, emoji: emoji || s.emoji })))
+    const next = emoji || personalSections.find((s) => s.id === sectionId)?.emoji || ''
+    setPersonalSections((ss) => ss.map((s) => (s.id !== sectionId ? s : { ...s, emoji: next })))
+    if (isRealTrip) pushRemoteChange(updatePersonalSection(sectionId, { emoji: next }), 'Non siamo riusciti a salvare l’icona.', refetchPersonal)
   }
 
   // ---- essentials mutations ----
@@ -778,6 +837,17 @@ export function Checklist() {
               <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Si parte 🎉</div>
             </div>
           )}
+        </div>
+      ) : isRealTrip && !mioMemberId ? (
+        // Non sappiamo chi sta guardando: qui si fermava tutto e si mostrava la
+        // valigia del primo membro della crew, di norma l'organizzatore, pronta
+        // anche da riscrivere (#34). Meglio dirlo che indovinare male: "il tuo"
+        // senza un tuo e' la roba di qualcun altro.
+        <div className="rounded-[22px] border-[1.5px] border-dashed border-[var(--color-empty-border)] px-5 py-7 text-center">
+          <div className="mb-1 font-display text-base font-semibold">Non riusciamo a riconoscerti in questa crew</div>
+          <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
+            La valigia è personale, quindi finché non sappiamo chi sei non possiamo aprirla. Scegli il tuo posto nella crew dal profilo del viaggio e torna qui.
+          </div>
         </div>
       ) : (
         <div>
