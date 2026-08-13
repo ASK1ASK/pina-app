@@ -153,6 +153,9 @@ export function Spese() {
   const [sheetMode, setSheetMode] = useState<SheetMode>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [balancesExpanded, setBalancesExpanded] = useState(false)
+  // Chiuso quando si entra, sempre: chiudere i conti e' una cosa che si fa
+  // ogni tanto, segnare una spesa e' una cosa che si fa dieci volte al giorno.
+  const [pianoAperto, setPianoAperto] = useState(false)
   const [daEliminare, setDaEliminare] = useState<{ kind: MovimentoKind; id: string } | null>(null)
   const [eliminando, setEliminando] = useState(false)
   // I rimborsi ancora da registrare quando si parte dall'elenco "Per chiudere
@@ -582,79 +585,6 @@ export function Spese() {
         )}
       </div>
 
-      {/*
-        L'ultimo passo che i saldi non facevano: i saldi dicono "Marco -25€",
-        qui c'e' scritto "Marco → Andrea 15€" e "Marco → Luca 10€". Con due
-        persone e' la stessa cosa detta due volte; da tre in su e' il conto che
-        finiva in testa a chi sta in piedi davanti a un bar (COLLAUDO #43).
-        Sta attaccato ai saldi perche' e' la loro continuazione, e ogni riga
-        apre il pannello di sempre gia' compilato: la conferma resta li'.
-      */}
-      {(expenses.length > 0 || cassaContributions.length > 0 || settlements.length > 0) && (
-        <div className="mb-3.5 rounded-[20px] border border-[var(--color-card-border)] bg-white p-4 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-          <div className="mb-2.5 flex items-baseline justify-between gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Per chiudere i conti</span>
-            {piano.pagamenti.length > 0 && (
-              <span className="shrink-0 text-[11px] font-bold text-[var(--color-text-secondary)]">
-                {piano.pagamenti.length} rimbors{piano.pagamenti.length === 1 ? 'o' : 'i'}
-              </span>
-            )}
-          </div>
-
-          {piano.pagamenti.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {piano.pagamenti.map((p, i) => (
-                <button
-                  key={`${p.from}-${p.to}-${i}`}
-                  type="button"
-                  className="flex w-full items-center gap-2.5 rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-bg)] p-2.5 text-left"
-                  onClick={() => openSettlementDaPiano(i)}
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white" style={{ background: membersById[p.from]?.color || '#c2a97e' }}>
-                    {membersById[p.from]?.name.slice(0, 1).toUpperCase() || '?'}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-bold">
-                      {membersById[p.from]?.name || '?'} <span className="text-[var(--color-text-secondary)]">→</span> {membersById[p.to]?.name || '?'}
-                    </span>
-                    <span className="block text-[11px] font-semibold text-[var(--color-text-secondary)]">Tocca per registrarlo</span>
-                  </span>
-                  <span className="shrink-0 font-display text-[15px] font-semibold" style={{ color: '#3f8f5f' }}>{fmtAmount(p.amount)}€</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 rounded-2xl bg-[#e9f7f0] p-3">
-              <span className="text-lg">✅</span>
-              {/*
-                "Siete in pari" solo a cassa vuota. Con dei soldi ancora nel
-                fondo i riquadri sopra dicono "riceve" a mezza crew, ed e' vero:
-                sono crediti verso la cassa, non fra persone. Dirlo lo stesso
-                farebbe leggere due frasi che si smentiscono a un centimetro di
-                distanza — qui si dice solo quello che riguarda le persone, e la
-                riga sotto spiega il resto.
-              */}
-              <span className="text-[12.5px] font-bold text-[#3f8f5f]">
-                {Math.abs(piano.residuoCassa) >= 0.01 ? 'Nessuno deve niente a nessuno.' : 'Siete in pari. Nessuno deve niente a nessuno.'}
-              </span>
-            </div>
-          )}
-
-          {/*
-            Quello che avanza non lo deve nessuno: sono soldi fermi nella cassa
-            comune, che restano di chi ce li ha messi. Senza questa riga i conti
-            sembrerebbero non tornare.
-          */}
-          {Math.abs(piano.residuoCassa) >= 0.01 && (
-            <div className="mt-2.5 text-[11.5px] font-semibold leading-snug text-[var(--color-text-secondary)]">
-              {piano.residuoCassa > 0
-                ? `A parte questo, ${fmtAmount(piano.residuoCassa)}€ sono ancora nella cassa comune: restano di chi li ha versati finché non li spendete.`
-                : `Attenzione: la cassa comune ha speso ${fmtAmount(Math.abs(piano.residuoCassa))}€ più di quanto ha incassato.`}
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="mb-5.5 flex gap-2.5">
         <button type="button" className="flex-1 rounded-2xl border border-[var(--color-card-border)] bg-white py-2.75 text-center text-[12.5px] font-bold text-[var(--color-text)]" onClick={openAddExpense}>＋ Aggiungi spesa</button>
         <button type="button" className="flex-1 rounded-2xl border border-[var(--color-card-border)] bg-white py-2.75 text-center text-[12.5px] font-bold text-[var(--color-text)]" onClick={openSettlement}>💸 Registra rimborso</button>
@@ -671,6 +601,89 @@ export function Spese() {
         </div>
         <div className="mt-2 text-[11.5px] font-semibold text-[var(--color-text-secondary)]">{cassaContributions.length} contribut{cassaContributions.length === 1 ? 'o' : 'i'} disponibili</div>
       </div>
+
+      {/*
+        L'ultimo passo che i saldi non facevano: i saldi dicono "Marco -25€",
+        qui c'e' scritto "Marco → Andrea 15€" e "Marco → Luca 10€". Con due
+        persone e' la stessa cosa detta due volte; da tre in su e' il conto che
+        finiva in testa a chi sta in piedi davanti a un bar (COLLAUDO #43).
+
+        Chiuso di default, e sotto la cassa comune invece che attaccato ai
+        saldi: aperto stava in prima pagina, ed e' la prima cosa che si leggeva
+        entrando in Spese. Ma chiudere i conti si fa una volta ogni tanto —
+        alla fine, o quando qualcuno se ne va — mentre entrare in Spese si fa
+        dieci volte al giorno per segnare una birra. Chi lo cerca sa dov'e';
+        chi non lo cerca non se lo trova addosso.
+      */}
+      {(expenses.length > 0 || cassaContributions.length > 0 || settlements.length > 0) && (
+        <div className="mb-5.5 rounded-[20px] border border-[var(--color-card-border)] bg-white shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 p-4 text-left"
+            aria-expanded={pianoAperto}
+            onClick={() => setPianoAperto((v) => !v)}
+          >
+            <span className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Per chiudere i conti</span>
+            <span className="shrink-0 text-[11px] font-bold text-[var(--color-coral-text)]">{pianoAperto ? '⌃' : '⌄'}</span>
+          </button>
+
+          {pianoAperto && (
+            <div className="px-4 pb-4">
+              {piano.pagamenti.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {piano.pagamenti.map((p, i) => (
+                    <button
+                      key={`${p.from}-${p.to}-${i}`}
+                      type="button"
+                      className="flex w-full items-center gap-2.5 rounded-2xl border border-[var(--color-card-border)] bg-[var(--color-bg)] p-2.5 text-left"
+                      onClick={() => openSettlementDaPiano(i)}
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white" style={{ background: membersById[p.from]?.color || '#c2a97e' }}>
+                        {membersById[p.from]?.name.slice(0, 1).toUpperCase() || '?'}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-bold">
+                          {membersById[p.from]?.name || '?'} <span className="text-[var(--color-text-secondary)]">→</span> {membersById[p.to]?.name || '?'}
+                        </span>
+                        <span className="block text-[11px] font-semibold text-[var(--color-text-secondary)]">Tocca per registrarlo</span>
+                      </span>
+                      <span className="shrink-0 font-display text-[15px] font-semibold" style={{ color: '#3f8f5f' }}>{fmtAmount(p.amount)}€</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 rounded-2xl bg-[#e9f7f0] p-3">
+                  <span className="text-lg">✅</span>
+                  {/*
+                    "Siete in pari" solo a cassa vuota. Con dei soldi ancora nel
+                    fondo i riquadri sopra dicono "riceve" a mezza crew, ed e'
+                    vero: sono crediti verso la cassa, non fra persone. Dirlo lo
+                    stesso farebbe leggere due frasi che si smentiscono a un
+                    centimetro di distanza — qui si dice solo quello che riguarda
+                    le persone, e la riga sotto spiega il resto.
+                  */}
+                  <span className="text-[12.5px] font-bold text-[#3f8f5f]">
+                    {Math.abs(piano.residuoCassa) >= 0.01 ? 'Nessuno deve niente a nessuno.' : 'Siete in pari. Nessuno deve niente a nessuno.'}
+                  </span>
+                </div>
+              )}
+
+              {/*
+                Quello che avanza non lo deve nessuno: sono soldi fermi nella
+                cassa comune, che restano di chi ce li ha messi. Senza questa
+                riga i conti sembrerebbero non tornare.
+              */}
+              {Math.abs(piano.residuoCassa) >= 0.01 && (
+                <div className="mt-2.5 text-[11.5px] font-semibold leading-snug text-[var(--color-text-secondary)]">
+                  {piano.residuoCassa > 0
+                    ? `A parte questo, ${fmtAmount(piano.residuoCassa)}€ sono ancora nella cassa comune: restano di chi li ha versati finché non li spendete.`
+                    : `Attenzione: la cassa comune ha speso ${fmtAmount(Math.abs(piano.residuoCassa))}€ più di quanto ha incassato.`}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mx-0.5 mb-3.5 flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Spese recenti</span>
