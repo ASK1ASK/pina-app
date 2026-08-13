@@ -36,18 +36,6 @@ const FRIENDS_COUNT = 5
 // e non `new Date()` ad ogni render, che rifarebbe i conti in continuazione.
 const DATA_NEUTRA = new Date(0)
 
-interface ActivityEntry {
-  person: string
-  action: string
-  time: string
-}
-
-const initialActivity: ActivityEntry[] = [
-  { person: 'Giulia', action: 'ha aggiunto Rototom Sunsplash', time: '2 min fa' },
-  { person: 'Marco', action: 'ha cambiato le date di Valencia', time: '1 h fa' },
-  { person: 'Andrea', action: 'ha spostato Malaga dopo Rototom', time: 'ieri' },
-]
-
 const emptyDraft: AddStopDraft = { name: '', startDay: null, endDay: null, moodId: null, photo: null, photoFile: null, error: null }
 
 export function Journey() {
@@ -67,9 +55,6 @@ export function Journey() {
   const [addStopOpen, setAddStopOpen] = useState(false)
   const [editingStopId, setEditingStopId] = useState<string | null>(null)
   const [draft, setDraft] = useState<AddStopDraft>(emptyDraft)
-
-  const [activityExpanded, setActivityExpanded] = useState(false)
-  const [activityLog, setActivityLog] = useState<ActivityEntry[]>(initialActivity)
 
   const [stopDetailId, setStopDetailId] = useState<string | null>(null)
   const [addingCategoryFor, setAddingCategoryFor] = useState<string | null>(null)
@@ -168,10 +153,6 @@ export function Journey() {
     } else {
       saveStops(next)
     }
-  }
-
-  function logActivity(action: string) {
-    setActivityLog((log) => [{ person: 'Tu', action, time: 'adesso' }, ...log].slice(0, 5))
   }
 
   function updateStop(stopId: string, fn: (s: Stop) => Stop) {
@@ -339,7 +320,6 @@ export function Journey() {
     const stop = stops.find((s) => s.id === id)
     persist(stops.filter((s) => s.id !== id))
     if (stop) {
-      logActivity(`ha rimosso ${stop.name}`)
       // Tolta la tappa, la sua foto e le prenotazioni dei suoi alloggi non sono
       // piu' raggiungibili da nessuna parte.
       if (stop.photo) removeTripMedia(stop.photo)
@@ -436,7 +416,6 @@ export function Journey() {
         )
         .sort((a, b) => (a.startDay || 0) - (b.startDay || 0))
       persist(next)
-      logActivity(`ha modificato ${draft.name}`)
     } else {
       const id = 'stop' + Date.now()
       const newStop: Stop = {
@@ -462,7 +441,6 @@ export function Journey() {
       }
       const next = [...stops, newStop].sort((a, b) => (a.startDay || 0) - (b.startDay || 0))
       persist(next)
-      logActivity(`ha aggiunto ${draft.name}`)
       setEditMode(true)
     }
     setAddStopOpen(false)
@@ -647,24 +625,6 @@ export function Journey() {
               </div>
             )}
           </div>
-
-          <div className="mt-5.5 rounded-[20px] border border-[var(--color-card-border)] bg-white p-3.5 shadow-[0_8px_18px_-14px_rgba(120,90,40,.25)]">
-            <button type="button" className="flex w-full items-center justify-between" onClick={() => setActivityExpanded((v) => !v)}>
-              <div className="text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Attività recenti · {activityLog.length}</div>
-              <span className="text-[11px] font-bold text-[var(--color-coral-text)]">{activityExpanded ? 'Chiudi ⌃' : 'Apri ⌄'}</span>
-            </button>
-            {activityExpanded && (
-              <div className="mt-3 flex flex-col gap-2.25">
-                {activityLog.map((a, i) => (
-                  <div key={i} className="flex items-baseline gap-1.5 text-[12.5px]">
-                    <span className="shrink-0 font-bold">{a.person}</span>
-                    <span className="flex-1 text-[#8a7256]">{a.action}</span>
-                    <span className="shrink-0 text-[11px] text-[var(--color-text-secondary)]">{a.time}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </>
       ) : (
         <div className="rounded-[28px] px-6.5 py-9 text-center text-white shadow-[0_18px_36px_-16px_rgba(255,150,60,.45)]" style={{ background: 'linear-gradient(135deg,#ffb627,#ff8a5b)' }}>
@@ -789,7 +749,6 @@ export function Journey() {
               ...st,
               categories: st.categories.map((c) => (c.id !== catId ? c : { ...c, items: [...c.items, { id: 'it' + Date.now(), label: text, link: '', starred: false, day: activeDay }] })),
             }))
-            logActivity(`ha aggiunto "${text}" a ${detailStop.name}`)
           }}
           addingCategoryFor={addingCategoryFor === detailStop.id}
           onStartAddCategory={() => setAddingCategoryFor(detailStop.id)}
