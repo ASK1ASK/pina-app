@@ -283,3 +283,18 @@ export function toMinutes(t: string | null | undefined): number | null {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
 }
+
+// Un orario come lo scrive una persona: ore e minuti, mai i secondi.
+// Serve perche' le due sorgenti hanno forme diverse: il campo `type="time"`
+// del pannello restituisce `10:30`, mentre su un viaggio vero l'orario arriva
+// dalla colonna `item_time` (tipo `time` di Postgres), che risponde `10:30:00`.
+// Si formatta qui, dove l'orario si stampa, e non dove si salva: `toMinutes`
+// ordina sul valore pieno e continua a farlo.
+export function hhmm(t: string | null | undefined): string {
+  if (!t) return ''
+  const [h, m] = t.split(':')
+  // Qualunque cosa non abbia la forma di un orario torna com'e': meglio
+  // mostrarla intera che troncarla a due pezzi che non significano niente.
+  if (m === undefined) return t
+  return `${h}:${m}`
+}

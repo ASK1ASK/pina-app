@@ -12,6 +12,7 @@ import { ScheduleItemSheet } from './today/ScheduleItemSheet'
 import {
   buildDays,
   buildRealDays,
+  hhmm,
   loadScheduleOrder,
   saveScheduleOrder,
   statusMeta,
@@ -333,7 +334,7 @@ export function Today() {
                         <button type="button" disabled={!canDown} className="h-2.75 text-center text-[9px] leading-[9px]" style={{ color: canDown ? 'var(--color-text-secondary)' : '#e6d5b3' }} onClick={() => moveScheduleItem(i, 1)}>▾</button>
                       </div>
                       <button type="button" className="w-9 shrink-0 cursor-pointer text-left text-[11px] font-bold" style={{ color: isCurrent ? 'var(--color-coral-text)' : 'var(--color-text-secondary)' }} onClick={open}>
-                        {hasTime ? it.time : 'Orario'}
+                        {hasTime ? hhmm(it.time) : 'Orario'}
                       </button>
                       <button type="button" className="w-5 shrink-0 text-center text-[15px]" onClick={open}>{it.icon || it.catIcon || '📌'}</button>
                       <button type="button" className="min-w-0 flex-1 truncate text-left text-[13px]" style={{ fontWeight: isCurrent || isNext ? 700 : 600 }} onClick={open}>{it.label}</button>

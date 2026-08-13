@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { EditableText } from '../../components/EditableText'
 import type { StarredItemForDay } from '../../lib/tripData'
-import { mealPresets } from './data'
+import { hhmm, mealPresets } from './data'
 
 function FieldBox({
   label,
@@ -106,7 +106,9 @@ export function ScheduleItemSheet({
         <div className="mb-1.5 mt-4 text-[11px] font-bold uppercase tracking-[.06em] text-[var(--color-eyebrow)]">Orario</div>
         <input
           type="time"
-          defaultValue={item.time}
+          // Il campo vuole `10:30`: con i secondi che arrivano dal database
+          // resta il valore pieno dentro un controllo che mostra ore e minuti.
+          defaultValue={hhmm(item.time)}
           onChange={(e) => onSetTime(e.target.value)}
           className="mb-2.5 w-full rounded-[10px] border border-[var(--color-card-border)] bg-white px-2.5 py-2 text-[12.5px] font-bold text-[var(--color-text)]"
         />
@@ -116,7 +118,9 @@ export function ScheduleItemSheet({
               key={p.label}
               type="button"
               className="whitespace-nowrap rounded-full px-3.25 py-1.75 text-[11.5px] font-bold"
-              style={item.time === p.time ? { background: '#3a2a1c', color: '#fff' } : { background: '#fff', border: '1px solid var(--color-card-border)', color: '#3a2a1c' }}
+              // Confronto sulla stessa forma: con i secondi del database
+              // nessuna scorciatoia risultava mai quella scelta.
+              style={hhmm(item.time) === p.time ? { background: '#3a2a1c', color: '#fff' } : { background: '#fff', border: '1px solid var(--color-card-border)', color: '#3a2a1c' }}
               onClick={() => onSetTime(p.time)}
             >
               {p.label}
